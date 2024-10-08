@@ -40,3 +40,5 @@ python-dotenv
 langserve
 fastapi
 uvicorn
+pytube
+bs4

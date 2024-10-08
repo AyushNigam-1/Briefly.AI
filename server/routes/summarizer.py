@@ -8,17 +8,13 @@ import validators
 
 router = APIRouter()
 
-class SummarizeRequest(BaseModel):
-    api_key: str
-    url: str
-
 @router.post("/summarize/")
-def summarize_content(request: SummarizeRequest):
-    if not validators.url(request.url):
+def summarize_content(api_key: str,url:str):
+    if not validators.url(url):
         raise HTTPException(status_code=400, detail="Invalid URL")
 
     try:
-        llm = ChatGroq(model="Gemma-7b-It", groq_api_key=request.api_key)
+        llm = ChatGroq(model="Gemma-7b-It", groq_api_key=api_key)
 
         prompt_template = """
         Provide a summary of the following content in 300 words:
@@ -26,11 +22,11 @@ def summarize_content(request: SummarizeRequest):
         """
         prompt = PromptTemplate(template=prompt_template, input_variables=["text"])
 
-        if "youtu.be" in request.url or "youtube.com" in request.url:
-            loader = YoutubeLoader.from_youtube_url(request.url, add_video_info=True)
+        if "youtu.be" in url or "youtube.com" in url:
+            loader = YoutubeLoader.from_youtube_url(url, add_video_info=True)
         else:
             loader = UnstructuredURLLoader(
-                urls=[request.url], ssl_verify=False,
+                urls=[url], ssl_verify=False,
                 headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_5_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"}
             )
 
