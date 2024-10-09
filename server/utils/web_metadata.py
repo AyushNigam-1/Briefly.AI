@@ -22,6 +22,7 @@ def get_website_metadata(url: str):
             favicon = requests.compat.urljoin(url, favicon)
 
         return {
+            'type':'web',
             'title': title,
             'favicon': favicon
         }

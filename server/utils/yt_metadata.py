@@ -3,7 +3,8 @@ from fastapi import HTTPException
 def get_youtube_metadata(video_url: str):
     try:
         yt = YouTube(video_url)
-        video_data = {
+        return {
+            "type":"video",
             "title": yt.title,
             "thumbnail_url": yt.thumbnail_url,
             "channel_name": yt.author
