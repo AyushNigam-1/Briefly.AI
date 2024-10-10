@@ -8,4 +8,6 @@ export type web_metadata = {
     type: string,
     title: string;
     favicon: string;
+    canonical_url: string,
+    meta_description: string
 };
