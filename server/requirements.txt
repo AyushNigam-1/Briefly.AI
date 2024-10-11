@@ -42,3 +42,4 @@ fastapi
 uvicorn
 pytube
 bs4
+tldextract

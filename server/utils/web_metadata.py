@@ -1,17 +1,17 @@
 import requests
 from bs4 import BeautifulSoup
 from fastapi import HTTPException
-
+import tldextract
 def get_website_metadata(url: str):
     try:
         response = requests.get(url)
         response.raise_for_status()  
         soup = BeautifulSoup(response.content, 'html.parser')
 
-        
+        # Extract the title of the webpage
         title = soup.title.string if soup.title else 'No title found'
 
-        
+        # Extract the favicon of the webpage
         favicon = None
         icon_link = soup.find('link', rel='icon')
         if not icon_link:
@@ -21,21 +21,17 @@ def get_website_metadata(url: str):
             if not favicon.startswith(('http://', 'https://')):
                 favicon = requests.compat.urljoin(url, favicon)
 
-        
-        canonical_link = soup.find('link', rel='canonical')
-        canonical_url = canonical_link['href'] if canonical_link else url  
-
-        
+        # Extract the meta description of the webpage
         description_tag = soup.find('meta', attrs={'name': 'description'})
         meta_description = description_tag['content'] if description_tag else 'No description found'
 
-        
+        # Return the metadata as a dictionary
         return {
             'type': 'web',
             'title': title,
             'favicon': favicon,
-            'canonical_url': canonical_url,
-            'meta_description': meta_description
+            'meta_description': meta_description,
+            'base_url': tldextract.extract(url).domain
         }
 
     except requests.RequestException as e:

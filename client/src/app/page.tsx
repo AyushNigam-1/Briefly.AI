@@ -4,12 +4,13 @@ import Image from "next/image";
 import loader from "../../public/805.svg";
 import { yt_metadata, web_metadata } from "./types";
 import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
 
 export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [metadata, setMetadata] = useState<yt_metadata | web_metadata | null>(null);
-
+  const [url, setUrl] = useState<string | null>()
   function isValidUrl(urlString: string): boolean {
     try {
       new URL(urlString);
@@ -34,11 +35,12 @@ export default function Home() {
           }
         }
         const data = await response.json();
+        setUrl(url)
         setMetadata(data);
-        console.log(data)
         setError(null);
       } catch (err: any) {
         setMetadata(null)
+        setUrl(null)
         setError(err.message);
       } finally {
         setLoading(false);
@@ -58,7 +60,7 @@ export default function Home() {
     <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 font-mono">
       <div className="flex flex-col gap-10 w-[800px]">
         <h3 className="text-gray-100 font-bold text-4xl">
-          Get Instant Summarization Of YouTube Videos & Websites
+          Quick Summaries of YouTube Content & Web Pages
         </h3>
 
         <div className="flex">
@@ -79,29 +81,26 @@ export default function Home() {
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                   </svg>
-
                 </>
               )
             )}
           </span>
         </div>
-
-        <button className="bg-gray-800 w-min flex items-center gap-1 text-xl p-2 px-3 rounded-full disabled:line-through" disabled={!metadata}>
-
-          Summarize
-
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-            className="size-6"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 8.25L21 12m0 0-3.75 3.75M21 12H3" />
-          </svg>
-        </button>
-
+        <Link href={`/summary/${encodeURIComponent(url ? url : "")}`}>
+          <button className="bg-gray-800 w-min flex items-center gap-1 text-xl p-2 px-3 rounded-full disabled:line-through" disabled={!metadata}>
+            Summarize
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="size-6"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 8.25L21 12m0 0-3.75 3.75M21 12H3" />
+            </svg>
+          </button>
+        </Link>
         {/* Wrapping div for metadata with fixed min-height */}
         <div className="min-h-[100px]">
           <AnimatePresence>
@@ -122,13 +121,20 @@ export default function Home() {
                   </div>
                 </motion.div>
               ) : (
-                <div className="bg-green-900/50 rounded-md flex p-2 gap-3 items-center text-green-300">
-                  <img src={metadata.favicon} alt="Website favicon" className="rounded-md" width="40" height="40" />
-                  <div className="flex flex-col gap-1">
-                    <h4 className="font-bold">{metadata.title}</h4>
-                    <p>{metadata.meta_description}</p>
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <div className="bg-green-900/50 rounded-md flex p-2 gap-3 items-center text-green-300">
+                    <img src={metadata.favicon} alt="Website favicon" className="rounded-md" width="40" height="40" />
+                    <div className="flex flex-col gap-1">
+                      <h4 className="font-bold">{metadata.title}</h4>
+                      <p>{metadata.base_url}</p>
+                    </div>
                   </div>
-                </div>
+                </motion.div>
               )
             )}
           </AnimatePresence>
