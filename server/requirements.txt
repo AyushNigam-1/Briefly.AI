@@ -43,3 +43,5 @@ uvicorn
 pytube
 bs4
 tldextract
+youtube-transcript-api
+unstructured

@@ -101,7 +101,6 @@ export default function Home() {
             </svg>
           </button>
         </Link>
-        {/* Wrapping div for metadata with fixed min-height */}
         <div className="min-h-[100px]">
           <AnimatePresence>
             {metadata && (
@@ -115,7 +114,7 @@ export default function Home() {
                   <div className="bg-green-900/50 rounded-md flex p-2 gap-2 items-center text-green-300">
                     <img src={metadata.thumbnail_url} alt="Video thumbnail" className="rounded-md" width="80" height="80" />
                     <div className="flex flex-col gap-1">
-                      <h4 className="font-bold">{metadata.title}</h4>
+                      <h4 className="font-bold truncate">{metadata.title}</h4>
                       <p>{metadata.channel_name}</p>
                     </div>
                   </div>
