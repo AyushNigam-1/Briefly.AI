@@ -2,7 +2,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import "tailwindcss/tailwind.css";
+
 const SummaryPage = () => {
     const params = useParams();
     const url = params?.url as string;
@@ -27,8 +27,6 @@ const SummaryPage = () => {
 
                 const data = await response.json();
                 console.log(data.summary)
-                // const summary = await marked(data.summary)
-                // console.log(summary)
                 setSummary(data.summary);
             } catch (err: any) {
                 setError(err.message || "An unknown error occurred.");
@@ -44,20 +42,29 @@ const SummaryPage = () => {
 
     return (
         <div className="gap-3 flex justify-center items-center h-[100vh] w-[100vw]" >
+
             {
-                loading ? <img src="/loader.gif" /> : <AnimatePresence>
+                loading ? <div className="flex-col gap-4 w-full flex items-center justify-center">
+                    <div
+                        className="w-20 h-20 border-4 border-transparent text-blue-400 text-4xl animate-spin flex items-center justify-center border-t-blue-400 rounded-full"
+                    >
+                        <div
+                            className="w-16 h-16 border-4 border-transparent text-red-400 text-2xl animate-spin flex items-center justify-center border-t-red-400 rounded-full"
+                        ></div>
+                    </div>
+                </div> : <AnimatePresence>
                     <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
                         transition={{ duration: 0.5 }}
                     >
-                        {/* <div className="bg-gray-800 p-4 rounded-lg shadow w-[70%] h-[70%]" > */}
-                        <div
-                            dangerouslySetInnerHTML={{ __html: summary }}
-                            className="text-white"
-                        />
-                        {/* </div> */}
+                        <div className="bg-gray-800 p-4 rounded-lg shadow w-[70%] h-[70%]" >
+                            <div
+                                dangerouslySetInnerHTML={{ __html: summary }}
+                                className="text-white"
+                            />
+                        </div>
                     </motion.div>
                 </AnimatePresence>
             }

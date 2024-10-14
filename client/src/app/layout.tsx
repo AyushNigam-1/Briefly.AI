@@ -28,7 +28,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <div className="max-h-[100vh] max-w-[100vw] overflow-hidden">
+          <img src="./1092758.jpg" alt="" className="h-[100%] w-[100%] absolute" />
+          {children}
+        </div>
       </body>
     </html>
   );
