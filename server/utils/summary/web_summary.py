@@ -8,11 +8,13 @@ load_dotenv()
 
 api_key = os.getenv("groq_api_key")
 
-def get_web_summary(url: str) -> str:
+def get_web_summary(url: str,lang:str) -> str:
     llm = ChatGroq(model="Gemma-7b-It", groq_api_key=api_key)
 
     prompt_template = """
     Provide a summary of the following webpage content in 300 words:
+    Ensure the summary is written entirely in {language}. 
+    Ensure the text is well-structured for webpage display.
     Content: {text}
     """
     prompt = PromptTemplate(template=prompt_template, input_variables=["text"])
@@ -24,6 +26,6 @@ def get_web_summary(url: str) -> str:
 
     docs = loader.load()
     chain = load_summarize_chain(llm, chain_type="stuff", prompt=prompt)
-    summary = chain.run(docs)
+    summary = chain.run(docs,language=lang)
 
     return summary

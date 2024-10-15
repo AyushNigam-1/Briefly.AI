@@ -57,14 +57,11 @@ export default function Home() {
   };
 
   return (
-
-
     <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 font-mono">
       <div className="flex flex-col gap-10 w-[800px]">
         <h3 className="text-gray-100 font-bold text-4xl">
           Quick Summaries of YouTube Content & Web Pages
         </h3>
-
         <div className="flex">
           <input
             type="text"
