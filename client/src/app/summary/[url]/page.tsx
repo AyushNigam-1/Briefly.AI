@@ -1,5 +1,6 @@
 "use client";
 import { AnimatePresence, motion } from "framer-motion";
+import { div } from "framer-motion/client";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -17,9 +18,8 @@ const SummaryPage = () => {
     const [summary, setSummary] = useState<string>("");
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
-    const [selectedLang, setSelectedLang] = useState<string>("en");
 
-    const fetchSummary = async (lang: string) => {
+    const fetchSummary = async (lang?: string | 'en' | null) => {
         try {
             const response = await fetch(
                 `http://localhost:8000/summarize/?url=${url}&lang=${lang}`
@@ -43,12 +43,12 @@ const SummaryPage = () => {
             setLoading(false);
             return;
         }
-        fetchSummary(selectedLang);
-    }, [url, selectedLang]);
+        fetchSummary();
+    }, [url]);
 
     const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const languageCode = e.target.value;
-        setSelectedLang(languageCode);
+        fetchSummary(languageCode)
         setLoading(true);
     };
 
@@ -70,7 +70,6 @@ const SummaryPage = () => {
                     >
                         <div className="bg-gray-800 p-4 rounded-lg shadow w-[70%] h-[70%]">
                             <select
-                                value={selectedLang}
                                 onChange={handleLanguageChange}
                                 className="mb-4 p-2 rounded border"
                             >
@@ -83,10 +82,12 @@ const SummaryPage = () => {
                             {error ? (
                                 <p className="text-red-500">{error}</p>
                             ) : (
-                                <div
-                                    dangerouslySetInnerHTML={{ __html: summary }}
-                                    className="text-white"
-                                />
+                                <div>{summary}</div>
+
+                                // <div
+                                //     dangerouslySetInnerHTML={{ __html: summary }}
+                                //     className="text-white"
+                                // />
                             )}
                         </div>
                     </motion.div>

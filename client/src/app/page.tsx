@@ -70,11 +70,9 @@ export default function Home() {
             placeholder="e.g https://youtu.be/IHkGe92LG_A?si=cjovoaz-goQNn00Y or https://heroicons.com/"
           />
           <span className="px-4  bg-gray-700/50 rounded-e-full flex gap-1.5 items-center justify-center text-gray-400">
-            {loading ? (
-              <>
-                <Image src={loader} alt="loader" width="20" height="20" />
-              </>
-            ) : (
+            {loading ? (<>
+              <Image src={loader} alt="loader" width="20" height="20" />
+            </>) : (
               metadata && (
                 <>
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -108,7 +106,6 @@ export default function Home() {
               </svg>
             </button>
           </div>
-
         </Link>
         <div className="min-h-[100px]">
           <AnimatePresence>
