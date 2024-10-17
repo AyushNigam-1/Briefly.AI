@@ -9,6 +9,6 @@ def get_youtube_metadata(video_url: str):
             "thumbnail_url": yt.thumbnail_url,
             "channel_name": yt.author
         }
-        return video_data
+
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
