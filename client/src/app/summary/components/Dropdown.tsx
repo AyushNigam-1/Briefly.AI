@@ -1,35 +1,23 @@
-import { useState } from "react";
+import { ReactNode, useState } from "react";
 
-// Define a TypeScript type for the user object
-interface User {
-    id: number;
-    name: string;
-    img: string;
+interface Option {
+    value?: string;
+    label?: string;
 }
 
-const users: User[] = [
-    {
-        id: 0,
-        name: "Wade Cooper",
-        img: "https://images.unsplash.com/photo-1491528323818-fdd1faba62cc?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-    {
-        id: 1,
-        name: "Tom Cook",
-        img: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    },
-];
+interface DropdownProps {
+    icon: ReactNode;
+    options: Option[];
+    setOption: (value?: Option) => void
+    selectedOption?: Option
+}
 
-export default function Dropdown() {
-    const [isOpen, setIsOpen] = useState<boolean>(false); // Boolean state
-    const [selectedUser, setSelectedUser] = useState<User>(users[1]); // User state
-
-    // Toggle dropdown open/close state
+const Dropdown: React.FC<DropdownProps> = ({ icon, options, setOption, selectedOption }) => {
+    const [isOpen, setIsOpen] = useState<boolean>(false);
     const toggleDropdown = () => setIsOpen((prev) => !prev);
 
-    // Handle user selection
-    const handleSelect = (user: User) => {
-        setSelectedUser(user);
+    const handleSelect = (option: Option) => {
+        setOption(option)
         setIsOpen(false);
     };
 
@@ -45,12 +33,8 @@ export default function Dropdown() {
                     aria-labelledby="listbox-label"
                 >
                     <span className="flex items-center">
-                        <img
-                            src={selectedUser.img}
-                            alt={selectedUser.name}
-                            className="h-5 w-5 flex-shrink-0 rounded-full"
-                        />
-                        <span className="ml-3 block truncate">{selectedUser.name}</span>
+                        {icon}
+                        <span className="ml-3 block truncate">{selectedOption?.label}</span>
                     </span>
                     <span className="pointer-events-none absolute inset-y-0 right-0 ml-3 flex items-center pr-2">
                         <svg
@@ -74,22 +58,22 @@ export default function Dropdown() {
                         role="listbox"
                         aria-labelledby="listbox-label"
                     >
-                        {users.map((user) => (
+                        {options.map((option) => (
                             <li
-                                key={user.id}
+                                key={Math.random()}
                                 className="relative cursor-default select-none py-2 pl-3 pr-9 "
-                                onClick={() => handleSelect(user)}
+                                onClick={() => handleSelect(option)}
                                 role="option"
                             >
                                 <div className="flex items-center">
-                                    <img
+                                    {/* <img
                                         src={user.img}
                                         alt={user.name}
                                         className="h-5 w-5 flex-shrink-0 rounded-full"
-                                    />
-                                    <span className="ml-3 block truncate">{user.name}</span>
+                                    /> */}
+                                    <span className="ml-3 block truncate">{option.label}</span>
                                 </div>
-                                {selectedUser.id === user.id && (
+                                {selectedOption?.value === option.value && (
                                     <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-indigo-600">
                                         <svg
                                             className="h-5 w-5"
@@ -113,3 +97,4 @@ export default function Dropdown() {
         </div>
     );
 }
+export default Dropdown;
