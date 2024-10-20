@@ -19,7 +19,7 @@ def get_youtube_summary(url: str, lang: str, tone: str) -> str:
     Provide a {tone} summary of the following YouTube content in 300 words.
     The summary should be written entirely in {language}. 
 
-    Ensure the summary is formatted for webpage display using proper HTML tags 
+    Ensure the summary is formatted for webpage display
     
     Content: {text}
     """

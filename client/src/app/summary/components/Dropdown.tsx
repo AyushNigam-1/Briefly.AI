@@ -26,7 +26,7 @@ const Dropdown: React.FC<DropdownProps> = ({ icon, options, setOption, selectedO
             <div className="relative">
                 <button
                     type="button"
-                    className="relative w-full cursor-default rounded-md bg-gray-900/70 py-1.5 pl-3 pr-10 text-left text-white shadow-sm ring-1 focus:outline-none  sm:text-sm sm:leading-6"
+                    className="relative w-full rounded-md bg-gray-900/70 py-1.5 pl-3 pr-10 text-left text-white shadow-sm ring-1 focus:outline-none  sm:text-sm sm:leading-6 cursor-pointer"
                     onClick={toggleDropdown}
                     aria-haspopup="listbox"
                     aria-expanded={isOpen}
@@ -61,7 +61,7 @@ const Dropdown: React.FC<DropdownProps> = ({ icon, options, setOption, selectedO
                         {options.map((option) => (
                             <li
                                 key={Math.random()}
-                                className="relative cursor-default select-none py-2 pl-3 pr-9 "
+                                className="relative cursor-pointer hover:bg-gray-700/50 select-none py-2 pl-3 pr-9 "
                                 onClick={() => handleSelect(option)}
                                 role="option"
                             >
