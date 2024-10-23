@@ -46,3 +46,4 @@ tldextract
 youtube-transcript-api
 unstructured
 meta_yt
+sentence-transformers

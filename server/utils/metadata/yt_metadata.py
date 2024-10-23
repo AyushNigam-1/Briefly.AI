@@ -11,21 +11,17 @@ def extract_video_id(url: str) -> str:
     else:
         raise ValueError("Invalid YouTube URL")
     
-    # Clean video ID by removing any extra query parameters
     return video_id.split("&")[0].split("?")[0]
 
 def get_youtube_metadata(video_url: str):
     try:
-        # Extract the clean video ID
+        
         video_id = extract_video_id(video_url)
-
-        # Fetch metadata using the oEmbed API
         metadata_url = f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={video_id}&format=json"
         response = requests.get(metadata_url)
         response.raise_for_status()
         metadata = response.json()
 
-        # Check for transcript availability
         transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
 
         return {
@@ -39,4 +35,4 @@ def get_youtube_metadata(video_url: str):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error: {str(e)}")
 
-# Example usage
+

@@ -70,7 +70,7 @@ const SummaryPage: React.FC = () => {
 
     return (
         <div className="gap-3 flex justify-center items-center h-[100vh] w-[100vw]">
-            <div className="flex flex-col gap-6 p-4 rounded-lg shadow w-[70%] h-[95%] z-50">
+            <div className="flex flex-col gap-6 p-4 rounded-lg shadow w-[70%] h-[95%] z-50 overflow-y-scroll scrollbar-thumb-gray-500 scrollbar-track-transparent scrollbar-thin">
                 <div className="flex justify-between">
                     <div className="gap-4 flex text-base">
                         <button className=" flex gap-1 shadow-sm ring-1 items-center bg-gray-900/70 px-4 py-2  rounded-lg" > <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5">
@@ -97,7 +97,7 @@ const SummaryPage: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="bg-gray-900/70 font-mono overflow-y-scroll scrollbar-thumb-gray-500 scrollbar-track-transparent scrollbar-thin w-100 p-4 rounded-lg prose-gray prose-lg w-full max-w-none h-100">
+                <div className="bg-gray-900/70 font-mono  scrollbar-thumb-gray-500 scrollbar-track-transparent scrollbar-thin w-100 p-4 rounded-lg prose-gray prose-lg w-full max-w-none">
                     <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
@@ -107,7 +107,10 @@ const SummaryPage: React.FC = () => {
                         {data?.summary}
                     </ReactMarkdown>
                 </div>
-                {queries.length ? queries.map(query => <div className="bg-gray-900/70 p-4 rounded-lg font-mono" >
+                {queries.length ? queries.map(query => <div className="bg-gray-900/70 p-4 rounded-lg font-mono flex gap-2 items-center" >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                    </svg>
                     {query}
                 </div>) : ""}
                 <QueryInput setQueries={setQueries} />
