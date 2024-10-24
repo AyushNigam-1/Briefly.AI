@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routes.summarizer import router as summarizer_router
 from routes.metadata import router as metadata_router
-
+from routes.query import router as query_router
 app = FastAPI()
 
 app.add_middleware(
@@ -15,6 +15,8 @@ app.add_middleware(
 
 app.include_router(summarizer_router)
 app.include_router(metadata_router)
+app.include_router(query_router)
+
 
 if __name__ == "__main__":
     import uvicorn

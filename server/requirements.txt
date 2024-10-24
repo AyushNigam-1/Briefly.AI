@@ -47,3 +47,4 @@ youtube-transcript-api
 unstructured
 meta_yt
 sentence-transformers
+pinecone-client

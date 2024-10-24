@@ -1,9 +1,12 @@
 from utils.query.embeddings import generate_embedding
 from utils.query.pinecone_db import store_embedding
-def save_summary_with_embedding(summary: str, video_id: str):
+
+def embed_and_save(summary: str, video_id: str):
+    print(video_id)
     embedding = generate_embedding(summary)
+    print("embedding --> ", embedding)
     if embedding is None:
         print("Failed to generate embedding. Skipping storage.")
         return
 
-    store_embedding(embedding, video_id, summary)
+    store_embedding(video_id,embedding)

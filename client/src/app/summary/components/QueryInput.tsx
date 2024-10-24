@@ -2,15 +2,50 @@ import { KeyboardEvent } from "react";
 
 interface QueryInputProps {
     setQueries: React.Dispatch<React.SetStateAction<string[]>>;
+    url: string;
+    setLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const QueryInput = ({ setQueries }: QueryInputProps) => {
-    const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+const QueryInput = ({ setQueries, url, setLoading }: QueryInputProps) => {
+    const extractVideoId = (url: string): string | null => {
+        const regex = /(?:youtube\.com\/.*v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+        const match = decodeURIComponent(url).match(regex);
+        return match ? match[1] : null;
+    };
+    const handleKeyDown = async (e: KeyboardEvent<HTMLInputElement>) => {
         if (e.key === "Enter" && e.currentTarget.value.trim()) {
+            setLoading(true)
             const inputValue = e.currentTarget.value;
             setQueries((query) => [...query, inputValue]);
-            e.currentTarget.value = "";
+            try {
+                const result = await fetchQueryResult(inputValue);
+                setQueries((queries) => [...queries, result]);
+                e.currentTarget.value = ' '
+            } catch (error) {
+                console.error("Error fetching query result:", error);
+            } finally {
+                setLoading(false);
+            }
         }
+        console.log("ended")
+    };
+    const fetchQueryResult = async (query: string) => {
+        let video_id = extractVideoId(url)
+        const response = await fetch("http://localhost:8000/query", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ query, video_id }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log(data)
+        return data
     };
     return (
         <div className="flex" > <span className="bg-gray-700/50 py-4 pl-3 rounded-s-md">

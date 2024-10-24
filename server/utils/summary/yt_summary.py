@@ -7,7 +7,7 @@ import os
 import requests
 from urllib.parse import urlparse, parse_qs
 from dotenv import load_dotenv
-from common import embed_and_save
+from common.embed_and_save import embed_and_save
 
 load_dotenv()
 api_key = os.getenv("groq_api_key")
