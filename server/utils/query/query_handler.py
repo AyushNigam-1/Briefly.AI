@@ -36,7 +36,6 @@ def chat_with_summary(user_input: str):
 
     docs = [Document(page_content=match.get('metadata', {}).get('text', '')) for match in results['matches']]
 
-
     qa_chain = load_qa_chain(llm, chain_type="stuff", prompt=prompt)
 
     input_data = {"input_documents": docs, "query": user_input}
