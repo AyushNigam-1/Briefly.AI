@@ -51,7 +51,6 @@ const Dropdown: React.FC<DropdownProps> = ({ icon, options, setOption, selectedO
                         </svg>
                     </span>
                 </button>
-
                 {isOpen && (
                     <ul
                         className="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded-md bg-gray-900 text-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm"

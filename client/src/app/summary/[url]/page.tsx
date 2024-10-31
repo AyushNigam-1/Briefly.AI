@@ -9,6 +9,7 @@ import ErrorPage from "../components/ErrorPage";
 import Loading from "../components/Loading";
 import QueryInput from "../components/QueryInput";
 // import loader from '.'
+import { query } from "@/app/types";
 interface SummaryResponse {
     summary: string;
 }
@@ -50,9 +51,11 @@ const SummaryPage: React.FC = () => {
     const url = params?.url as string;
     const [selectedLanguage, setSelectedLanguage] = useState<props | undefined>(languages[0]);
     const [selectedTone, setSelectedTone] = useState<props | undefined>(tones[0]);
-    const [queries, setQueries] = useState<string[]>([])
+    const [queries, setQueries] = useState<query[]>([])
     const [isLoading, setLoading] = useState<boolean>(false)
+    const queriesContainerRef = useRef<HTMLDivElement | null>(null);
     const key = url ? [url, selectedLanguage, selectedTone] : null;
+
 
     const { data, error } = useSWR<SummaryResponse>(key,
         () => fetchSummary(url, selectedLanguage?.value, selectedTone?.value),
@@ -64,21 +67,20 @@ const SummaryPage: React.FC = () => {
     );
 
     const loading = !data && !error;
+    useEffect(() => {
+        if (queriesContainerRef.current) {
+            queriesContainerRef.current.scrollTop = queriesContainerRef.current.scrollHeight + 10;
+        }
+    }, [queries]);
 
     if (error) return <ErrorPage />
 
     if (loading) return <Loading />
-    const queriesContainerRef = useRef<HTMLDivElement | null>(null);
 
-    useEffect(() => {
-        if (queriesContainerRef.current) {
-            queriesContainerRef.current.scrollTop = queriesContainerRef.current.scrollHeight;
-        }
-    }, [queries]);
     return (
         <div className="gap-3 flex items-center justify-center flex-col max-h-[100vh] max-w-[100vw] p-4">
-            <div className="flex flex-col gap-6 rounded-lg shadow w-[75%] z-50 overflow-y-scroll scrollbar-thumb-gray-500 scrollbar-track-transparent scrollbar-thin">
-                <div className="bg-gray-900/70 font-mono scrollbar-thumb-gray-500 scrollbar-track-transparent scrollbar-thin w-100 p-4 rounded-lg prose-gray prose-lg w-full max-w-none">
+            <div className="flex flex-col gap-3 rounded-lg shadow w-[75%] z-50 overflow-y-scroll scrollbar-thumb-gray-500 scrollbar-track-transparent scrollbar-thin" ref={queriesContainerRef}>
+                <div className="bg-gray-900/70 font-mono scrollbar-thumb-gray-500  w-100 p-4 rounded-lg prose-gray prose-lg w-full max-w-none">
                     <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
@@ -88,12 +90,18 @@ const SummaryPage: React.FC = () => {
                         {data?.summary}
                     </ReactMarkdown>
                 </div>
-                <div ref={queriesContainerRef} className="max-h-60 overflow-y-scroll"> {/* Use the ref for scrolling */}
+                <div className="max-h-60 flex flex-col gap-3"> {/* Use the ref for scrolling */}
                     {queries.length ? queries.map((query, index) => (
                         <div key={index} className="bg-gray-900/70 p-4 rounded-lg font-mono flex gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6 w-max">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                            </svg>
+                            <div>
+                                {
+                                    query.sender == 'user' ? <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6 w-max">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                    </svg> : <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6 w-max">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
+                                    </svg>
+                                }
+                            </div>
                             <div>
                                 <ReactMarkdown
                                     remarkPlugins={[remarkGfm]}
@@ -101,7 +109,7 @@ const SummaryPage: React.FC = () => {
                                         ul: ({ children }) => <ul className="list-disc ml-5">{children}</ul>
                                     }}
                                 >
-                                    {query}
+                                    {query.content}
                                 </ReactMarkdown>
                             </div>
                         </div>
@@ -122,7 +130,7 @@ const SummaryPage: React.FC = () => {
                 </div>
             </div>
             <QueryInput setQueries={setQueries} url={url} setLoading={setLoading} />
-        </div>
+        </div >
 
     );
 };

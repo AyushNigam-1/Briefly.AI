@@ -11,3 +11,7 @@ export type web_metadata = {
     base_url: string,
     meta_description: string
 };
+export interface query {
+    sender?: string;
+    content?: string
+};

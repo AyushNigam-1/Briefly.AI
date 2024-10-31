@@ -17,6 +17,7 @@ def get_web_summary(url: str,lang:str) -> str:
     Ensure the text is well-structured for webpage display.
     Content: {text}
     """
+    
     prompt = PromptTemplate(template=prompt_template, input_variables=["text"])
 
     loader = UnstructuredURLLoader(

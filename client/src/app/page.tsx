@@ -119,7 +119,7 @@ export default function Home() {
                 >
                   <div className="bg-gray-900/70 rounded-md flex p-2 gap-2 items-center text-gray-300">
                     <img src={metadata.thumbnail_url} alt="Video thumbnail" className="rounded-md" width="80" height="80" />
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-1 truncate">
                       <h4 className="font-bold truncate">{metadata.title}</h4>
                       <p>{metadata.channel_name}</p>
                     </div>
