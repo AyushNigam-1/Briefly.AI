@@ -90,7 +90,7 @@ const SummaryPage: React.FC = () => {
                         {data?.summary}
                     </ReactMarkdown>
                 </div>
-                <div className="max-h-60 flex flex-col gap-3"> {/* Use the ref for scrolling */}
+                <div className="max-h-60 flex flex-col gap-3">
                     {queries.length ? queries.map((query, index) => (
                         <div key={index} className="bg-gray-900/70 p-4 rounded-lg font-mono flex gap-2">
                             <div>
@@ -129,7 +129,10 @@ const SummaryPage: React.FC = () => {
                     }
                 </div>
             </div>
-            <QueryInput setQueries={setQueries} url={url} setLoading={setLoading} />
+            <div className="" >
+
+                <QueryInput setQueries={setQueries} url={url} setLoading={setLoading} />
+            </div>
         </div >
 
     );
