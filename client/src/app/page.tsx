@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Image from "next/image";
 import loader from "../../public/805.svg";
 import { yt_metadata, web_metadata } from "./types";
@@ -11,6 +11,8 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [metadata, setMetadata] = useState<yt_metadata | web_metadata | null>(null);
   const [url, setUrl] = useState<string | null>()
+  const [file, setFile] = useState<FileList | undefined>();
+  const doc = useRef<HTMLInputElement | null>(null);
   function isValidUrl(urlString: string): boolean {
     try {
       new URL(urlString);
@@ -62,26 +64,35 @@ export default function Home() {
         <h3 className="text-gray-100 font-bold text-4xl">
           Quick Summaries of YouTube Content & Web Pages
         </h3>
-        <div className="flex">
-          <input
-            type="text"
-            onChange={({ target }) => getMetadata(target.value)}
-            className="bg-gray-700/50 py-4 w-full rounded-s-full pl-6 outline-none"
-            placeholder="e.g https://youtu.be/IHkGe92LG_A?si=cjovoaz-goQNn00Y or https://heroicons.com/"
-          />
-          <span className="px-4  bg-gray-700/50 rounded-e-full flex gap-1.5 items-center justify-center text-gray-400">
-            {loading ? (<>
-              <Image src={loader} alt="loader" width="20" height="20" />
-            </>) : (
-              metadata && (
-                <>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                  </svg>
-                </>
-              )
-            )}
-          </span>
+        <div className="flex gap-2">
+          <div className="flex w-full">
+            <input
+              type="text"
+              onChange={({ target }) => getMetadata(target.value)}
+              className="bg-gray-700/50 py-4 w-full rounded-s-full pl-6 outline-none"
+              placeholder="e.g https://youtu.be/IHkGe92LG_A?si=cjovoaz-goQNn00Y or https://heroicons.com/"
+            />
+            <span className="px-4  bg-gray-700/50 rounded-e-full flex gap-1.5 items-center justify-center text-gray-400">
+              {loading ? (<>
+                <Image src={loader} alt="loader" width="20" height="20" />
+              </>) : (
+                metadata && (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                    </svg>
+                  </>
+                )
+              )}
+            </span>
+          </div>
+          <button className="flex bg-gray-700/50 p-2 items-center rounded-full px-4" onClick={() => doc.current?.click()} >
+            <input type="file" className="hidden" onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFile(e.target.files ?? undefined)} ref={doc as React.LegacyRef<HTMLInputElement>} />
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+            </svg>
+
+          </button>
         </div>
         <Link href={`/summary/${encodeURIComponent(url ? url : "")}`}>
           <div className="p-[2px] bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full inline-block">

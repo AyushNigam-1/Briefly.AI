@@ -48,3 +48,4 @@ unstructured
 meta_yt
 sentence-transformers
 pinecone-client
+

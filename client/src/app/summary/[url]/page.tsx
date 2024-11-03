@@ -90,7 +90,7 @@ const SummaryPage: React.FC = () => {
                         {data?.summary}
                     </ReactMarkdown>
                 </div>
-                <div className="max-h-60 flex flex-col gap-3">
+                <div className="max-h-60 flex flex-col gap-3 z-50">
                     {queries.length ? queries.map((query, index) => (
                         <div key={index} className="bg-gray-900/70 p-4 rounded-lg font-mono flex gap-2">
                             <div>
@@ -129,7 +129,7 @@ const SummaryPage: React.FC = () => {
                     }
                 </div>
             </div>
-            <div className="" >
+            <div className="z-50" >
 
                 <QueryInput setQueries={setQueries} url={url} setLoading={setLoading} />
             </div>
