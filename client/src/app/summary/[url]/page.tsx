@@ -10,6 +10,7 @@ import Loading from "../components/Loading";
 import QueryInput from "../components/QueryInput";
 // import loader from '.'
 import { query } from "@/app/types";
+import Navbar from "@/app/components/Navbar";
 interface SummaryResponse {
     summary: string;
 }
@@ -78,8 +79,9 @@ const SummaryPage: React.FC = () => {
     if (loading) return <Loading />
 
     return (
-        <div className="gap-3 flex items-center justify-center flex-col max-h-[100vh] max-w-[100vw] p-4">
-            <div className="flex flex-col gap-3 rounded-lg shadow w-[75%] z-50 overflow-y-scroll scrollbar-thumb-gray-500 scrollbar-track-transparent scrollbar-thin" ref={queriesContainerRef}>
+        <div className="gap-1 flex items-center justify-center flex-col max-h-[100vh] max-w-[100vw]">
+            <Navbar />
+            <div className="flex flex-col gap-3 rounded-lg shadow container z-50 overflow-y-scroll scrollbar-thumb-gray-500 scrollbar-track-transparent scrollbar-thin" ref={queriesContainerRef}>
                 <div className="bg-gray-900/70 font-mono scrollbar-thumb-gray-500  w-100 p-4 rounded-lg prose-gray prose-lg w-full max-w-none">
                     <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
@@ -129,8 +131,7 @@ const SummaryPage: React.FC = () => {
                     }
                 </div>
             </div>
-            <div className="z-50" >
-
+            <div className="z-50 w-full" >
                 <QueryInput setQueries={setQueries} url={url} setLoading={setLoading} />
             </div>
         </div >

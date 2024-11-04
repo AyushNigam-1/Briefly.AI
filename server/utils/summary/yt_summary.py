@@ -8,6 +8,7 @@ import requests
 from urllib.parse import urlparse, parse_qs
 from dotenv import load_dotenv
 from common.embed_and_save import embed_and_save
+from youtube_transcript_api import _api
 
 load_dotenv()
 api_key = os.getenv("groq_api_key")
@@ -20,8 +21,8 @@ def session_request(method, url, *args, **kwargs):
     response.raise_for_status()
     return response.json()
 
-from youtube_transcript_api import _api
 _api.request = session_request
+
 
 def extract_video_id(url: str) -> str:
     """Extracts the video ID from various YouTube URL formats."""
@@ -91,7 +92,7 @@ def get_youtube_summary(url: str, lang: str, tone: str) -> str:
 
     chain = load_summarize_chain(llm, chain_type="stuff", prompt=prompt)
     summary = chain.run(input_data)
-    embed_and_save(summary,video_id)
+    # embed_and_save(summary,video_id)
 
     return summary
 
