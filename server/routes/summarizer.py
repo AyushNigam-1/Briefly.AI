@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
-from utils.summary.yt_summary import get_youtube_summary
-from utils.summary.web_summary import get_web_summary
+from controllers.summary.yt_summary import get_youtube_summary
+from controllers.summary.web_summary import get_web_summary
 import validators
 
 router = APIRouter()

@@ -4,8 +4,8 @@ from langchain.chains.question_answering import load_qa_chain
 from langchain.schema import Document
 from langchain_groq import ChatGroq
 from dotenv import load_dotenv
-from utils.query.embeddings import generate_embedding
-from utils.query.pinecone_db import query_embeddings
+from controllers.query.embeddings import generate_embedding
+from controllers.query.pinecone_db import query_embeddings
 
 load_dotenv()
 groq_api_key = os.getenv("groq_api_key")

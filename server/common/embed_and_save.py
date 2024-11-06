@@ -1,5 +1,5 @@
-from utils.query.embeddings import generate_embedding
-from utils.query.pinecone_db import store_embedding
+from controllers.query.embeddings import generate_embedding
+from controllers.query.pinecone_db import store_embedding
 
 def embed_and_save(summary: str, video_id: str):
     print(video_id)

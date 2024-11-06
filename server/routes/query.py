@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from utils.query.query_handler import chat_with_summary  
+from controllers.query.query_handler import chat_with_summary  
 
 router = APIRouter()
 
