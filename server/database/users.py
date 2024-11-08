@@ -1,74 +1,95 @@
-from pymongo import MongoClient
-from bson.objectid import ObjectId
-from flask import Flask, request, jsonify
+from fastapi import APIRouter, HTTPException, Depends
+from pydantic import BaseModel
+from typing import Optional
+import jwt
+import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
+from bson import ObjectId
+from pymongo import MongoClient
 
-app = Flask(__name__)
 
 CONNECTION_STRING = "mongodb+srv://<username>:<password>@<cluster-url>/test?retryWrites=true&w=majority"
 client = MongoClient(CONNECTION_STRING)
-
 db = client['briefly']
-collection = db['summaries']
-users_collection = db['users'] 
+users_collection = db['users']
 
-def write_document(document):
-    """
-    Insert a document into the collection.
-    
-    Parameters:
-    document (dict): The document to be inserted.
-    
-    Returns:
-    str: The ID of the inserted document.
-    """
-    result = collection.insert_one(document)
-    print("Inserted document ID:", result.inserted_id)
-    return str(result.inserted_id)
 
-def read_document_by_id(doc_id):
-    """
-    Read a document from the collection by its ID.
-    
-    Parameters:
-    doc_id (str): The ID of the document to retrieve.
-    
-    Returns:
-    dict: The document if found, or None if not found.
-    """
+SECRET_KEY = "your_secret_key_here"  
+ALGORITHM = "HS256"
+
+
+router = APIRouter()
+
+
+class User(BaseModel):
+    username: str
+    password: str
+
+class UserInDB(User):
+    hashed_password: str
+
+class AuthResponse(BaseModel):
+    message: str
+    token: Optional[str] = None
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+
+def create_access_token(data: dict, expires_delta: Optional[datetime.timedelta] = None) -> str:
+    to_encode = data.copy()
+    expire = datetime.datetime.utcnow() + (expires_delta or datetime.timedelta(hours=1))
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+def verify_token(token: str):
     try:
-        document = collection.find_one({"_id": ObjectId(doc_id)})
-        if document:
-            print("Document found:", document)
-            return document
-        else:
-            print("Document not found")
-            return None
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        return None
-    
-def signup(username, password):
-    if not username or not password:
-        return {"error": "Username and password are required"}, 400
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token has expired")
+    except jwt.JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
-    if users_collection.find_one({"username": username}):
-        return {"error": "Username already exists"}, 400
 
-    hashed_password = generate_password_hash(password)
-    user_data = {
-        "username": username,
-        "password": hashed_password
-    }
+
+def get_user_by_username(username: str):
+    return users_collection.find_one({"username": username})
+
+def create_user(user_data: dict):
     users_collection.insert_one(user_data)
-    return {"message": "User registered successfully"}, 201
 
-def login(username, password):
-    if not username or not password:
-        return {"error": "Username and password are required"}, 400
 
-    user = users_collection.find_one({"username": username})
-    if not user or not check_password_hash(user['password'], password):
-        return {"error": "Invalid username or password"}, 401
+@router.post("/signup", response_model=AuthResponse)
+async def signup(user: User):
+    if not user.username or not user.password:
+        raise HTTPException(status_code=400, detail="Username and password are required")
 
-    return {"message": "Login successful", "user_id": str(user['_id'])}, 200
+    if get_user_by_username(user.username):
+        raise HTTPException(status_code=400, detail="Username already exists")
+
+    hashed_password = generate_password_hash(user.password)
+    create_user({"username": user.username, "password": hashed_password})
+    
+    return {"message": "User registered successfully"}
+
+@router.post("/login", response_model=Token)
+async def login(user: User):
+    if not user.username or not user.password:
+        raise HTTPException(status_code=400, detail="Username and password are required")
+
+    stored_user = get_user_by_username(user.username)
+    if not stored_user or not check_password_hash(stored_user['password'], user.password):
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+
+    token_data = {"username": user.username, "user_id": str(stored_user['_id'])}
+    access_token = create_access_token(data=token_data)
+    
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+def get_db():
+    return db
+

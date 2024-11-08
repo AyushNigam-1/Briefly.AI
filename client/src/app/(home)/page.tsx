@@ -4,7 +4,6 @@ import Image from "next/image";
 import { yt_metadata, web_metadata } from "../types";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { div } from "framer-motion/client";
 import Navbar from "../components/Navbar"
 export default function Home() {
   const [loading, setLoading] = useState(false);
