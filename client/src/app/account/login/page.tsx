@@ -1,3 +1,4 @@
+"use client"
 import React, { useState, FormEvent } from 'react';
 import axios from 'axios';
 
@@ -11,20 +12,17 @@ const page: React.FC = () => {
         event.preventDefault();
         setError('');
         setLoading(true);
-
         const data = {
             action: 'login',
             username,
             password,
         };
-
         try {
-            const response = await axios.post('/api/auth', data, {
+            const response = await axios.post('http://localhost:8000/auth', data, {
                 headers: {
                     'Content-Type': 'application/json',
                 },
             });
-
             if (response.status === 200) {
                 console.log(response.data);
             } else {

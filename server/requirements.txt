@@ -48,5 +48,6 @@ unstructured
 meta_yt
 sentence-transformers
 pinecone-client
-pyjwt
-
+PyJWT
+Werkzeug
+pymongo

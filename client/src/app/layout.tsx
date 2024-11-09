@@ -26,13 +26,20 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-cover bg-center`}
+        style={{
+          backgroundImage: "url('/1092758.jpg')",  // Path to your background image
+          backgroundSize: "cover",   // Ensures the image covers the entire page
+          backgroundPosition: "center center",  // Centers the image both vertically and horizontally
+          backgroundAttachment: "fixed", // Makes the background fixed during scrolling
+          height: "100vh",  // Ensures the body covers the entire viewport height
+        }}
       >
         <div className="relative max-h-[100vh] max-w-[100vw] overflow-hidden">
-          <img src="./1092758.jpg" alt="" className="h-[100%] w-[100%] absolute z-0" />
           <div className="relative z-10">{children}</div>
         </div>
       </body>
     </html>
   );
 }
+
