@@ -2,7 +2,7 @@ from fastapi import  HTTPException , Response
 from pydantic import BaseModel
 from typing import Optional
 import jwt
-import datetime
+from datetime import datetime , timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from pymongo import MongoClient
 from dotenv import load_dotenv
@@ -18,10 +18,9 @@ users_collection = db['users']
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-SECRET_KEY = "your_secret_key"
+SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
 
 class User(BaseModel):
     username: str
@@ -38,11 +37,9 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
-
-
-def create_access_token(data: dict, expires_delta: Optional[datetime.timedelta] = None) -> str:
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
-    expire = datetime.datetime.utcnow() + (expires_delta or datetime.timedelta(hours=1))
+    expire = datetime.datetime.utcnow() + (expires_delta or timedelta(hours=1))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -85,20 +82,21 @@ async def signup(user: User, response: Response):
     access_token = create_access_token(data=token_data)
     response.set_cookie(key="access_token", value=access_token, httponly=True, max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60)
 
-    return {"message": "User registered successfully", "status_code": 201}
+    return {"access_token": access_token, "token_type": "bearer","status_code":201}
 
-async def login(user: User):
-    if not user.username or not user.password:
+async def login(username , password , response):
+    if not username or not password:
         raise HTTPException(status_code=400, detail="Username and password are required")
 
-    stored_user = get_user_by_username(user.username)
-    if not stored_user or not check_password_hash(stored_user['password'], user.password):
+    stored_user = get_user_by_username(username)
+    if not stored_user or not check_password_hash(stored_user['password'], password):
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
-    token_data = {"username": user.username, "user_id": str(stored_user['_id'])}
+    token_data = {"username": username, "user_id": str(stored_user['_id'])}
     access_token = create_access_token(data=token_data)
+    response.set_cookie(key="access_token", value=access_token, httponly=True, max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60)
     
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"access_token": access_token, "token_type": "bearer","status_code":201}
 
 
 def get_db():
