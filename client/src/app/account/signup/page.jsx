@@ -1,11 +1,12 @@
 "use client"
 import React, { useState } from 'react';
 import axios from 'axios';
-
+import { useRouter } from 'next/navigation';
 const Page = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState(null);
+    const router = useRouter()
 
     const submitForm = async (e) => {
         e.preventDefault();
@@ -17,6 +18,8 @@ const Page = () => {
             });
             console.log(response.data);
             alert("Login successful!");
+            router.push("/")
+
         } catch (err) {
             console.error(err);
             setError(err.response?.data?.detail || 'An error occurred');

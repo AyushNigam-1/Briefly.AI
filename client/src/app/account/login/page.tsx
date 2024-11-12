@@ -1,13 +1,13 @@
 "use client"
 import React, { useState, FormEvent } from 'react';
 import axios from 'axios';
-
+import { useRouter } from 'next/navigation';
 const page: React.FC = () => {
     const [username, setUsername] = useState<string>('');
     const [password, setPassword] = useState<string>('');
     const [error, setError] = useState<string>('');
     const [loading, setLoading] = useState<boolean>(false);
-
+    const router = useRouter()
     const handleSubmit = async (event: FormEvent) => {
         event.preventDefault();
         setError('');
@@ -21,6 +21,7 @@ const page: React.FC = () => {
             const response = await axios.post('http://localhost:8000/auth', data);
             if (response.status === 200) {
                 console.log(response.data);
+                router.push("/")
             } else {
                 setError(response.data.detail || 'Something went wrong');
             }

@@ -1,22 +1,18 @@
 from fastapi import  HTTPException , Response
 from pydantic import BaseModel
 from typing import Optional
-import jwt
-from datetime import datetime , timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from pymongo import MongoClient
 from dotenv import load_dotenv
 import os
-from datetime import timedelta
-from fastapi.security import OAuth2PasswordBearer
+from utils.auth import create_access_token , create_user , get_user_by_username
+
 load_dotenv()
 
 CONNECTION_STRING = os.getenv("mongo_db_uri")
 client = MongoClient(CONNECTION_STRING)
 db = client['briefly']
 users_collection = db['users']
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
@@ -37,36 +33,6 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    to_encode = data.copy()
-    expire = datetime.datetime.utcnow() + (expires_delta or timedelta(hours=1))
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-def verify_token(token: str):
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token has expired")
-    except jwt.JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-def get_user_by_username(username: str):
-    return users_collection.find_one({"username": username})
-
-def create_user(user_data: dict):
-    users_collection.insert_one(user_data)
-
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
 
 async def signup(user: User, response: Response):
     if not user.username or not user.password:
@@ -80,25 +46,36 @@ async def signup(user: User, response: Response):
 
     token_data = {"username": user.username}
     access_token = create_access_token(data=token_data)
-    response.set_cookie(key="access_token", value=access_token, httponly=True, max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60)
-
+    response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=False,
+            max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            secure=False,  
+            samesite="Lax"  
+        )
     return {"access_token": access_token, "token_type": "bearer","status_code":201}
 
-async def login(username , password , response):
-    if not username or not password:
+async def login(user: User, response: Response):
+    if not user.username or not user.password:
         raise HTTPException(status_code=400, detail="Username and password are required")
 
-    stored_user = get_user_by_username(username)
-    if not stored_user or not check_password_hash(stored_user['password'], password):
+    stored_user = get_user_by_username(user.username)
+    if not stored_user or not check_password_hash(stored_user['password'], user.password):
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
-    token_data = {"username": username, "user_id": str(stored_user['_id'])}
+    token_data = {"username": user.username, "user_id": str(stored_user['_id'])}
     access_token = create_access_token(data=token_data)
-    response.set_cookie(key="access_token", value=access_token, httponly=True, max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60)
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=False,
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        secure=False,  
+        samesite="Lax"  
+    )
+
+
     
     return {"access_token": access_token, "token_type": "bearer","status_code":201}
-
-
-def get_db():
-    return db
 
