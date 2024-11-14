@@ -21,6 +21,8 @@ const page: React.FC = () => {
             const response = await axios.post('http://localhost:8000/auth', data);
             if (response.status === 200) {
                 console.log(response.data);
+                const token = response.data.access_token;
+                localStorage.setItem('access_token', token);
                 router.push("/")
             } else {
                 setError(response.data.detail || 'Something went wrong');

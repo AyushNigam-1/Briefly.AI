@@ -20,12 +20,17 @@ export default function Home() {
       return false;
     }
   }
-
   const getMetadata = async (url: string) => {
     if (isValidUrl(url)) {
       setLoading(true);
       try {
-        const response = await fetch(`http://127.0.0.1:8000/metadata?url=${encodeURIComponent(url)}`);
+        const token = localStorage.getItem("access_token");
+        const response = await fetch(`http://127.0.0.1:8000/metadata?url=${encodeURIComponent(url)}`, {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+        });
+
         if (!response.ok) {
           if (response.status === 404) {
             throw new Error("We couldn't find any metadata for this URL. Please check if the URL is correct.");
@@ -35,21 +40,21 @@ export default function Home() {
             throw new Error("An unexpected error occurred. Please try again.");
           }
         }
+
         const data = await response.json();
-        setUrl(url)
+        setUrl(url);
         setMetadata(data);
         setError(null);
       } catch (err: any) {
-        setMetadata(null)
-        setUrl(null)
+        setMetadata(null);
+        setUrl(null);
         setError(err.message);
       } finally {
         setLoading(false);
       }
-    }
-    else {
-      setError(null)
-      setMetadata(null)
+    } else {
+      setError(null);
+      setMetadata(null);
     }
   };
 

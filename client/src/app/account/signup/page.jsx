@@ -16,8 +16,8 @@ const Page = () => {
                 username,
                 password,
             });
-            console.log(response.data);
-            alert("Login successful!");
+            const token = response.data.access_token;
+            localStorage.setItem('access_token', token);
             router.push("/")
 
         } catch (err) {
