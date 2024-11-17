@@ -18,7 +18,9 @@ const page: React.FC = () => {
             password,
         };
         try {
-            const response = await axios.post('http://localhost:8000/auth', data);
+            const response = await axios.post('http://localhost:8000/auth', data, {
+                withCredentials: true,
+            });
             if (response.status === 200) {
                 console.log(response.data);
                 const token = response.data.access_token;

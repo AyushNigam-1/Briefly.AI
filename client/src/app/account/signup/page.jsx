@@ -15,6 +15,8 @@ const Page = () => {
                 action: 'signup',
                 username,
                 password,
+            }, {
+                withCredentials: true,
             });
             const token = response.data.access_token;
             localStorage.setItem('access_token', token);

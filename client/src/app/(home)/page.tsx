@@ -5,6 +5,7 @@ import { yt_metadata, web_metadata } from "../types";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Navbar from "../components/Navbar"
+import axios from "axios";
 export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,30 +26,39 @@ export default function Home() {
       setLoading(true);
       try {
         const token = localStorage.getItem("access_token");
-        const response = await fetch(`http://127.0.0.1:8000/metadata?url=${encodeURIComponent(url)}`, {
+        console.log(token);
+
+        const response = await axios.get(`http://127.0.0.1:8000/metadata`, {
+          params: {
+            url: encodeURIComponent(url),
+          },
           headers: {
             "Authorization": `Bearer ${token}`,
           },
+          withCredentials: true,
         });
 
-        if (!response.ok) {
-          if (response.status === 404) {
-            throw new Error("We couldn't find any metadata for this URL. Please check if the URL is correct.");
-          } else if (response.status >= 500) {
-            throw new Error("Server encountered an issue. Please try again later.");
-          } else {
-            throw new Error("An unexpected error occurred. Please try again.");
-          }
-        }
-
-        const data = await response.json();
+        const data = response.data;
         setUrl(url);
         setMetadata(data);
         setError(null);
       } catch (err: any) {
         setMetadata(null);
         setUrl(null);
-        setError(err.message);
+
+        if (err.response) {
+          // Handle specific HTTP errors
+          if (err.response.status === 404) {
+            setError("We couldn't find any metadata for this URL. Please check if the URL is correct.");
+          } else if (err.response.status >= 500) {
+            setError("Server encountered an issue. Please try again later.");
+          } else {
+            setError("An unexpected error occurred. Please try again.");
+          }
+        } else {
+          // Network error or other issues
+          setError(err.message);
+        }
       } finally {
         setLoading(false);
       }
@@ -57,6 +67,7 @@ export default function Home() {
       setMetadata(null);
     }
   };
+
 
   const isYouTubeMetadata = (metadata: yt_metadata | web_metadata): metadata is yt_metadata => {
     return (metadata as yt_metadata).thumbnail_url !== undefined;
