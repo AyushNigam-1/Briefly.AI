@@ -28,10 +28,7 @@ export default function Home() {
         const token = localStorage.getItem("access_token");
         console.log(token);
 
-        const response = await axios.get(`http://127.0.0.1:8000/metadata`, {
-          params: {
-            url: encodeURIComponent(url),
-          },
+        const response = await axios.get(`http://127.0.0.1:8000/metadata?url=${encodeURIComponent(url)}`, {
           headers: {
             "Authorization": `Bearer ${token}`,
           },

@@ -18,7 +18,7 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 
-app.middleware("http")(auth_middleware)
+# app.middleware("http")(auth_middleware)
 
 app.include_router(summarizer_router)
 app.include_router(metadata_router)

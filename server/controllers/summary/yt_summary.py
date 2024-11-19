@@ -75,20 +75,27 @@ def get_youtube_summary(url: str, lang: str, tone: str) -> str:
 
     docs = [Document(page_content=transcript)]
 
+    # prompt_template = """
+    # Provide a {tone} summary of the following YouTube content in 300 words.
+    # The summary should be written entirely in {language}. 
+
+    # Ensure the summary is formatted for webpage display.
+
+    # Content: {text}
+    # """ 
+    
     prompt_template = """
-    Provide a {tone} summary of the following YouTube content in 300 words.
-    The summary should be written entirely in {language}. 
-
-    Ensure the summary is formatted for webpage display.
-
-    Content: {text}
-    """
+Analyze the following YouTube subtitle transcript from a psychological and scientific perspective, applying relevant psychological models such as the Big Five Personality Traits, Maslow’s Hierarchy of Needs, Self-Determination Theory, Cognitive Behavioral Theory, and others. Identify the key psychological traits, behaviors, and motivations expressed in the text, and evaluate how they align with established psychological theories. Provide a critical assessment of the individual’s choices, decision-making, and emotional intelligence. Offer real-world use cases where these traits might manifest, drawing on historical or cultural examples to highlight how similar traits have influenced notable figures or events. Discuss the underlying psychological needs or drives that might explain these behaviors, and use psychological frameworks to provide suggestions for personal growth or improvement. Consider how these behaviors may evolve over time and reflect on their impact on the individual's relationships, professional life, and overall well-being. the subtitle is - {text} and the language should strictly be - {language}
+"""
     prompt = PromptTemplate(
         template=prompt_template, 
-        input_variables=["text", "language", "tone"],
+        # input_variables=["text", "language", "tone"],
+                input_variables=["text", "language"],
+
     )
 
-    input_data = {"input_documents": docs, "language": lang, "tone": tone}
+    # input_data = {"input_documents": docs, "language": lang, "tone": tone}
+    input_data = {"input_documents": docs, "language": lang}
 
     chain = load_summarize_chain(llm, chain_type="stuff", prompt=prompt)
     summary = chain.run(input_data)
