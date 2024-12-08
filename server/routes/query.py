@@ -6,16 +6,15 @@ router = APIRouter()
 
 class QueryRequest(BaseModel):
     query: str
-    video_id: str
+    id: str
 
 @router.post("/query")
 async def query_handler(request: QueryRequest):
     query = request.query
-    video_id = request.video_id
-    print(query, video_id)
+    id = request.id
+    print(query , id)
     try:
-        response = chat_with_summary(query)
-        print(response)
+        response = chat_with_summary(query,id)
         return response
     except Exception as e:
         print(e)

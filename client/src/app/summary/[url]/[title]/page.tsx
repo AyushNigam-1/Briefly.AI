@@ -2,23 +2,27 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import useSWR from "swr";
-import Dropdown from "../components/Dropdown";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import ErrorPage from "../components/ErrorPage";
-import Loading from "../components/Loading";
-import QueryInput from "../components/QueryInput";
-// import loader from '.'
+import ErrorPage from "../../components/ErrorPage";
+import Loading from "../../components/Loading";
+import QueryInput from "../../components/QueryInput";
+import Cookies from "js-cookie";
+import axios from "axios";
 import { query } from "@/app/types";
+import Sidebar from "../../components/Sidebar";
 import Navbar from "@/app/components/Navbar";
-interface SummaryResponse {
-    summary: string;
-}
 
+interface SummaryResponse {
+    summarized_summary: string;
+    id: string;
+    queries: query[] | [];
+}
 interface props {
     value?: string;
     label?: string;
 }
+
 
 const languages: props[] = [
     { value: "en", label: "English" },
@@ -36,52 +40,159 @@ const tones: props[] = [
     { value: "concise", label: "Concise" },
 ];
 
-const fetchSummary = async (url?: string, lang?: string, tone?: string): Promise<SummaryResponse> => {
-    const response = await fetch(
-        `http://localhost:8000/summarize/?url=${url}&lang=${lang}&tone=${tone}`
-    );
-
-    if (!response.ok) {
-        throw new Error(`Error: ${response.statusText}`);
+const fetchExisitingSummary = async (summaryId: string) => {
+    try {
+        const token = Cookies.get("access_token");
+        const response = await axios.get(`http://localhost:8000/summary/?id=${summaryId}`, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        });
+        return response.data;
+    } catch (error) {
+        if (axios.isAxiosError(error)) {
+            throw new Error(error.response?.data?.message || error.message);
+        } else {
+            throw new Error(String(error));
+        }
     }
-    return response.json();
 };
+const fetchSummary = async (url?: string, lang?: string, tone?: string, title?: string) => {
+    try {
+        const token = Cookies.get("access_token");
+        const response = await axios.get(`http://localhost:8000/summarize/?url=${url}&lang=${lang}&tone=${tone}&title=${title}`, {
+            headers: {
+                "Authorization": `Bearer ${token}`,
+            },
+            withCredentials: true,
+        });
+        console.log(response.data);
+        return response.data;
+    } catch (error) {
+        if (axios.isAxiosError(error)) {
+            throw new Error(error.response?.data?.message || error.message);
+        } else {
+            throw new Error(String(error));
+        }
+    }
+};
+
+
+
 
 const SummaryPage: React.FC = () => {
     const params = useParams();
     const url = params?.url as string;
+    const title = params?.title as string;
     const [selectedLanguage, setSelectedLanguage] = useState<props | undefined>(languages[0]);
     const [selectedTone, setSelectedTone] = useState<props | undefined>(tones[0]);
-    const [queries, setQueries] = useState<query[]>([])
-    const [isLoading, setLoading] = useState<boolean>(false)
+    const [queries, setQueries] = useState<query[]>([]);
+    const [isLoading, setLoading] = useState<boolean>(false);
     const queriesContainerRef = useRef<HTMLDivElement | null>(null);
     const key = url ? [url, selectedLanguage, selectedTone] : null;
+    const [summary, setSummary] = useState<SummaryResponse | undefined>();
+    const [summaryId, setSummaryId] = useState<string | undefined>(undefined);
+    const [state, setState] = useState<string | undefined>(undefined)
+    // const { data, error } = useSWR<SummaryResponse>(key,
+    //     () => fetchSummary(url, selectedLanguage?.value, selectedTone?.value , title),
+    //     {
+    //         revalidateOnFocus: false,
+    //         dedupingInterval: 60000,
+    //         refreshWhenHidden: false,
+    //     }
+    // );
+
+    useEffect(() => {
+        const fetchData = async () => {
+            setLoading(true);
+            try {
+                const data = await fetchSummary(url, selectedLanguage?.value, selectedTone?.value, title);
+                setSummary(data.summary);
+                setQueries(data.summary.queries)
+                console.log(data)
+            } catch (error) {
+                console.error("Failed to fetch summary:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, []);
+
+    useEffect(() => {
+        if (!summaryId) return;
+        const fetchData = async () => {
+            setLoading(true);
+            try {
+                const data = await fetchExisitingSummary(summaryId);
+                setSummary(data.summary);
+                setQueries(data.summary.queries)
+                console.log(data)
+            } catch (error) {
+                console.error("Failed to fetch summary:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [summaryId]);
 
 
-    const { data, error } = useSWR<SummaryResponse>(key,
-        () => fetchSummary(url, selectedLanguage?.value, selectedTone?.value),
-        {
-            revalidateOnFocus: false,
-            dedupingInterval: 60000,
-            refreshWhenHidden: false,
-        }
-    );
-
-    const loading = !data && !error;
     useEffect(() => {
         if (queriesContainerRef.current) {
-            queriesContainerRef.current.scrollTop = queriesContainerRef.current.scrollHeight + 10;
+            queriesContainerRef.current.scrollTo({
+                top: queriesContainerRef.current.scrollHeight,
+                behavior: "smooth",
+            });
         }
     }, [queries]);
 
-    if (error) return <ErrorPage />
 
-    if (loading) return <Loading />
+    const handleDownload = async (summaryId: string | undefined, type: "original_summary" | "summarized_summary"): Promise<void> => {
+        try {
+            const response = await axios.get(`http://localhost:8000/download/`, {
+                params: { summary_id: summaryId, type },
+                responseType: "blob",
+            });
 
+            const blob = new Blob([response.data], { type: "text/plain" });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.setAttribute("download", `${type}_${summaryId}.txt`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error("Error downloading the summary:", error);
+            alert("Failed to download the summary.");
+        }
+    };
+
+    // if (error) return <ErrorPage />;
+    if (isLoading) return <Loading />;
+
+    {/* <div className="flex justify-center gap-4 mt-4">
+        <button
+            onClick={() => handleDownload(data?.summary?.id, "original_summary")}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+        >
+            Download Original Summary
+        </button>
+        <button
+            onClick={() => handleDownload(data?.summary?.id, "summarized_summary")}
+            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+        >
+            Download Summarized Summary
+        </button>
+    </div> */}
     return (
         <div className="gap-1 flex items-center justify-center flex-col max-h-[100vh] max-w-[100vw]">
-            <Navbar />
-            <div className="flex flex-col gap-3 rounded-lg shadow container z-50 overflow-y-scroll scrollbar-thumb-gray-500 scrollbar-track-transparent scrollbar-thin" ref={queriesContainerRef}>
+            <Navbar component={<Sidebar setId={setSummaryId} />} />
+            <div className="flex flex-col gap-3 rounded-lg shadow container overflow-y-scroll scrollbar-thumb-gray-500 scrollbar-track-transparent scrollbar-thin" ref={queriesContainerRef}>
                 <div className="bg-gray-900/70 font-mono scrollbar-thumb-gray-500  w-100 p-4 rounded-lg prose-gray prose-lg w-full max-w-none">
                     <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
@@ -89,11 +200,11 @@ const SummaryPage: React.FC = () => {
                             ul: ({ children }) => <ul className="list-disc ml-5">{children}</ul>
                         }}
                     >
-                        {data?.summary}
+                        {summary?.summarized_summary}
                     </ReactMarkdown>
                 </div>
-                <div className="max-h-60 flex flex-col gap-3 z-50">
-                    {queries.length ? queries.map((query, index) => (
+                <div className="max-h-60 flex flex-col gap-3">
+                    {queries?.map((query, index) =>
                         <div key={index} className="bg-gray-900/70 p-4 rounded-lg font-mono flex gap-2">
                             <div>
                                 {
@@ -115,9 +226,9 @@ const SummaryPage: React.FC = () => {
                                 </ReactMarkdown>
                             </div>
                         </div>
-                    )) : ""}
+                    )}
                     {
-                        isLoading ?
+                        state == 'pending' ?
                             <div className="bg-gray-900/70 p-4 rounded-lg font-mono flex gap-2 items-center">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
@@ -131,11 +242,10 @@ const SummaryPage: React.FC = () => {
                     }
                 </div>
             </div>
-            <div className="z-50 w-full" >
-                <QueryInput setQueries={setQueries} url={url} setLoading={setLoading} />
+            <div className="w-full" >
+                <QueryInput setQueries={setQueries} url={url} setState={setState} id={summary?.id} />
             </div>
         </div >
-
     );
 };
 

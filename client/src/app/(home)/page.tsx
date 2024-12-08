@@ -5,6 +5,7 @@ import { yt_metadata, web_metadata } from "../types";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Navbar from "../components/Navbar"
+import Cookies from "js-cookie";
 import axios from "axios";
 export default function Home() {
   const [loading, setLoading] = useState(false);
@@ -21,20 +22,23 @@ export default function Home() {
       return false;
     }
   }
+ 
+  
   const getMetadata = async (url: string) => {
     if (isValidUrl(url)) {
       setLoading(true);
       try {
-        const token = localStorage.getItem("access_token");
-        console.log(token);
-
+        // Retrieve the token from cookies
+        const token = Cookies.get("access_token"); 
+        console.log("Token from cookies:", token);
+  
         const response = await axios.get(`http://127.0.0.1:8000/metadata?url=${encodeURIComponent(url)}`, {
           headers: {
             "Authorization": `Bearer ${token}`,
           },
-          withCredentials: true,
+          withCredentials: true, // Ensures cookies are sent with the request
         });
-
+  
         const data = response.data;
         setUrl(url);
         setMetadata(data);
@@ -42,7 +46,7 @@ export default function Home() {
       } catch (err: any) {
         setMetadata(null);
         setUrl(null);
-
+  
         if (err.response) {
           // Handle specific HTTP errors
           if (err.response.status === 404) {
@@ -64,6 +68,7 @@ export default function Home() {
       setMetadata(null);
     }
   };
+  
 
 
   const isYouTubeMetadata = (metadata: yt_metadata | web_metadata): metadata is yt_metadata => {
@@ -108,7 +113,7 @@ export default function Home() {
 
             </button>
           </div>
-          <Link href={`/summary/${encodeURIComponent(url ? url : "")}`}>
+          <Link href={`/summary/${encodeURIComponent(url ? url : "")}/${ metadata?.title } `}>
             <div className="p-[2px] bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full inline-block">
               <button
                 className="bg-gray-700 w-min flex items-center gap-1 text-xl p-2 px-3 rounded-full disabled:line-through"

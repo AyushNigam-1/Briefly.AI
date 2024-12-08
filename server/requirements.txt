@@ -1,36 +1,3 @@
-# langchain
-# python-dotenv
-# ipykernel
-# langchain-community
-# pypdf
-# bs4
-# arxiv
-# pymupdf
-# wikipedia
-# langchain-text-splitters
-# langchain-openai
-# chromadb
-# sentence_transformers
-# langchain_huggingface
-# faiss-cpu
-# langchain_chroma
-# duckdb
-# pandas
-# openai
-# langchain-groq
-# duckduckgo_search==5.3.1b1
-# pymupdf
-# arxiv
-# wikipedia
-# mysql-connector-python
-# SQLAlchemy
-# validators==0.28.1
-# pytube
-# numexpr
-# huggingface_hub
-# youtube_transcript_api
-# unstructured
-
 langchain
 langchain_community
 streamlit
@@ -46,7 +13,6 @@ tldextract
 youtube-transcript-api
 unstructured
 meta_yt
-sentence-transformers
 pinecone-client
 PyJWT
 Werkzeug

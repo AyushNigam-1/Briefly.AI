@@ -1,29 +1,19 @@
-from fastapi import  HTTPException , Response
+from werkzeug.security import generate_password_hash, check_password_hash
 from pydantic import BaseModel
 from typing import Optional
-from werkzeug.security import generate_password_hash, check_password_hash
-from pymongo import MongoClient
-from dotenv import load_dotenv
+from .conn import users_collection  # Correct import from the conn module
+from utils.auth import create_access_token  # Correct import from utils.auth
+from fastapi import HTTPException, Response
 import os
-from utils.auth import create_access_token , create_user , get_user_by_username
+from dotenv import load_dotenv
 
+# Load environment variables
 load_dotenv()
 
-CONNECTION_STRING = os.getenv("mongo_db_uri")
-client = MongoClient(CONNECTION_STRING)
-db = client['briefly']
-users_collection = db['users']
-
-SECRET_KEY = os.getenv("SECRET_KEY")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 class User(BaseModel):
     username: str
     password: str
-
-class UserInDB(User):
-    hashed_password: str
 
 class AuthResponse(BaseModel):
     message: str
@@ -35,47 +25,63 @@ class Token(BaseModel):
 
 
 async def signup(user: User, response: Response):
+    """Sign up a new user."""
     if not user.username or not user.password:
         raise HTTPException(status_code=400, detail="Username and password are required")
 
-    if get_user_by_username(user.username):
+    # Check if the username already exists by querying the users_collection
+    if users_collection.find_one({"username": user.username}):
         raise HTTPException(status_code=400, detail="Username already exists")
 
+    # Hash the password and create the new user
     hashed_password = generate_password_hash(user.password)
-    create_user({"username": user.username, "password": hashed_password})
+    new_user = users_collection.insert_one({"username": user.username, "password": hashed_password})
 
-    token_data = {"username": user.username}
+    # Fetch the user_id from the inserted user document
+    user_id = str(new_user.inserted_id)
+
+    # Create access token for the user, include user_id in the payload
+    token_data = {"username": user.username, "user_id": user_id}
     access_token = create_access_token(data=token_data)
+
+    # Set the token in the response cookie
     response.set_cookie(
             key="access_token",
             value=access_token,
             httponly=False,
-            max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
             secure=False,  
             samesite="Lax"  
         )
-    return {"access_token": access_token, "token_type": "bearer","status_code":201}
+
+    return {"access_token": access_token, "token_type": "bearer", "status_code": 201}
+
 
 async def login(user: User, response: Response):
+    """Log in an existing user."""
     if not user.username or not user.password:
         raise HTTPException(status_code=400, detail="Username and password are required")
 
-    stored_user = get_user_by_username(user.username)
+    # Fetch the user from the users_collection
+    stored_user = users_collection.find_one({"username": user.username})
+
+    # Check if the user exists and if the password is correct
     if not stored_user or not check_password_hash(stored_user['password'], user.password):
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
-    token_data = {"username": user.username, "user_id": str(stored_user['_id'])}
+    # Fetch the user_id from the stored user document
+    user_id = str(stored_user['_id'])
+
+    # Generate access token, include user_id in the payload
+    token_data = {"username": user.username, "user_id": user_id}
     access_token = create_access_token(data=token_data)
+
+    # Set the token in the response cookie
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=False,
-        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         secure=False,  
         samesite="Lax"  
     )
 
-
-    
-    return {"access_token": access_token, "token_type": "bearer","status_code":201}
-
+    return {"access_token": access_token, "token_type": "bearer", "status_code": 201}
