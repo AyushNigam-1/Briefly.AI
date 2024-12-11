@@ -175,24 +175,25 @@ const SummaryPage: React.FC = () => {
     // if (error) return <ErrorPage />;
     if (isLoading) return <Loading />;
 
-    {/* <div className="flex justify-center gap-4 mt-4">
-        <button
-            onClick={() => handleDownload(data?.summary?.id, "original_summary")}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-        >
-            Download Original Summary
-        </button>
-        <button
-            onClick={() => handleDownload(data?.summary?.id, "summarized_summary")}
-            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-        >
-            Download Summarized Summary
-        </button>
-    </div> */}
+   
     return (
         <div className="gap-1 flex items-center justify-center flex-col max-h-[100vh] max-w-[100vw]">
             <Navbar component={<Sidebar setId={setSummaryId} />} />
             <div className="flex flex-col gap-3 rounded-lg shadow container overflow-y-scroll scrollbar-thumb-gray-500 scrollbar-track-transparent scrollbar-thin" ref={queriesContainerRef}>
+             {/* <div className="flex justify-center gap-4 mt-4"> */}
+        {/* <button
+            onClick={() => handleDownload(summary?.id, "original_summary")}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+        >
+            Download Original Summary
+        </button> */}
+        {/* <button
+            onClick={() => handleDownload(data?.summary?.id, "summarized_summary")}
+            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+        >
+            Download Summarized Summary
+        </button> */}
+    {/* </div> */}
                 <div className="bg-gray-900/70 font-mono scrollbar-thumb-gray-500  w-100 p-4 rounded-lg prose-gray prose-lg w-full max-w-none">
                     <ReactMarkdown
                         remarkPlugins={[remarkGfm]}

@@ -137,6 +137,6 @@ def get_youtube_summary(url: str, lang: str, tone: str,title:str, current_user) 
     
     print(current_user)
     user_id = str(current_user["user_id"])
-    save_result = save_summary_to_mongo(user_id, corrected_transcript, summary , video_id , video_title=title)
+    save_result = save_summary_to_mongo(user_id, transcript, summary , video_id , video_title=title)
     return save_result
 
