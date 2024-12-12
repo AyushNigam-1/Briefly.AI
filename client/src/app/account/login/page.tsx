@@ -2,6 +2,7 @@
 import React, { useState, FormEvent } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 const page: React.FC = () => {
     const [username, setUsername] = useState<string>('');
     const [password, setPassword] = useState<string>('');
@@ -63,10 +64,11 @@ const page: React.FC = () => {
                     <a href="#" className="text-sm font-thin text-gray-400 underline hover:text-indigo-600">Forget Password?</a>
                     <button
                         type="submit"
-                        className="cursor-pointer py-2 px-4 bg-gray-500/50 text-white font-bold w-full rounded"
+                        className="cursor-pointer py-2 px-4 flex justify-center bg-gray-500/50 text-white font-bold w-full rounded"
                         disabled={loading}
                     >
-                        {loading ? 'Loading...' : 'Login'}
+                        {loading ? <Image src="/805.svg" alt="loader" width="20" height="20" />
+                 : 'Login'}
                     </button>
                 </form>
             </div>

@@ -34,3 +34,8 @@ async def auth(request: Request, response:Response):
     
     # else:
     #     raise HTTPException(status_code=400, detail="Invalid action. Use 'login' or 'signup'")
+
+@router.post("/logout")
+async def logout(response: Response):
+    response.delete_cookie("access_token")  # This will delete the 'access_token' cookie
+    return {"message": "Logged out successfully."}

@@ -194,7 +194,7 @@ const SummaryPage: React.FC = () => {
             Download Summarized Summary
         </button> */}
     {/* </div> */}
-                <div className="bg-gray-900/70 font-mono scrollbar-thumb-gray-500  w-100 p-4 rounded-lg prose-gray prose-lg w-full max-w-none">
+                <div className="bg-gray-900/70 font-mono border-gray-700 scrollbar-thumb-gray-500  w-100 p-4 rounded-lg prose-gray prose-lg w-full max-w-none">
                     <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
