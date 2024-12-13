@@ -7,7 +7,7 @@ from routes.metadata import router as metadata_router
 from routes.query import router as query_router
 from routes.auth import router as auth_router
 from middleware.auth_middleware import auth_middleware  
-
+from routes.prompt import router as prompt_router
 app = FastAPI()
 
 app.add_middleware(
@@ -24,6 +24,7 @@ app.include_router(summarizer_router)
 app.include_router(metadata_router)
 app.include_router(query_router)
 app.include_router(auth_router)
+app.include_router(prompt_router)
 
 
 if __name__ == "__main__":

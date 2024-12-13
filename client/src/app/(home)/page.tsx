@@ -6,7 +6,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Navbar from "../components/Navbar"
 import Cookies from "js-cookie";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
+interface PromptResponse {
+  prompt?: string
+  error?: string
+
+}
 export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -14,6 +19,8 @@ export default function Home() {
   const [url, setUrl] = useState<string | null>()
   const [file, setFile] = useState<FileList | undefined>();
   const doc = useRef<HTMLInputElement | null>(null);
+  const [isInputVisible, setIsInputVisible] = useState(false); // state to toggle input visibility
+  const [prompt, setPrompt] = useState<string |undefined>()
   function isValidUrl(urlString: string): boolean {
     try {
       new URL(urlString);
@@ -22,23 +29,69 @@ export default function Home() {
       return false;
     }
   }
- 
-  
+  const getPrompts = async (userId: string): Promise<PromptResponse> => {
+    const token = Cookies.get("access_token");
+
+    try {
+      const response = await axios.get<PromptResponse>(`http://127.0.0.1:8000/get-prompt`, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+        withCredentials: true, // Ensures cookies are sent with the request
+      });
+      return response.data;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        const axiosError = error as AxiosError<PromptResponse>;
+        console.error('Error fetching prompts:', axiosError.response?.data || axiosError.message);
+        return { error: axiosError.response?.data?.error || axiosError.message };
+      } else {
+        console.error('An unexpected error occurred:', error);
+        return { error: 'An unexpected error occurred' };
+      }
+    }
+  };
+  const updatePrompt = async (newPrompt: string|undefined): Promise<PromptResponse> => {
+    const token = Cookies.get("access_token");
+
+    try {
+      const response = await axios.post<PromptResponse>(`http://127.0.0.1:8000/update-prompt`, {
+        new_prompt: newPrompt,
+      }, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+        withCredentials: true, 
+      });
+      console.log(response)
+      return response.data;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        const axiosError = error as AxiosError<PromptResponse>;
+        console.error('Error updating prompt:', axiosError.response?.data || axiosError.message);
+        return { error: axiosError.response?.data?.error || axiosError.message };
+      } else {
+        console.error('An unexpected error occurred:', error);
+        return { error: 'An unexpected error occurred' };
+      }
+    }
+  };
+
   const getMetadata = async (url: string) => {
     if (isValidUrl(url)) {
       setLoading(true);
       try {
         // Retrieve the token from cookies
-        const token = Cookies.get("access_token"); 
+        const token = Cookies.get("access_token");
         console.log("Token from cookies:", token);
-  
+
         const response = await axios.get(`http://127.0.0.1:8000/metadata?url=${encodeURIComponent(url)}`, {
           headers: {
             "Authorization": `Bearer ${token}`,
           },
           withCredentials: true, // Ensures cookies are sent with the request
         });
-  
+
         const data = response.data;
         setUrl(url);
         setMetadata(data);
@@ -46,9 +99,8 @@ export default function Home() {
       } catch (err: any) {
         setMetadata(null);
         setUrl(null);
-  
+
         if (err.response) {
-          // Handle specific HTTP errors
           if (err.response.status === 404) {
             setError("We couldn't find any metadata for this URL. Please check if the URL is correct.");
           } else if (err.response.status >= 500) {
@@ -68,7 +120,7 @@ export default function Home() {
       setMetadata(null);
     }
   };
-  
+
 
 
   const isYouTubeMetadata = (metadata: yt_metadata | web_metadata): metadata is yt_metadata => {
@@ -113,30 +165,59 @@ export default function Home() {
 
             </button>
           </div>
-          <Link href={`/summary/${encodeURIComponent(url ? url : "")}/${ metadata?.title } `}>
-            <div className="p-[2px] bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full inline-block">
-              <button
-                className="bg-gray-700 w-min flex items-center gap-1 text-xl p-2 px-3 rounded-full disabled:line-through"
-                disabled={!metadata}
-              >
-                Summarize
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                  className="size-6"
+          <div className="flex justify-between">
+            <Link href={`/summarize/${encodeURIComponent(url ? url : "")}/${metadata?.title} `}>
+              <div className="p-[2px] bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full inline-block">
+                <button
+                  className="bg-gray-700 w-min flex items-center gap-1 text-xl p-2 px-3 rounded-full disabled:line-through"
+                  disabled={!metadata}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M17.25 8.25L21 12m0 0-3.75 3.75M21 12H3"
-                  />
+                  Summarize
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="size-6"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M17.25 8.25L21 12m0 0-3.75 3.75M21 12H3"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </Link>
+            <div className="relative flex gap-2">
+              {isInputVisible && <button onClick={() => updatePrompt(prompt)}
+                className="flex items-center justify-center gap-2 bg-gray-900/70  w-full p-3.5  rounded-full"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                 </svg>
+
+                Add
+              </button>}
+
+              <button
+                onClick={() => setIsInputVisible(!isInputVisible)}
+                className="flex items-center justify-center gap-2 bg-gray-900/70  w-full p-3.5  rounded-full"
+              >
+
+                {!isInputVisible ? <><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg> Add Prompt  </> : <>
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                  </svg>
+                  Cancel
+                </>}
               </button>
             </div>
-          </Link>
+          </div>
+
           <div className="min-h-[100px]">
             <AnimatePresence>
               {metadata && (
@@ -188,6 +269,18 @@ export default function Home() {
               </motion.div>
               }
             </AnimatePresence>
+            <div
+              className={` bottom-full mb-2 w-full transition-all duration-300 ease-in-out relative ${isInputVisible ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-4 pointer-events-none"
+                }`}
+            >
+              <textarea
+                rows={6}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="Enter custom prompt"
+                className="w-full p-2 rounded-lg bg-gray-700/50 text-white outline-none"
+              />
+
+            </div>
           </div>
         </div>
       </div>

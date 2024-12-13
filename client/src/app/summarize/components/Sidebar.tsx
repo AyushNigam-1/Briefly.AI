@@ -58,6 +58,7 @@ const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
     const [summaries, setSummaries] = useState<Summary[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
+    const [isInputVisible, setIsInputVisible] = useState(false); // state to toggle input visibility
 
     const toggleSidebar = () => {
         setIsOpen(!isOpen);
@@ -176,11 +177,28 @@ const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
                         items={["Edit", "Delete", "Share"]}
                     /> */}
                     {isClient && (
-                    <button className="flex items-center justify-center gap-2 bg-gray-900/70 p-2 rounded-lg"> <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-4">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                    </svg>
- Custom Prompt</button>)}
- 
+                        <div className="relative">
+                            <div
+                                className={`absolute bottom-full mb-2 w-full transition-all duration-300 ease-in-out ${isInputVisible ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-4 pointer-events-none"
+                                    }`}
+                            >
+                                    <textarea
+                                    rows={6}
+                                        placeholder="Enter custom prompt"
+                                        className="w-full p-2 rounded-lg bg-gray-800 text-white"
+                                    />
+                            </div>
+                            <button
+                                onClick={() => setIsInputVisible(!isInputVisible)}
+                                className="flex items-center justify-center gap-2 bg-gray-900/70 w-full p-2 rounded-lg"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-4">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                </svg>
+                                {isInputVisible ? "Add Prompt" : "Custom Prompt"}
+                            </button>
+                        </div>
+                    )}
                 </div>
                 <PopupMenu
                     isOpen={isPopupOpen}
@@ -192,3 +210,4 @@ const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
 };
 
 export default Sidebar;
+
