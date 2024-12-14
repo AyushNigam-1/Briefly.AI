@@ -3,17 +3,16 @@ from bson.objectid import ObjectId
 
 def get_prompt_by_user(user_id: str) -> dict:
     try:
-        user = users_collection.find({"_id":ObjectId(user_id)})
+        user = users_collection.find_one({"_id": ObjectId(user_id)})
         
-        if user.count() == 0:
+        if not user:
             return {"error": f"No User found for user with ID {user_id}."}
-        prompts = user.get("prompt", None)
         
+        prompts = user.get("prompt", None)
         if not prompts:
             return {"error": f"No prompts found for user with ID {user_id}."}
         
         return {"prompt": prompts}
-        
         
     except Exception as e:
         return {"error": f"An error occurred: {str(e)}"}

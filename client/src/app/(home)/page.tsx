@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { yt_metadata, web_metadata } from "../types";
 import { motion, AnimatePresence } from "framer-motion";
@@ -7,6 +7,10 @@ import Link from "next/link";
 import Navbar from "../components/Navbar"
 import Cookies from "js-cookie";
 import axios, { AxiosError } from "axios";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import ClipLoader from "react-spinners/ClipLoader";
+
 interface PromptResponse {
   prompt?: string
   error?: string
@@ -19,8 +23,9 @@ export default function Home() {
   const [url, setUrl] = useState<string | null>()
   const [file, setFile] = useState<FileList | undefined>();
   const doc = useRef<HTMLInputElement | null>(null);
-  const [isInputVisible, setIsInputVisible] = useState(false); // state to toggle input visibility
+  const [isInputVisible, setIsInputVisible] = useState(false); 
   const [prompt, setPrompt] = useState<string |undefined>()
+  const [promptState , setState] = useState(false)
   function isValidUrl(urlString: string): boolean {
     try {
       new URL(urlString);
@@ -29,7 +34,7 @@ export default function Home() {
       return false;
     }
   }
-  const getPrompts = async (userId: string): Promise<PromptResponse> => {
+  const getPrompt = async () => {
     const token = Cookies.get("access_token");
 
     try {
@@ -37,9 +42,9 @@ export default function Home() {
         headers: {
           "Authorization": `Bearer ${token}`,
         },
-        withCredentials: true, // Ensures cookies are sent with the request
+        withCredentials: true, 
       });
-      return response.data;
+      setPrompt(response.data.prompt);
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
         const axiosError = error as AxiosError<PromptResponse>;
@@ -51,9 +56,9 @@ export default function Home() {
       }
     }
   };
-  const updatePrompt = async (newPrompt: string|undefined): Promise<PromptResponse> => {
+  const updatePrompt = async (newPrompt: string|undefined) => {
+    setState(true)
     const token = Cookies.get("access_token");
-
     try {
       const response = await axios.post<PromptResponse>(`http://127.0.0.1:8000/update-prompt`, {
         new_prompt: newPrompt,
@@ -63,8 +68,8 @@ export default function Home() {
         },
         withCredentials: true, 
       });
-      console.log(response)
-      return response.data;
+      toast.success("Prompt Updated Successfully")
+      setPrompt(response.data.prompt)
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
         const axiosError = error as AxiosError<PromptResponse>;
@@ -74,6 +79,10 @@ export default function Home() {
         console.error('An unexpected error occurred:', error);
         return { error: 'An unexpected error occurred' };
       }
+    }
+    finally{
+      setState(false)
+      setIsInputVisible(false)
     }
   };
 
@@ -89,7 +98,7 @@ export default function Home() {
           headers: {
             "Authorization": `Bearer ${token}`,
           },
-          withCredentials: true, // Ensures cookies are sent with the request
+          withCredentials: true, 
         });
 
         const data = response.data;
@@ -121,7 +130,9 @@ export default function Home() {
     }
   };
 
-
+useEffect(() => {
+  getPrompt()
+},[])
 
   const isYouTubeMetadata = (metadata: yt_metadata | web_metadata): metadata is yt_metadata => {
     return (metadata as yt_metadata).thumbnail_url !== undefined;
@@ -194,11 +205,36 @@ export default function Home() {
               {isInputVisible && <button onClick={() => updatePrompt(prompt)}
                 className="flex items-center justify-center gap-2 bg-gray-900/70  w-full p-3.5  rounded-full"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                </svg>
-
-                Add
+              {/* {
+                  promptState ? <svg version="1.1" id="L9" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+                    viewBox="0 0 100 100" enable-background="new 0 0 0 0" xmlSpace="preserve">
+                    <path fill="#fff" d="M73,50c0-12.7-10.3-23-23-23S27,37.3,27,50 M30.9,50c0-10.5,8.5-19.1,19.1-19.1S69.1,39.5,69.1,50">
+                      <animateTransform
+                        attributeName="transform"
+                        attributeType="XML"
+                        type="rotate"
+                        dur="1s"
+                        from="0 50 50"
+                        to="360 50 50"
+                        repeatCount="indefinite" />
+                    </path>
+                  </svg> :
+              } */}
+                <ClipLoader
+                  color={"#ffffff"}
+                  loading={promptState}
+                  size={25}
+                  aria-label="Loading Spinner"
+                  data-testid="loader"
+                />
+                  {!promptState && <>
+                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                  </svg>
+                      Add
+                  </>}
+               
+                
               </button>}
 
               <button
@@ -275,6 +311,7 @@ export default function Home() {
             >
               <textarea
                 rows={6}
+                value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="Enter custom prompt"
                 className="w-full p-2 rounded-lg bg-gray-700/50 text-white outline-none"
@@ -284,6 +321,8 @@ export default function Home() {
           </div>
         </div>
       </div>
+      <ToastContainer />
+
     </div>
   );
 }

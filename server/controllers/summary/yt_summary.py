@@ -13,6 +13,7 @@ import os
 from datetime import datetime
 from controllers.db.summary import save_summary_to_mongo
 from controllers.db.conn import summary_collection
+from controllers.db.prompt import get_prompt_by_user
 load_dotenv()
 api_key = os.getenv("groq_api_key")
 
@@ -120,17 +121,32 @@ def get_youtube_summary(url: str, lang: str, tone: str,title:str, current_user) 
 
     corrected_transcript = correct_subtitles(transcript, language=lang)
     
-    docs = [Document(page_content=corrected_transcript)]
+    user_prompt_data = get_prompt_by_user(user_id)
+    if "error" in user_prompt_data:
+        user_prompt = None  # No user-specific prompt found
+    else:
+        user_prompt = user_prompt_data.get("prompt")
 
-    prompt_template = """
-    Extract multiple 30-60 second segments from Osho's original speech without summarizing, rephrasing, or adding any additional words. For each segment, provide a meaningful and engaging title that captures the essence of the excerpt. Focus on powerful themes such as meditation, love, self-awareness, freedom, or inner transformation. Ensure each segment starts and ends cleanly, preserving the original flow of Osho's words. Include as many impactful segments as possible, with each one accompanied by a suitable title. The goal is to create multiple inspiring pieces that can stand alone and be paired with visuals like nature scenes, meditative imagery, or serene moments for Instagram reels. The subtitle is - {text} and the language should strictly be - hinglish.
-    """
+    if user_prompt:
+        prompt_template = user_prompt + "\n\nThe subtitle is - {text} and the language should strictly be - {language}."
+    else:
+        prompt_template = (
+            "Extract multiple 30-60 second segments from Osho's original speech without summarizing, rephrasing, or adding any additional words. "
+            "For each segment, provide a meaningful and engaging title that captures the essence of the excerpt. "
+            "Focus on powerful themes such as meditation, love, self-awareness, freedom, or inner transformation. "
+            "Ensure each segment starts and ends cleanly, preserving the original flow of Osho's words. Include as many impactful segments as possible, "
+            "with each one accompanied by a suitable title. The goal is to create multiple inspiring pieces that can stand alone and be paired with visuals "
+            "like nature scenes, meditative imagery, or serene moments for Instagram reels. The subtitle is - {text} and the language should strictly be - {language}."
+        )
+
     prompt = PromptTemplate(
         template=prompt_template, 
         input_variables=["text", "language"]
     )
 
+    docs = [Document(page_content=corrected_transcript)]
     input_data = {"input_documents": docs, "language": lang}
+    print("prompt" ,prompt)
 
     chain = load_summarize_chain(llm, chain_type="stuff", prompt=prompt)
     summary = chain.run(input_data)
