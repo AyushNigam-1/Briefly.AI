@@ -126,9 +126,9 @@ const SummaryPage: React.FC = () => {
             setLoading(true);
             try {
                 const data = await fetchExisitingSummary(summaryId);
+                console.log(data)
                 setSummary(data.summary);
                 setQueries(data.summary.queries)
-                console.log(data)
             } catch (error) {
                 console.error("Failed to fetch summary:", error);
             } finally {
@@ -179,7 +179,7 @@ const SummaryPage: React.FC = () => {
     return (
         <div className="gap-1 flex items-center justify-center flex-col max-h-[100vh] max-w-[100vw]">
             <Navbar component={<Sidebar setId={setSummaryId} />} />
-            <div className="flex flex-col gap-3 rounded-lg shadow container overflow-y-scroll scrollbar-thumb-gray-500 scrollbar-track-transparent scrollbar-thin" ref={queriesContainerRef}>
+            <div className="flex flex-col gap-3 rounded-lg shadow container overflow-y-scroll mb-20 scrollbar-thumb-gray-500 scrollbar-track-transparent scrollbar-thin" ref={queriesContainerRef}>
              {/* <div className="flex justify-center gap-4 mt-4"> */}
         {/* <button
             onClick={() => handleDownload(summary?.id, "original_summary")}
@@ -243,7 +243,7 @@ const SummaryPage: React.FC = () => {
                     }
                 </div>
             </div>
-            <div className="w-full" >
+            <div className="flex flex-col gap-3 p-2 w-full fixed bottom-0 left-0 right-0">
                 <QueryInput setQueries={setQueries} url={url} setState={setState} id={summary?.id} />
             </div>
         </div >

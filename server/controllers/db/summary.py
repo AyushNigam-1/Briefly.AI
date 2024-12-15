@@ -30,7 +30,7 @@ def save_summary_to_mongo(user_id: str, original_summary: str, summarized_summar
     return {
         "id": str(result.inserted_id),
         "summarized_summary": summarized_summary,
-        "queries":  summary_data.get("query", [])
+        "queries":  summary_data.get("queries", [])
 
     }
 
@@ -46,7 +46,7 @@ def get_summary_by_id(id: str):
             return "Could not find a summary associated with the given ID."
         
         summarized_summary = summary_data.get("summarized_summary", "")
-        query_history = summary_data.get("query", [])
+        query_history = summary_data.get("queries", [])
         
         return { 
              "id": str(summary_data["_id"]),

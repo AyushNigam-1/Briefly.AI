@@ -108,10 +108,13 @@ def get_youtube_summary(url: str, lang: str, tone: str,title:str, current_user) 
     
     user_id = str(current_user["user_id"])
     existing_summary = summary_collection.find_one({"user_id": user_id, "video_id": video_id})
+    print(existing_summary)
     if existing_summary:
         summarized_summary = existing_summary.get("summarized_summary", "No summarized summary available.")
         summary_id = str(existing_summary["_id"])
-        return {"summarized_summary": summarized_summary, "id": summary_id}
+        queries = existing_summary.get("queries", "No queries available.")
+        print(existing_summary.get("queries", []))
+        return {"summarized_summary": summarized_summary, "id": summary_id,"queries":queries}
 
 
     transcript = get_auto_subtitles(video_id, lang)
@@ -151,7 +154,6 @@ def get_youtube_summary(url: str, lang: str, tone: str,title:str, current_user) 
     chain = load_summarize_chain(llm, chain_type="stuff", prompt=prompt)
     summary = chain.run(input_data)
     
-    print(current_user)
     user_id = str(current_user["user_id"])
     save_result = save_summary_to_mongo(user_id, transcript, summary , video_id , video_title=title)
     return save_result

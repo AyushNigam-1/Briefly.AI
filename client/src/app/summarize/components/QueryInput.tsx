@@ -22,7 +22,7 @@ const QueryInput = ({ setQueries, url, setState , id }: QueryInputProps) => {
             }
             try {
                 const result = await fetchQueryResult(inputValue);
-                setQueries((queries) => [...queries, { sender: "llm", content: result }]);
+                setQueries((queries) =>( [...queries, { sender: "llm", content: result }]));
               
             } catch (error) {
                 console.error("Error fetching query result:", error);

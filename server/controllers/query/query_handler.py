@@ -17,7 +17,7 @@ llm = ChatGroq(model="Gemma-7b-It", groq_api_key=groq_api_key)
 prompt_template = """
 You are an expert AI assistant. Based on the following summarized information and user query, provide a concise, human-like response without headings or unnecessary structure:
 
-Query: {query}
+: {query}
 Summarized Information: {context}
 
 Keep the response natural, to the point, and conversational.
@@ -53,7 +53,7 @@ def chat_with_summary(user_input: str, id: str):
     # Update the database document to include the new query entries
     update_result = summary_collection.update_one(
         {"_id": ObjectId(id)},
-        {"$push": {"query": {"$each": [user_query_entry, llm_response_entry]}}}
+        {"$push": {"queries": {"$each": [user_query_entry, llm_response_entry]}}}
     )
 
     if update_result.modified_count == 1:

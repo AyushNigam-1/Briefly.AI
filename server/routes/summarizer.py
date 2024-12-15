@@ -22,7 +22,7 @@ def summarize_content(url: str,lang:str,tone:str,title:str , current_user: dict 
         else:
             summary = get_web_summary(url,lang,tone,current_user)
             
-        return {"summary":summary}
+        return {"summary":summary,}
 
     except Exception as e:
         print(e)
