@@ -1,3 +1,4 @@
+import json
 from langchain.prompts import PromptTemplate
 from langchain.chains.summarize import load_summarize_chain
 from langchain_groq import ChatGroq
@@ -14,9 +15,11 @@ from datetime import datetime
 from controllers.db.summary import save_summary_to_mongo
 from controllers.db.conn import summary_collection
 from controllers.db.prompt import get_prompt_by_user
+import websockets  # Replace with your chosen library
+
 load_dotenv()
 api_key = os.getenv("groq_api_key")
-
+websocket_uri = "ws://localhost:8080" 
 session = requests.Session()
 
 def session_request(method, url, *args, **kwargs):
@@ -99,62 +102,79 @@ def save_subtitles_to_file(subtitles: str, file_name: str) -> None:
         file.write(subtitles)
     print(f"Saved subtitles to {file_path}")
 
-def get_youtube_summary(url: str, lang: str, tone: str,title:str, current_user) -> str:
-    llm = ChatGroq(model="Gemma-7b-It", groq_api_key=api_key)
+async def get_youtube_summary(url: str, lang: str, tone: str,title:str, current_user) -> str:
+    async with websockets.connect(websocket_uri) as websocket:
+        llm = ChatGroq(model="Gemma-7b-It", groq_api_key=api_key)
+        
+        video_id = extract_video_id(url)
+        if not video_id:
+            return "Invalid YouTube URL or video ID could not be extracted."
+        
+        user_id = str(current_user["user_id"])
+        existing_summary = summary_collection.find_one({"user_id": user_id, "video_id": video_id})
     
-    video_id = extract_video_id(url)
-    if not video_id:
-        return "Invalid YouTube URL or video ID could not be extracted."
-    
-    user_id = str(current_user["user_id"])
-    existing_summary = summary_collection.find_one({"user_id": user_id, "video_id": video_id})
-    print(existing_summary)
-    if existing_summary:
-        summarized_summary = existing_summary.get("summarized_summary", "No summarized summary available.")
-        summary_id = str(existing_summary["_id"])
-        queries = existing_summary.get("queries", "No queries available.")
-        print(existing_summary.get("queries", []))
-        return {"summarized_summary": summarized_summary, "id": summary_id,"queries":queries}
+        print(existing_summary)
+        if existing_summary:
+            summarized_summary = existing_summary.get("summarized_summary", "No summarized summary available.")
+            summary_id = str(existing_summary["_id"])
+            queries = existing_summary.get("queries", "No queries available.")
+            print(existing_summary.get("queries", []))
+            return {"summarized_summary": summarized_summary, "id": summary_id,"queries":queries}
 
+        await websocket.send(
+                json.dumps(
+                    {"step": "Extracting transcript", "progress": 0, "status": "Success"}
+                )
+            )
+        transcript = get_auto_subtitles(video_id, lang)
+        
+        if transcript in ["Subtitles not available.", "Transcripts are disabled for this video."]:
+            return transcript
+        
+        await websocket.send(
+                    json.dumps(
+                        {
+                            "step": "Correcting subtitles",
+                            "progress": 50,  # Adjust based on actual progress
+                            "status": "Success",
+                        }
+                    )
+                )
+        corrected_transcript = correct_subtitles(transcript, language=lang)
+        
+        user_prompt_data = get_prompt_by_user(user_id)
+        if "error" in user_prompt_data:
+            user_prompt = None  # No user-specific prompt found
+        else:
+            user_prompt = user_prompt_data.get("prompt")
 
-    transcript = get_auto_subtitles(video_id, lang)
-    
-    if transcript in ["Subtitles not available.", "Transcripts are disabled for this video."]:
-        return transcript
+        if user_prompt:
+            prompt_template = user_prompt + "\n\nThe subtitle is - {text} and the language should strictly be - {language}."
+        else:
+            prompt_template = (
+                "Extract multiple 30-60 second segments from Osho's original speech without summarizing, rephrasing, or adding any additional words. "
+                "For each segment, provide a meaningful and engaging title that captures the essence of the excerpt. "
+                "Focus on powerful themes such as meditation, love, self-awareness, freedom, or inner transformation. "
+                "Ensure each segment starts and ends cleanly, preserving the original flow of Osho's words. Include as many impactful segments as possible, "
+                "with each one accompanied by a suitable title. The goal is to create multiple inspiring pieces that can stand alone and be paired with visuals "
+                "like nature scenes, meditative imagery, or serene moments for Instagram reels. The subtitle is - {text} and the language should strictly be - {language}."
+            )
 
-    corrected_transcript = correct_subtitles(transcript, language=lang)
-    
-    user_prompt_data = get_prompt_by_user(user_id)
-    if "error" in user_prompt_data:
-        user_prompt = None  # No user-specific prompt found
-    else:
-        user_prompt = user_prompt_data.get("prompt")
-
-    if user_prompt:
-        prompt_template = user_prompt + "\n\nThe subtitle is - {text} and the language should strictly be - {language}."
-    else:
-        prompt_template = (
-            "Extract multiple 30-60 second segments from Osho's original speech without summarizing, rephrasing, or adding any additional words. "
-            "For each segment, provide a meaningful and engaging title that captures the essence of the excerpt. "
-            "Focus on powerful themes such as meditation, love, self-awareness, freedom, or inner transformation. "
-            "Ensure each segment starts and ends cleanly, preserving the original flow of Osho's words. Include as many impactful segments as possible, "
-            "with each one accompanied by a suitable title. The goal is to create multiple inspiring pieces that can stand alone and be paired with visuals "
-            "like nature scenes, meditative imagery, or serene moments for Instagram reels. The subtitle is - {text} and the language should strictly be - {language}."
+        prompt = PromptTemplate(
+            template=prompt_template, 
+            input_variables=["text", "language"]
         )
 
-    prompt = PromptTemplate(
-        template=prompt_template, 
-        input_variables=["text", "language"]
-    )
+        docs = [Document(page_content=corrected_transcript)]
+        input_data = {"input_documents": docs, "language": lang}
+        print("prompt" ,prompt)
 
-    docs = [Document(page_content=corrected_transcript)]
-    input_data = {"input_documents": docs, "language": lang}
-    print("prompt" ,prompt)
-
-    chain = load_summarize_chain(llm, chain_type="stuff", prompt=prompt)
-    summary = chain.run(input_data)
-    
-    user_id = str(current_user["user_id"])
-    save_result = save_summary_to_mongo(user_id, transcript, summary , video_id , video_title=title)
-    return save_result
+        chain = load_summarize_chain(llm, chain_type="stuff", prompt=prompt)
+        summary = chain.run(input_data)
+        await websocket.send(
+            json.dumps({"step": "Summarizing", "progress": 100, "status": "Success"})
+        )
+        user_id = str(current_user["user_id"])
+        save_result = await save_summary_to_mongo(user_id, transcript, summary , video_id , video_title=title)
+        return save_result
 

@@ -85,3 +85,17 @@ def get_summaries_by_user(user_id: str):
     except Exception as e:
         return f"An error occurred: {str(e)}"
 
+def delete_summary_by_id(id: str):
+    """
+    Deletes a summary from the MongoDB collection by its ID.
+    """
+    print(id)
+    if not is_valid_object_id(id):
+        return "Invalid ObjectId. It must be a 24-character hex string."
+
+    result = summary_collection.delete_one({"_id": ObjectId(id)})
+
+    if result.deleted_count == 0:
+        return "Summary not found or could not be deleted."
+    else:
+        return "Summary deleted successfully."

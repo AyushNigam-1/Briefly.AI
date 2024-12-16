@@ -90,7 +90,6 @@ export default function Home() {
     if (isValidUrl(url)) {
       setLoading(true);
       try {
-        // Retrieve the token from cookies
         const token = Cookies.get("access_token");
         console.log("Token from cookies:", token);
 
@@ -118,7 +117,6 @@ export default function Home() {
             setError("An unexpected error occurred. Please try again.");
           }
         } else {
-          // Network error or other issues
           setError(err.message);
         }
       } finally {
@@ -231,7 +229,7 @@ useEffect(() => {
                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                   </svg>
-                      Add
+                      Update
                   </>}
                
                 
@@ -244,7 +242,7 @@ useEffect(() => {
 
                 {!isInputVisible ? <><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                </svg> Add Prompt  </> : <>
+                </svg> Update Prompt  </> : <>
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
                     <path strokeLinecap="round" strokeLinejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                   </svg>
@@ -254,7 +252,7 @@ useEffect(() => {
             </div>
           </div>
 
-          <div className="min-h-[100px]">
+          <div className="min-h-[100px] ">
             <AnimatePresence>
               {metadata && (
                 isYouTubeMetadata(metadata) ? (
@@ -264,7 +262,7 @@ useEffect(() => {
                     exit={{ opacity: 0, height: 0 }}
                     transition={{ duration: 0.5 }}
                   >
-                    <div className="bg-gray-900/70 rounded-md flex p-2 gap-2 items-center text-gray-300">
+                    <div className="bg-gray-900/70 rounded-md flex p-2 gap-2 items-center text-gray-300 mb-6">
                       <img src={metadata.thumbnail_url} alt="Video thumbnail" className="rounded-md" width="80" height="80" />
                       <div className="flex flex-col gap-1 truncate">
                         <h4 className="font-bold truncate">{metadata.title}</h4>
@@ -306,11 +304,11 @@ useEffect(() => {
               }
             </AnimatePresence>
             <div
-              className={` bottom-full mb-2 w-full transition-all duration-300 ease-in-out relative ${isInputVisible ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-4 pointer-events-none"
+              className={` bottom-full w-full transition-all duration-300 ease-in-out relative ${isInputVisible ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-4 pointer-events-none"
                 }`}
             >
               <textarea
-                rows={6}
+                rows={isInputVisible ? 6 : 0}
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="Enter custom prompt"

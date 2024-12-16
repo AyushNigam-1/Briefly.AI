@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import useSWR from "swr";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import ErrorPage from "../../components/ErrorPage";
@@ -12,6 +11,8 @@ import axios from "axios";
 import { query } from "@/app/types";
 import Sidebar from "../../components/Sidebar";
 import Navbar from "@/app/components/Navbar";
+
+const socket = new WebSocket('ws://localhost:8080');
 
 interface SummaryResponse {
     summarized_summary: string;
@@ -92,16 +93,25 @@ const SummaryPage: React.FC = () => {
     const key = url ? [url, selectedLanguage, selectedTone] : null;
     const [summary, setSummary] = useState<SummaryResponse | undefined>();
     const [summaryId, setSummaryId] = useState<string | undefined>(undefined);
-    const [state, setState] = useState<string | undefined>(undefined)
-    // const { data, error } = useSWR<SummaryResponse>(key,
-    //     () => fetchSummary(url, selectedLanguage?.value, selectedTone?.value , title),
-    //     {
-    //         revalidateOnFocus: false,
-    //         dedupingInterval: 60000,
-    //         refreshWhenHidden: false,
-    //     }
-    // );
+    const [state, setState] = useState<string | undefined>(undefined);
+    socket.onmessage = function (event) {
+        const messageData = JSON.parse(event.data); // Assuming the server sends JSON messages
 
+        // Handle the received message based on its content
+        if (messageData.type === 'progress') {
+            // Update progress bar or display a notification
+            console.log('Progress:', messageData.progress);
+            // Update UI elements to reflect progress
+        } else if (messageData.type === 'error') {
+            // Handle error messages
+            console.error('Error:', messageData.message);
+            // Display an error message to the user
+        } else if (messageData.type === 'completion') {
+            // Handle completion messages
+            console.log('Task completed:', messageData.result);
+            // Display a success message or redirect the user
+        }
+    };
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
@@ -204,7 +214,7 @@ const SummaryPage: React.FC = () => {
                         {summary?.summarized_summary}
                     </ReactMarkdown>
                 </div>
-                <div className="max-h-60 flex flex-col gap-3">
+                <div className="flex flex-col gap-3">
                     {queries?.map((query, index) =>
                         <div key={index} className="bg-gray-900/70 p-4 rounded-lg font-mono flex gap-2">
                             <div>

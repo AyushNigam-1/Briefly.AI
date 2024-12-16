@@ -8,17 +8,17 @@ from bson import ObjectId
 from io import BytesIO
 from typing import Any, Dict
 from controllers.db.conn import summary_collection
-from controllers.db.summary import get_summaries_by_user , get_summary_by_id
+from controllers.db.summary import get_summaries_by_user , get_summary_by_id , delete_summary_by_id
 router = APIRouter()
 
 @router.get("/summarize/")
-def summarize_content(url: str,lang:str,tone:str,title:str , current_user: dict = Depends(get_current_user)):
+async def summarize_content(url: str,lang:str,tone:str,title:str , current_user: dict = Depends(get_current_user)):
     print(current_user)
     if not validators.url(url):
         raise HTTPException(status_code=400, detail="Invalid URL")
     try:
         if "youtu.be" in url or "youtube.com" in url:
-            summary = get_youtube_summary(url,lang,tone,title,current_user)
+            summary = await get_youtube_summary(url,lang,tone,title,current_user)
         else:
             summary = get_web_summary(url,lang,tone,current_user)
             
@@ -73,7 +73,6 @@ def get_summary(id: str):
     Retrieve a summary by its ID for the current user.
     """
     try:
-        print(id)
         summary = get_summary_by_id(id)
         if isinstance(summary, str):
             raise HTTPException(status_code=400, detail=summary)
@@ -85,4 +84,24 @@ def get_summary(id: str):
     except Exception as e:
         # Handle unexpected errors
         print(f"Unexpected error: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    
+
+@router.delete("/summary/")
+async def delete_summary(id: str):
+    """
+    Deletes a summary by its ID for the current user.
+    """
+    print(id)
+    try:
+        result = delete_summary_by_id(id)
+        if "Invalid" in result:
+            raise HTTPException(status_code=400, detail=result)
+        elif "not found" in result:
+            raise HTTPException(status_code=404, detail=result)
+
+        return {"message": result}
+    except HTTPException as e:
+        raise e
+    except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
