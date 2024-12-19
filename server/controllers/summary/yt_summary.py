@@ -103,7 +103,7 @@ def save_subtitles_to_file(subtitles: str, file_name: str) -> None:
     print(f"Saved subtitles to {file_path}")
 
 async def get_youtube_summary(url: str, lang: str, tone: str,title:str, current_user) -> str:
-    async with websockets.connect(websocket_uri) as websocket:
+    # async with websockets.connect(websocket_uri) as websocket:
         llm = ChatGroq(model="Gemma-7b-It", groq_api_key=api_key)
         
         video_id = extract_video_id(url)
@@ -121,25 +121,25 @@ async def get_youtube_summary(url: str, lang: str, tone: str,title:str, current_
             print(existing_summary.get("queries", []))
             return {"summarized_summary": summarized_summary, "id": summary_id,"queries":queries}
 
-        await websocket.send(
-                json.dumps(
-                    {"step": "Extracting transcript", "progress": 0, "status": "Success"}
-                )
-            )
+        # await websocket.send(
+        #         json.dumps(
+        #             {"step": "Extracting transcript", "progress": 0, "status": "Success"}
+        #         )
+        #     )
         transcript = get_auto_subtitles(video_id, lang)
         
         if transcript in ["Subtitles not available.", "Transcripts are disabled for this video."]:
             return transcript
         
-        await websocket.send(
-                    json.dumps(
-                        {
-                            "step": "Correcting subtitles",
-                            "progress": 50,  # Adjust based on actual progress
-                            "status": "Success",
-                        }
-                    )
-                )
+        # await websocket.send(
+        #             json.dumps(
+        #                 {
+        #                     "step": "Correcting subtitles",
+        #                     "progress": 50,  # Adjust based on actual progress
+        #                     "status": "Success",
+        #                 }
+        #             )
+        #         )
         corrected_transcript = correct_subtitles(transcript, language=lang)
         
         user_prompt_data = get_prompt_by_user(user_id)
@@ -171,9 +171,9 @@ async def get_youtube_summary(url: str, lang: str, tone: str,title:str, current_
 
         chain = load_summarize_chain(llm, chain_type="stuff", prompt=prompt)
         summary = chain.run(input_data)
-        await websocket.send(
-            json.dumps({"step": "Summarizing", "progress": 100, "status": "Success"})
-        )
+        # await websocket.send(
+        #     json.dumps({"step": "Summarizing", "progress": 100, "status": "Success"})
+        # )
         user_id = str(current_user["user_id"])
         save_result = await save_summary_to_mongo(user_id, transcript, summary , video_id , video_title=title)
         return save_result

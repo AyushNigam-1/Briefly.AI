@@ -18,3 +18,4 @@ PyJWT
 Werkzeug
 pymongo
 ws
+python-multipart
