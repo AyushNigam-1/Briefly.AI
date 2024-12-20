@@ -9,7 +9,7 @@ load_dotenv()
 api_key = os.getenv("groq_api_key")
 
 def get_web_summary(url: str,lang:str) -> str:
-    llm = ChatGroq(model="Gemma-7b-It", groq_api_key=api_key)
+    llm = ChatGroq(model="llama-3.3-70b-versatile", groq_api_key=api_key)
 
     prompt_template = """
     Provide a summary of the following webpage content in 300 words:

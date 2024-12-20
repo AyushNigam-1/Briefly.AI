@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException , Depends
+from fastapi import APIRouter, HTTPException , Depends , UploadFile , File
 from controllers.summary.yt_summary import get_youtube_summary
 from controllers.summary.web_summary import get_web_summary
+from controllers.summary.file_summary import get_file_summary
 import validators
 from utils.auth import get_current_user
 from fastapi.responses import StreamingResponse
@@ -57,8 +58,6 @@ async def download_summary(summary_id: str, type: str):
 def get_user_summaries(current_user: dict = Depends(get_current_user)):
     try:
         summaries = get_summaries_by_user(current_user["user_id"])
-        if isinstance(summaries, str):  
-            raise HTTPException(status_code=400, detail=summaries)
         
         return {"summaries": summaries}
 
@@ -105,3 +104,12 @@ async def delete_summary(id: str):
         raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    
+@router.post('/summarize-file')
+async def extract_text(file: UploadFile = File(...)):
+    try:
+        extracted_text = get_file_summary(file)
+        return {"extracted_text": extracted_text}
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+

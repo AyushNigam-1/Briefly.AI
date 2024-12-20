@@ -1,4 +1,4 @@
 model:
-  name: "Gemma-7b-It"
+  name: "llama-3.3-70b-versatile"
   type: "text"
   description: "A model for summarizing content"

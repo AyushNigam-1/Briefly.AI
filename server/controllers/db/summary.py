@@ -43,7 +43,7 @@ def get_summary_by_id(id: str):
     try:
         summary_data = summary_collection.find_one({"_id": ObjectId(id)})
         if not summary_data:
-            return "Could not find a summary associated with the given ID."
+            return []
         
         summarized_summary = summary_data.get("summarized_summary", "")
         query_history = summary_data.get("queries", [])
@@ -69,7 +69,7 @@ def get_summaries_by_user(user_id: str):
         summary_list = list(summaries)
 
         if not summary_list:  # Check if the list is empty
-            return f"No summaries found for user with ID {user_id}."
+            return []
         
         # Process summaries if found
         result = []

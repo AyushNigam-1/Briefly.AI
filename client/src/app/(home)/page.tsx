@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { yt_metadata, web_metadata } from "../types";
+import { yt_metadata, web_metadata, file_metadata } from "../types";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Navbar from "../components/Navbar"
@@ -10,7 +10,7 @@ import axios, { AxiosError } from "axios";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import ClipLoader from "react-spinners/ClipLoader";
-
+import { Metadata } from "../types";
 interface PromptResponse {
   prompt?: string
   error?: string
@@ -19,13 +19,14 @@ interface PromptResponse {
 export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [metadata, setMetadata] = useState<yt_metadata | web_metadata | null>(null);
+  const [metadata, setMetadata] = useState<Metadata | null>(null);
   const [url, setUrl] = useState<string | null>()
-  const [file, setFile] = useState<FileList | undefined>();
+  const [file, setFile] = useState<File | undefined>();
   const doc = useRef<HTMLInputElement | null>(null);
-  const [isInputVisible, setIsInputVisible] = useState(false); 
-  const [prompt, setPrompt] = useState<string |undefined>()
-  const [promptState , setState] = useState(false)
+  const [isInputVisible, setIsInputVisible] = useState(false);
+  const [prompt, setPrompt] = useState<string | undefined>()
+  const [promptState, setState] = useState(false)
+  const [fileDetails, setFileDetails] = useState<{ name: string; size: number; format: string } | null>(null);
   function isValidUrl(urlString: string): boolean {
     try {
       new URL(urlString);
@@ -34,6 +35,29 @@ export default function Home() {
       return false;
     }
   }
+  const uploadFile = async () => {
+    if (!file) throw new Error("No file provided");
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await fetch("http://localhost:8000/summarize-file", {
+        method: "POST",
+        body: formData,
+      });
+      console.log(response)
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "An error occurred while uploading the file");
+      }
+
+      const data = await response.json();
+      return data.extracted_text;
+    } catch (error: any) {
+      throw new Error(`File upload failed: ${error.message}`);
+    }
+  };
   const getPrompt = async () => {
     const token = Cookies.get("access_token");
 
@@ -42,7 +66,7 @@ export default function Home() {
         headers: {
           "Authorization": `Bearer ${token}`,
         },
-        withCredentials: true, 
+        withCredentials: true,
       });
       setPrompt(response.data.prompt);
     } catch (error: unknown) {
@@ -56,7 +80,7 @@ export default function Home() {
       }
     }
   };
-  const updatePrompt = async (newPrompt: string|undefined) => {
+  const updatePrompt = async (newPrompt: string | undefined) => {
     setState(true)
     const token = Cookies.get("access_token");
     try {
@@ -66,7 +90,7 @@ export default function Home() {
         headers: {
           "Authorization": `Bearer ${token}`,
         },
-        withCredentials: true, 
+        withCredentials: true,
       });
       toast.success("Prompt Updated Successfully")
       setPrompt(response.data.prompt)
@@ -80,12 +104,33 @@ export default function Home() {
         return { error: 'An unexpected error occurred' };
       }
     }
-    finally{
+    finally {
       setState(false)
       setIsInputVisible(false)
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLoading(true);
+    if (e.target.files) {
+      const uploadedFile = e.target.files[0];
+      setFile(uploadedFile)
+      const fileSize = uploadedFile.size >= 1048576 ? (uploadedFile.size / 1048576).toFixed(2) + ' MB' : (uploadedFile.size / 1024).toFixed(2) + ' KB';
+      const fileType = uploadedFile.type.startsWith('image/') ? 'image' : 'document';
+      let thumbnail = '';
+      if (fileType === 'image') {
+        thumbnail = URL.createObjectURL(uploadedFile);
+      } else {
+        thumbnail = ' https://img.icons8.com/color/50/google-docs.png';
+      }
+
+      const fileMetaData = { title: uploadedFile.name, size: fileSize, type: fileType, thumbnail };
+      setMetadata(fileMetaData)
+
+
+    }
+    setLoading(false);
+  }
   const getMetadata = async (url: string) => {
     if (isValidUrl(url)) {
       setLoading(true);
@@ -97,7 +142,7 @@ export default function Home() {
           headers: {
             "Authorization": `Bearer ${token}`,
           },
-          withCredentials: true, 
+          withCredentials: true,
         });
 
         const data = response.data;
@@ -128,13 +173,25 @@ export default function Home() {
     }
   };
 
-useEffect(() => {
-  getPrompt()
-},[])
+  useEffect(() => {
+    getPrompt()
+  }, [])
 
-  const isYouTubeMetadata = (metadata: yt_metadata | web_metadata): metadata is yt_metadata => {
-    return (metadata as yt_metadata).thumbnail_url !== undefined;
-  };
+  function isYouTubeMetadata(metadata: Metadata): metadata is yt_metadata {
+    return metadata.type === "video";
+  }
+
+  function isWebMetadata(metadata: Metadata): metadata is web_metadata {
+    return metadata.type === "web";
+  }
+
+  function isDocMetadata(metadata: Metadata): metadata is file_metadata {
+    return metadata.type === "document";
+  }
+  function isImageMetadata(metadata: Metadata): metadata is file_metadata {
+    return metadata.type === "image";
+  }
+
 
   return (
     <div>
@@ -167,7 +224,7 @@ useEffect(() => {
               </span>
             </div>
             <button className="flex bg-gray-700/50 p-2 items-center rounded-full px-4" onClick={() => doc.current?.click()} >
-              <input type="file" className="hidden" onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFile(e.target.files ?? undefined)} ref={doc as React.LegacyRef<HTMLInputElement>} />
+              <input type="file" className="hidden" onChange={(e) => handleFileChange(e)} ref={doc as React.LegacyRef<HTMLInputElement>} />
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
               </svg>
@@ -175,49 +232,37 @@ useEffect(() => {
             </button>
           </div>
           <div className="flex justify-between">
-            <Link href={`/summarize/${encodeURIComponent(url ? url : "")}/${metadata?.title} `}>
-              <div className="p-[2px] bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full inline-block">
-                <button
-                  className="bg-gray-700 w-min flex items-center gap-1 text-xl p-2 px-3 rounded-full disabled:line-through"
-                  disabled={!metadata}
+            {/* <Link   
+            href={`/summarize/${encodeURIComponent(url ? url : "")}/${metadata?.title} `}
+            > */}
+            <div className="p-[2px] bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full inline-block">
+              <button
+                onClick={() => uploadFile()}
+                className="bg-gray-700 w-min flex items-center gap-1 text-xl p-2 px-3 rounded-full disabled:line-through"
+                disabled={!metadata}
+              >
+                Summarize
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="size-6"
                 >
-                  Summarize
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                    className="size-6"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M17.25 8.25L21 12m0 0-3.75 3.75M21 12H3"
-                    />
-                  </svg>
-                </button>
-              </div>
-            </Link>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M17.25 8.25L21 12m0 0-3.75 3.75M21 12H3"
+                  />
+                </svg>
+              </button>
+            </div>
+            {/* </Link> */}
             <div className="relative flex gap-2">
               {isInputVisible && <button onClick={() => updatePrompt(prompt)}
                 className="flex items-center justify-center gap-2 bg-gray-900/70  w-full p-3.5  rounded-full"
               >
-              {/* {
-                  promptState ? <svg version="1.1" id="L9" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-                    viewBox="0 0 100 100" enable-background="new 0 0 0 0" xmlSpace="preserve">
-                    <path fill="#fff" d="M73,50c0-12.7-10.3-23-23-23S27,37.3,27,50 M30.9,50c0-10.5,8.5-19.1,19.1-19.1S69.1,39.5,69.1,50">
-                      <animateTransform
-                        attributeName="transform"
-                        attributeType="XML"
-                        type="rotate"
-                        dur="1s"
-                        from="0 50 50"
-                        to="360 50 50"
-                        repeatCount="indefinite" />
-                    </path>
-                  </svg> :
-              } */}
                 <ClipLoader
                   color={"#ffffff"}
                   loading={promptState}
@@ -225,21 +270,17 @@ useEffect(() => {
                   aria-label="Loading Spinner"
                   data-testid="loader"
                 />
-                  {!promptState && <>
-                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                {!promptState && <>
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                   </svg>
-                      Update
-                  </>}
-               
-                
+                  Update
+                </>}
               </button>}
-
               <button
                 onClick={() => setIsInputVisible(!isInputVisible)}
                 className="flex items-center justify-center gap-2 bg-gray-900/70  w-full p-3.5  rounded-full"
               >
-
                 {!isInputVisible ? <><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                 </svg> Update Prompt  </> : <>
@@ -255,7 +296,7 @@ useEffect(() => {
           <div className="min-h-[100px] ">
             <AnimatePresence>
               {metadata && (
-                isYouTubeMetadata(metadata) ? (
+                isYouTubeMetadata(metadata) && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
@@ -270,22 +311,57 @@ useEffect(() => {
                       </div>
                     </div>
                   </motion.div>
-                ) : (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.5 }}
-                  >
-                    <div className="bg-gray-900/70 rounded-md flex p-2 gap-2 items-center text-gray-300">
-                      <img src={metadata.favicon} alt="Website favicon" className="rounded-md" width="40" height="40" />
-                      <div className="flex flex-col gap-1">
-                        <h4 className="font-bold">{metadata.title}</h4>
-                        <p>{metadata.base_url}</p>
-                      </div>
+                ))}
+              {metadata && (isWebMetadata(metadata) && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <div className="bg-gray-900/70 rounded-md flex p-2 gap-2 items-center text-gray-300">
+                    <img src={metadata.favicon} alt="Website favicon" className="rounded-md" width="40" height="40" />
+                    <div className="flex flex-col gap-1">
+                      <h4 className="font-bold">{metadata.title}</h4>
+                      <p>{metadata.base_url}</p>
                     </div>
-                  </motion.div>
-                )
+                  </div>
+                </motion.div>
+              )
+              )}
+              {metadata && isDocMetadata(metadata) && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <div className="bg-gray-900/70 rounded-md flex p-2 gap-2 items-center text-gray-300">
+                    <img src={metadata.thumbnail} alt="Website favicon" className="rounded-md" width="40" height="40" />
+                    <div className="flex flex-col gap-1">
+                      <h4 className="font-bold">{metadata.title}</h4>
+                      <p>{metadata.size}</p>
+                    </div>
+                  </div>
+                </motion.div>
+
+              )}
+              {metadata && isImageMetadata(metadata) && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <div className="bg-gray-900/70 rounded-md flex p-2 gap-2 items-center text-gray-300">
+                    <img src={metadata.thumbnail} alt="Website favicon" className="rounded-md" width="40" height="40" />
+                    <div className="flex flex-col gap-1">
+                      <h4 className="font-bold">{metadata.title}</h4>
+                      <p>{metadata.size}</p>
+                    </div>
+                  </div>
+                </motion.div>
+
               )}
             </AnimatePresence>
             <AnimatePresence>

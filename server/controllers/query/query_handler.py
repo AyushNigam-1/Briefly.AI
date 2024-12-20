@@ -12,7 +12,7 @@ from controllers.db.conn import summary_collection
 load_dotenv()
 groq_api_key = os.getenv("groq_api_key")
 
-llm = ChatGroq(model="Gemma-7b-It", groq_api_key=groq_api_key)
+llm = ChatGroq(model="llama-3.3-70b-versatile", groq_api_key=groq_api_key)
 
 prompt_template = """
 You are an expert AI assistant. Based on the following summarized information and user query, provide a concise, human-like response without headings or unnecessary structure:
