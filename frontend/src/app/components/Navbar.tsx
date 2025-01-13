@@ -24,10 +24,8 @@ const Navbar = () => {
                         </MenuItem>
                         )
                     }
-
                 </MenuItems>
             </Menu>
-
         </div>
     )
 }
