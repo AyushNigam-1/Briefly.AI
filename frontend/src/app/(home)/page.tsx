@@ -1,19 +1,92 @@
 "use client"
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useRef, useState } from 'react'
 import Navbar from '../components/Navbar'
 import Image from 'next/image'
 import { motion, AnimatePresence } from "framer-motion";
-
+import Cookies from "js-cookie";
+import axios, { AxiosError } from "axios";
 import { Dialog, DialogBackdrop, DialogPanel, Textarea } from '@headlessui/react'
 import clsx from 'clsx'
+import { metadata } from '../types';
 const page = () => {
   const [action, setAction] = useState('Summarize')
   const [language, setLanguage] = useState('Hindi')
   const actions = useMemo(() => ["Summarize", "Extend", "Shorten", "Key Points"], [])
   const languages = useMemo(() => ['Hindi', 'English', 'Urdu', 'Sanskrit'], [])
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(true)
-  const [metadata, setMetadata] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [url, setUrl] = useState<string | null>(null)
+  const [metadata, setMetadata] = useState<metadata | null>(null)
+  const [file, setFile] = useState<File | undefined>()
+  const doc = useRef<HTMLInputElement | null>(null);
+
+  function isValidUrl(urlString: string): boolean {
+    try {
+      new URL(urlString);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLoading(true);
+    if (e.target.files) {
+      const uploadedFile = e.target.files[0];
+      setFile(uploadedFile)
+      const metadata = uploadedFile.size >= 1048576 ? (uploadedFile.size / 1048576).toFixed(2) + ' MB' : (uploadedFile.size / 1024).toFixed(2) + ' KB';
+      const fileType = uploadedFile.type.startsWith('image/') ? 'image' : 'document';
+      let icon;
+      if (fileType === 'image') {
+        icon = URL.createObjectURL(uploadedFile);
+      } else {
+        icon = ' https://img.icons8.com/color/50/google-docs.png';
+      }
+      const fileMetaData = { title: uploadedFile.name, metadata, icon };
+      setMetadata(fileMetaData)
+    }
+    setLoading(false);
+  }
+  const getMetadata = async () => {
+    if (typeof url == 'string' && isValidUrl(url)) {
+      setLoading(true);
+      try {
+        const token = Cookies.get("access_token");
+        console.log("Token from cookies:", token);
+        const response = await axios.get(`http://127.0.0.1:8000/metadata?url=${encodeURIComponent(url)}`, {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+          withCredentials: true,
+        });
+
+        const data = response.data;
+        setMetadata(data);
+        console.log(data)
+        // setError(null);
+      } catch (err: any) {
+        setMetadata(null);
+
+        if (err.response) {
+          if (err.response.status === 404) {
+            // setError("We couldn't find any metadata for this URL. Please check if the URL is correct.");
+          } else if (err.response.status >= 500) {
+            // setError("Server encountered an issue. Please try again later.");
+          } else {
+            // setError("An unexpected error occurred. Please try again.");
+          }
+        } else {
+          // setError(err.message);
+        }
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      // setError(null);
+      setMetadata(null);
+    }
+  };
+
 
   return (
     <>
@@ -30,10 +103,12 @@ const page = () => {
           </div>
           <div className='flex gap-4 w-full' >
             <span className='bg-gray-700 rounded-full flex gap-3 w-full'>
-              <button className='bg-gray-900 rounded-full p-3 px-4 flex items-center justify-center'>
+              <button className='bg-gray-900 rounded-full p-3 px-4 flex items-center justify-center' onClick={() => doc.current?.click()}>
+                <input type="file" className="hidden" onChange={(e) => handleFileChange(e)} accept=".pdf,.txt,image/*" ref={doc as React.LegacyRef<HTMLInputElement>} />
+
                 <img width="20" height="20" src="https://img.icons8.com/forma-regular/50/FFFFFF/attach.png" alt="attach" />
               </button>
-              <input type="text" placeholder='e.g https://youtu.be/IHkGe92LG_A?si=cjovoaz-goQNn00Y or https://heroicons.com/' className='appearance-none border-none outline-none bg-transparent p-0 m-0 w-full h-14' />
+              <input type="text" onChange={({ target }) => setUrl(target.value)} placeholder='e.g https://youtu.be/IHkGe92LG_A?si=cjovoaz-goQNn00Y or https://heroicons.com/' className='appearance-none border-none outline-none bg-transparent p-0 m-0 w-full h-14' />
               <span className="px-4  bg-gray-700/50 rounded-e-full flex gap-1.5 items-center justify-center text-gray-400">
                 {loading ? (<>
                   <Image src="/805.svg" alt="loader" width="20" height="20" />
@@ -48,7 +123,7 @@ const page = () => {
                 )}
               </span>
             </span>
-            <button onClick={() => setMetadata("haha")} className="bg-gradient-to-t from-red-500  to-blue-500 rounded-full p-1 flex items-center justify-center">
+            <button onClick={() => getMetadata()} className="bg-gradient-to-t from-red-500  to-blue-500 rounded-full p-1 flex items-center justify-center">
               <div className="bg-gray-900 rounded-full p-4 flex items-center justify-center">
                 <img
                   width="20"
@@ -72,7 +147,7 @@ const page = () => {
             <button className='bg-gray-900 p-3 px-4 text-xl rounded-full  flex items-center justify-center' onClick={() => setOpen(true)}>
               Custom
             </button>
-            <Dialog open={open} as="div" className="relative z-10 focus:outline-none" onClose={close}>
+            <Dialog open={open} as="div" className="relative z-10 focus:outline-none" onClose={() => setOpen(false)}>
               <DialogBackdrop className="fixed inset-0 bg-black/50" />
               <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
                 <div className="flex min-h-full items-center justify-center p-4">
@@ -81,7 +156,7 @@ const page = () => {
                     className="w-full max-w-md rounded-xl flex flex-col gap-3 bg-[#1b283b] shadow-md  p-6 backdrop-blur-2xl duration-300 ease-out data-[closed]:transform-[scale(95%)] data-[closed]:opacity-0"
                   >
                     <div className='flex justify-between items-center w-full' >
-                    <h6 className='font-mulish text-xl font-bold' > CUSTOM PROMPT </h6>
+                      <h6 className='font-mulish text-xl font-bold' > CUSTOM PROMPT </h6>
                       <div className='flex gap-2' >
                         <button className='bg-gradient-to-t from-blue-500 to-gray-900 p-1 rounded-full' >
                           <span className='bg-gray-900 p-2 text-xl rounded-full  flex items-center justify-center' >
@@ -106,7 +181,7 @@ const page = () => {
                       )}
                       rows={9}
                     />
-                    
+
                   </DialogPanel>
                 </div>
               </div>
@@ -212,7 +287,7 @@ const page = () => {
               </motion.div>
               }*/}
           {/* </AnimatePresence>  */}
-          <Dialog open={Boolean(metadata)} as="div" className="relative z-10 focus:outline-none" onClose={close}>
+          <Dialog open={Boolean(metadata)} as="div" className="relative z-10 focus:outline-none" onClose={() => setMetadata(null)}>
             <DialogBackdrop className="fixed inset-0 bg-black/50" />
             <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
               <div className="flex min-h-full items-center justify-center p-4">
@@ -221,7 +296,7 @@ const page = () => {
                   className="w-full max-w-lg rounded-xl flex flex-col gap-3 bg-[#1b283b] shadow-md  p-6 backdrop-blur-2xl duration-300 ease-out data-[closed]:transform-[scale(95%)] data-[closed]:opacity-0"
                 >
                   <div className='flex justify-between items-center' >
-                  <h6 className='font-mulish text-xl font-bold' > CONTENT </h6>
+                    <h6 className='font-mulish text-xl font-bold' > CONTENT </h6>
                     <div className='flex gap-2' >
                       <button className='bg-gradient-to-t from-blue-500 to-gray-900 p-1 rounded-full' >
                         <span className='bg-gray-900 p-2 text-xl rounded-full  flex items-center justify-center' >
@@ -238,25 +313,30 @@ const page = () => {
                         </span>
                       </button>
                     </div>
-
                   </div>
-                  <div className="bg-gray-900 rounded-md flex p-2 gap-3 items-center ">
-                    <img src="https://legiit-service.s3.amazonaws.com/e28a65e1c9b74c50e1dbfc21c6ed8e15/09e97ce6ea2c1176eed82325275a3f9b.jpg" alt="Video thumbnail" className="rounded-md" width="120" height="120" />
+                  <div className="bg-gray-900 rounded-md flex p-2 gap-3 items-center">
+                    <img
+                      src={metadata?.icon}
+                      alt="Video thumbnail"
+                      className="rounded-md"
+                      width="80"
+                      height="80"
+                    />
                     <div className="flex flex-col gap-1 truncate">
-                      <h4 className="font-extrabold font-mulish text-xl truncate">A Demo Youtube Tittle Hehe</h4>
-                      <p className='text-sm font-light text-gray-300' >Lorem, ipsum dolor sit amet consectetur adipisicing elit. Officiis sapiente eligendi necessitatibus?</p>
-                      <p className='text-sm font-semibold' >Mojo Gang</p>
+                      <h4 className="font-extrabold font-mulish text-xl truncate">
+                        {metadata?.title}
+                      </h4>
+                      <p className="text-sm font-semibold truncate">{metadata?.metadata}</p>
                     </div>
                   </div>
-
                 </DialogPanel>
               </div>
             </div>
 
-          </Dialog>
+          </Dialog >
           {/* </div> */}
-        </div>
-      </div>
+        </div >
+      </div >
     </>
 
   )

@@ -1,7 +1,9 @@
 import React, { useMemo } from 'react'
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
+import Link from 'next/link';
+
 const Navbar = () => {
-    const options = useMemo(() => ["Login",'Signup'], [])
+    const options = useMemo(() => [{ label: "Login", route: '/account/login' }, { label: 'Signup',route:'/account/signup' }], [])
     return (
         <div className='flex justify-between items-center container mx-auto my-3' >
             <h3 className='text-3xl font-mulish font-extrabold ' >
@@ -17,10 +19,10 @@ const Navbar = () => {
                     anchor="bottom end"
                     className="w-52 origin-top-right rounded-xl border border-white/5 bg-white/5 p-1 text-sm/6 text-white transition duration-100 ease-out [--anchor-gap:var(--spacing-1)] focus:outline-none data-[closed]:scale-95 data-[closed]:opacity-0">
                     {
-                        options.map(option => <MenuItem key={option}>
-                            <button className="group flex w-full items-center gap-2 rounded-lg py-1.5 px-3 data-[focus]:bg-white/10">
-                                {option}
-                            </button>
+                        options.map(option => <MenuItem key={Math.random()}>
+                            <Link href={option.route} className="group flex w-full items-center gap-2 rounded-lg py-1.5 px-3 data-[focus]:bg-white/10">
+                                {option.label}
+                            </Link>
                         </MenuItem>
                         )
                     }
