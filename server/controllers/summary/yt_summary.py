@@ -15,7 +15,7 @@ from datetime import datetime
 from controllers.db.summary import save_summary_to_mongo
 from controllers.db.conn import summary_collection
 from controllers.db.prompt import get_prompt_by_user
-import websockets  # Replace with your chosen library
+# import websockets  # Replace with your chosen library
 
 load_dotenv()
 api_key = os.getenv("groq_api_key")

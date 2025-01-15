@@ -21,33 +21,25 @@ def get_youtube_metadata(video_url: str):
         response = requests.get(metadata_url)
         response.raise_for_status()
         metadata = response.json()
+        print(metadata)
 
-        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+        try:
+            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+            transcript_available = transcript_list is not None
+        except Exception as transcript_error:
+            print(f"Transcript error: {transcript_error}")
+            transcript_available = False
 
         return {
             "type": "video",
             "title": metadata["title"],
-            "thumbnail_url": metadata["thumbnail_url"],
-            "channel_name": metadata["author_name"],
-            "transcript_available": transcript_list is not None,
+            "icon": metadata["thumbnail_url"],
+            "metadata": metadata["author_name"],
+            "transcript_available": transcript_available
         }
 
     except Exception as e:
         print(e)
         raise HTTPException(status_code=400, detail=f"Error: {str(e)}")
-# from pytube import YouTube
-# from fastapi import HTTPException
-# def get_youtube_metadata(video_url: str):
-#     try:
-#         yt = YouTube(video_url)
-#         return {
-#             "type":"video",
-#             "title": yt.title,
-#             "thumbnail_url": yt.thumbnail_url,
-#             "channel_name": yt.author
-#         }
 
-#     except Exception as e:
-#         print(e)
-#         raise HTTPException(status_code=400, detail=str(e))
 

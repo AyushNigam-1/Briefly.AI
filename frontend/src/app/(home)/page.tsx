@@ -8,7 +8,9 @@ import axios, { AxiosError } from "axios";
 import { Dialog, DialogBackdrop, DialogPanel, Textarea } from '@headlessui/react'
 import clsx from 'clsx'
 import { metadata } from '../types';
+import Link from 'next/link';
 const page = () => {
+
   const [action, setAction] = useState('Summarize')
   const [language, setLanguage] = useState('Hindi')
   const actions = useMemo(() => ["Summarize", "Extend", "Shorten", "Key Points"], [])
@@ -47,6 +49,7 @@ const page = () => {
     }
     setLoading(false);
   }
+
   const getMetadata = async () => {
     if (typeof url == 'string' && isValidUrl(url)) {
       setLoading(true);
@@ -200,93 +203,6 @@ const page = () => {
               Other
             </button>
           </div>
-          {/* <div className="min-h-[100px] "> */}
-
-          {/* <AnimatePresence> */}
-
-          {/* <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.5 }}
-                  >
-                    <div className="bg-gray-900 rounded-md flex p-2 gap-3 items-center  mb-6">
-                      <img src="https://legiit-service.s3.amazonaws.com/e28a65e1c9b74c50e1dbfc21c6ed8e15/09e97ce6ea2c1176eed82325275a3f9b.jpg" alt="Video thumbnail" className="rounded-md" width="120" height="120" />
-                      <div className="flex flex-col gap-1 truncate">
-                    <h4 className="font-extrabold font-mulish text-xl truncate">A Demo Youtube Tittle Hehe</h4>
-                    <p className='text-sm font-light text-gray-300' >Lorem, ipsum dolor sit amet consectetur adipisicing elit. Officiis sapiente eligendi necessitatibus?</p>
-                    <p className='text-sm font-semibold' >Mojo Gang</p>
-                      </div>
-                    </div>
-                  </motion.div> */}
-
-          {/* {metadata && (isWebMetadata(metadata) && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.5 }}
-                >
-                  <div className="bg-gray-900/70 rounded-md flex p-2 gap-2 items-center text-gray-300">
-                    <img src={metadata.favicon} alt="Website favicon" className="rounded-md" width="40" height="40" />
-                    <div className="flex flex-col gap-1">
-                      <h4 className="font-bold">{metadata.title}</h4>
-                      <p>{metadata.base_url}</p>
-                    </div>
-                  </div>
-                </motion.div>
-              )
-              )}
-              {metadata && isDocMetadata(metadata) && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.5 }}
-                >
-                  <div className="bg-gray-900/70 rounded-md flex p-2 gap-2 items-center text-gray-300">
-                    <img src={metadata.thumbnail} alt="Website favicon" className="rounded-md" width="40" height="40" />
-                    <div className="flex flex-col gap-1">
-                      <h4 className="font-bold">{metadata.title}</h4>
-                      <p>{metadata.size}</p>
-                    </div>
-                  </div>
-                </motion.div>
-
-              )}
-              {metadata && isImageMetadata(metadata) && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.5 }}
-                >
-                  <div className="bg-gray-900/70 rounded-md flex p-2 gap-2 items-center text-gray-300">
-                    <img src={metadata.thumbnail} alt="Website favicon" className="rounded-md" width="40" height="40" />
-                    <div className="flex flex-col gap-1">
-                      <h4 className="font-bold">{metadata.title}</h4>
-                      <p>{metadata.size}</p>
-                    </div>
-                  </div>
-                </motion.div>
-
-              )}
-            </AnimatePresence>
-            <AnimatePresence>
-              {error && <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.5 }}
-              > <div className="bg-red-900/50 rounded-md flex p-2 gap-3 items-center text-red-300">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                  </svg>
-                  <p>{error}</p>
-                </div>
-              </motion.div>
-              }*/}
-          {/* </AnimatePresence>  */}
           <Dialog open={Boolean(metadata)} as="div" className="relative z-10 focus:outline-none" onClose={() => setMetadata(null)}>
             <DialogBackdrop className="fixed inset-0 bg-black/50" />
             <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
@@ -298,13 +214,17 @@ const page = () => {
                   <div className='flex justify-between items-center' >
                     <h6 className='font-mulish text-xl font-bold' > CONTENT </h6>
                     <div className='flex gap-2' >
-                      <button className='bg-gradient-to-t from-blue-500 to-gray-900 p-1 rounded-full' >
-                        <span className='bg-gray-900 p-2 text-xl rounded-full  flex items-center justify-center' >
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                          </svg>
-                        </span>
-                      </button>
+                      <Link
+                        href={`/summarize/${encodeURIComponent(url ? url : "")}?title=${metadata?.title}&language=${language}&format=${action}`}
+                      >
+                        <button className='bg-gradient-to-t from-blue-500 to-gray-900 p-1 rounded-full' >
+                          <span className='bg-gray-900 p-2 text-xl rounded-full  flex items-center justify-center' >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                            </svg>
+                          </span>
+                        </button>
+                      </Link>
                       <button className='bg-gradient-to-t from-red-500 to-gray-900 p-1 rounded-full' onClick={() => setMetadata(null)} >
                         <span className='bg-gray-900 p-2 text-xl rounded-full  flex items-center justify-center' >
                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5">
@@ -332,9 +252,7 @@ const page = () => {
                 </DialogPanel>
               </div>
             </div>
-
           </Dialog >
-          {/* </div> */}
         </div >
       </div >
     </>

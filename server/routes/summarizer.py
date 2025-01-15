@@ -13,15 +13,14 @@ from controllers.db.summary import get_summaries_by_user , get_summary_by_id , d
 router = APIRouter()
 
 @router.get("/summarize/")
-async def summarize_content(url: str,lang:str,tone:str,title:str , current_user: dict = Depends(get_current_user)):
-    print(current_user)
+async def summarize_content(url: str,lang:str,format:str,title:str , current_user: dict = Depends(get_current_user)):
     if not validators.url(url):
         raise HTTPException(status_code=400, detail="Invalid URL")
     try:
         if "youtu.be" in url or "youtube.com" in url:
-            summary = await get_youtube_summary(url,lang,tone,title,current_user)
+            summary = await get_youtube_summary(url,lang,format,title,current_user)
         else:
-            summary = get_web_summary(url,lang,tone,current_user)
+            summary = get_web_summary(url,lang,format,current_user)
             
         return {"summary":summary,}
 

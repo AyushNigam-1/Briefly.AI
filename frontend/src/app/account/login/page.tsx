@@ -10,15 +10,20 @@ const page: React.FC = () => {
     const [error, setError] = useState<string>('');
     const [loading, setLoading] = useState<boolean>(false);
     const router = useRouter()
-    const handleSubmit = async (event: FormEvent) => {
+
+    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         setError('');
         setLoading(true);
+        const formData = new FormData(event.currentTarget);
+        const username = formData.get("name") as string; 
+        const password = formData.get("password") as string; 
         const data = {
-            action: 'login',
+            action: 'signup',
             username,
             password,
         };
+        console.log(data)
         try {
             const response = await axios.post('http://localhost:8000/auth', data, {
                 withCredentials: true,
@@ -43,7 +48,6 @@ const page: React.FC = () => {
         <div className="w-screen h-screen flex justify-center items-center font-mono">
             <div className="rounded-lg shadow-xl z-20 bg-gradient-to-t from-red-500  to-blue-500 p-1">
                 <div className='p-8 bg-gray-900 rounded-lg' >
-                    {/* <div></div> */}
                     <form action="" onSubmit={handleSubmit} className="flex flex-col gap-6 ">
                         <span className='bg-gray-700 p-1.5 w-min rounded-full self-center'>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-10">
@@ -62,8 +66,8 @@ const page: React.FC = () => {
                         />
                         <input
                             type="password"
-                            name="email"
-                            id="email"
+                            name="password"
+                            id="password"
                             placeholder="Password"
                             className="py-4 pl-3 rounded-lg w-80  bg-gray-500/50 outline-none focus:ring-indigo-600"
                             value={password}

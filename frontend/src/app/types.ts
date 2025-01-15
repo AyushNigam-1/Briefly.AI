@@ -4,8 +4,13 @@ export type metadata = {
     metadata: string;
 };
 
-export interface query {
+export type query = {
     sender?: string;
     content?: string
 };
 
+export type SummaryResponse = {
+    summarized_summary: string;
+    id: string;
+    queries: query[] | [];
+}

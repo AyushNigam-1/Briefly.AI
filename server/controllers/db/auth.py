@@ -64,6 +64,8 @@ async def login(user: User, response: Response):
     # Fetch the user from the users_collection
     stored_user = users_collection.find_one({"username": user.username})
 
+    print(stored_user)
+
     # Check if the user exists and if the password is correct
     if not stored_user or not check_password_hash(stored_user['password'], user.password):
         raise HTTPException(status_code=401, detail="Invalid username or password")

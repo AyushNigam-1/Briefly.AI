@@ -17,8 +17,8 @@ pinecone-client
 PyJWT
 Werkzeug
 pymongo
-ws
 python-multipart
 PyPDF2
 pytesseract
 pillow
+scikit-learn

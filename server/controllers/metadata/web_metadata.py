@@ -29,8 +29,8 @@ def get_website_metadata(url: str):
         return {
             'type': 'web',
             'title': title,
-            'favicon': favicon,
-            'meta_description': meta_description,
+            'icon': favicon,
+            'metadata': meta_description,
             'base_url': tldextract.extract(url).domain
         }
 

@@ -28,6 +28,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 def get_current_user(token: str = Depends(oauth2_scheme)) -> Any:
+    print(token)
     try:
         payload = verify_token(token)
         return payload  # Return the payload which might include user data like username or user_id
