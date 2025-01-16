@@ -22,3 +22,5 @@ PyPDF2
 pytesseract
 pillow
 scikit-learn
+python-socketio[asyncio_server]
+fastapi-socketio

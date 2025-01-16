@@ -19,7 +19,7 @@ const page: React.FC = () => {
         const username = formData.get("name") as string; 
         const password = formData.get("password") as string; 
         const data = {
-            action: 'signup',
+            action: 'login',
             username,
             password,
         };
@@ -97,7 +97,6 @@ const page: React.FC = () => {
                         </Link>
                     </form>
                 </div>
-
             </div>
         </div>
     );

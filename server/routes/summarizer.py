@@ -27,6 +27,8 @@ async def summarize_content(url: str,lang:str,format:str,title:str , current_use
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+    
+
 
 @router.get("/download/")
 async def download_summary(summary_id: str, type: str):
@@ -53,6 +55,7 @@ async def download_summary(summary_id: str, type: str):
     )
 
 
+
 @router.get("/user_summaries/")
 def get_user_summaries(current_user: dict = Depends(get_current_user)):
     try:
@@ -64,6 +67,7 @@ def get_user_summaries(current_user: dict = Depends(get_current_user)):
         print(e)
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
     
+
 
 @router.get("/summary/")
 def get_summary(id: str):
@@ -85,6 +89,7 @@ def get_summary(id: str):
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
     
 
+
 @router.delete("/summary/")
 async def delete_summary(id: str):
     """
@@ -103,6 +108,8 @@ async def delete_summary(id: str):
         raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    
+
     
 @router.post('/summarize-file')
 async def extract_text(file: UploadFile = File(...)):
