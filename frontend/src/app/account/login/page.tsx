@@ -1,5 +1,5 @@
 "use client"
-import React, { useState, FormEvent } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -23,7 +23,6 @@ const page: React.FC = () => {
             username,
             password,
         };
-        console.log(data)
         try {
             const response = await axios.post('http://localhost:8000/auth', data, {
                 withCredentials: true,

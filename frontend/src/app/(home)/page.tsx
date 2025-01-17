@@ -9,6 +9,8 @@ import { Dialog, DialogBackdrop, DialogPanel, Textarea } from '@headlessui/react
 import clsx from 'clsx'
 import { metadata } from '../types';
 import Link from 'next/link';
+import { useEffect } from "react";
+
 const page = () => {
 
   const [action, setAction] = useState('Summarize')
@@ -22,6 +24,7 @@ const page = () => {
   const [file, setFile] = useState<File | undefined>()
   const doc = useRef<HTMLInputElement | null>(null);
 
+
   function isValidUrl(urlString: string): boolean {
     try {
       new URL(urlString);
@@ -30,7 +33,7 @@ const page = () => {
       return false;
     }
   }
-
+ 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLoading(true);
     if (e.target.files) {

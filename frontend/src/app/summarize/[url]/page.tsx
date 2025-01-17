@@ -4,12 +4,17 @@ import { useParams, useSearchParams } from "next/navigation";
 import axios from 'axios';
 import Cookies from 'js-cookie';
 import { SummaryResponse, query } from '@/app/types';
-import { io } from "socket.io-client";
+import { setupWebSocketListeners } from '@/websocket/webEvent';
+import GradientCircularLoader from '@/app/components/ProgressBar';
+import { connectWebSocket } from "@/websocket/websocket";
+
+
 const page = () => {
 
     const [queries, setQueries] = useState<query[]>([]);
     const [isLoading, setLoading] = useState<boolean>(false);
     const [summary, setSummary] = useState<SummaryResponse | undefined>();
+    const [progress, setProgress] = useState(0);
     const searchParams = useSearchParams();
     const params = useParams();
     const url = params?.url as string;
@@ -17,8 +22,6 @@ const page = () => {
     const language = searchParams.get('language') as string
     const format = searchParams.get('format') as string;
     console.log(language, format, url)
-
-
     const getSummary = async (url?: string, lang?: string, format?: string, title?: string) => {
         setLoading(true);
         try {
@@ -47,40 +50,33 @@ const page = () => {
     };
 
     useEffect(() => {
+        connectWebSocket("ws://127.0.0.1:8000/ws")
         getSummary(url, language, format, title);
     }, []);
-    useEffect(() => {
-        const ws = new WebSocket("ws://127.0.0.1:8000/ws");
-    
-        ws.onopen = () => {
-          console.log("WebSocket connection established");
-        };
-    
-        ws.onmessage = (event) => {
-            console.log(JSON.parse(event.data))
-        //   setMessages((prev) => [...prev, event.data]);
-        };
-    
-        ws.onclose = () => {
-          console.log("WebSocket connection closed");
-        };
-    
-        ws.onerror = (error) => {
-          console.error("WebSocket error:", error);
-        };
 
-        return () => {
-          ws.close();
-        };
-      }, []);
-    
-    
-    return (
-        <div>
-            {format}
-            {language}
+    useEffect(() => {
+        setupWebSocketListeners({
+            onOpen: () => console.log("WebSocket connection established in EventListenerComponent"),
+            onMessage: (data) => setProgress(data.progress),
+            onClose: () => console.log("WebSocket connection closed in EventListenerComponent"),
+            onError: (error) => console.error("WebSocket error:", error),
+        });
+    }, []);
+
+    return isLoading ?
+        <div className='h-screen w-screen flex items-center justify-center' >
+            <GradientCircularLoader progress={progress} />
         </div>
-    )
+        : (
+            <div>
+                {format}
+                {language}
+                <div className='w-28' >
+
+                </div>
+            </div>
+        )
+
 }
 
 export default page

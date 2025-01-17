@@ -14,3 +14,15 @@ export type SummaryResponse = {
     id: string;
     queries: query[] | [];
 }
+
+export type ProgressResponse = {
+    progress: number;
+    message: string;
+}
+
+export type WebSocketListeners = {
+    onMessage?: (data: ProgressResponse) => void;
+    onOpen?: (event: Event) => void;
+    onClose?: (event: CloseEvent) => void;
+    onError?: (event: Event) => void;
+  }

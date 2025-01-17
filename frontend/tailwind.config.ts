@@ -7,8 +7,11 @@ export default {
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
-  theme: {
+  theme: {    
     extend: {
+      animation: {
+        'spin-slow': 'spin 2s linear infinite',
+      },
       fontFamily: {
         mulish: [
           "Mulish",
