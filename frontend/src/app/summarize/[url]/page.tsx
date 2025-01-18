@@ -5,9 +5,9 @@ import axios from 'axios';
 import Cookies from 'js-cookie';
 import { SummaryResponse, query } from '@/app/types';
 import { setupWebSocketListeners } from '@/websocket/webEvent';
-import GradientCircularLoader from '@/app/components/ProgressBar';
+import CircularLoader from '@/app/components/ProgressBar';
 import { connectWebSocket } from "@/websocket/websocket";
-
+import BarLoader from "react-spinners/ClipLoader";
 
 const page = () => {
 
@@ -54,18 +54,29 @@ const page = () => {
         getSummary(url, language, format, title);
     }, []);
 
+    // useEffect(() => {
+    //     setupWebSocketListeners({
+    //         onOpen: () => console.log("WebSocket connection established in EventListenerComponent"),
+    //         onMessage: (data) => setProgress(data.progress),
+    //         onClose: () => console.log("WebSocket connection closed in EventListenerComponent"),
+    //         onError: (error) => console.error("WebSocket error:", error),
+    //     });
+    // }, []);
     useEffect(() => {
-        setupWebSocketListeners({
-            onOpen: () => console.log("WebSocket connection established in EventListenerComponent"),
-            onMessage: (data) => setProgress(data.progress),
-            onClose: () => console.log("WebSocket connection closed in EventListenerComponent"),
-            onError: (error) => console.error("WebSocket error:", error),
-        });
-    }, []);
+        const interval = setInterval(() => {
+            setProgress((prev) => (prev < 100 ? prev + 1 : 0));
+        }, 1000);
 
+        return () => clearInterval(interval);
+    }, []);
     return isLoading ?
         <div className='h-screen w-screen flex items-center justify-center' >
-            <GradientCircularLoader progress={progress} />
+            <BarLoader
+                color={"#ffffff"}
+                loading={isLoading}
+                size={25}
+                aria-label="Loading Spinner"
+                data-testid="loader" />
         </div>
         : (
             <div>
