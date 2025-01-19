@@ -7,7 +7,7 @@ export default {
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
-  theme: {    
+  theme: {
     extend: {
       animation: {
         'spin-slow': 'spin 2s linear infinite',
@@ -23,5 +23,5 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [require("tailwindcss-animate"), require('tailwind-scrollbar'), require("@tailwindcss/typography")]
 } satisfies Config;

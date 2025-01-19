@@ -16,8 +16,8 @@ const page: React.FC = () => {
         setError('');
         setLoading(true);
         const formData = new FormData(event.currentTarget);
-        const username = formData.get("name") as string; 
-        const password = formData.get("password") as string; 
+        const username = formData.get("name") as string;
+        const password = formData.get("password") as string;
         const data = {
             action: 'login',
             username,
@@ -28,9 +28,6 @@ const page: React.FC = () => {
                 withCredentials: true,
             });
             if (response.status === 200) {
-                console.log(response.data);
-                const token = response.data.access_token;
-                localStorage.setItem('access_token', token);
                 router.push("/")
             } else {
                 setError(response.data.detail || 'Something went wrong');
@@ -52,7 +49,7 @@ const page: React.FC = () => {
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-10">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
                             </svg>
-                        </span> 
+                        </span>
                         <h3 className='text-4xl font-mulish font-extrabold self-center text-gray-200' >Login</h3>
                         <input
                             type="text"

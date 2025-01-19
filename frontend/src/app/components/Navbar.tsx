@@ -1,11 +1,15 @@
-import React, { useMemo } from 'react'
+import React, { ReactNode, useMemo } from 'react'
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
 import Link from 'next/link';
+interface NavbarProps {
+    component?: ReactNode;
+}
+const Navbar: React.FC<NavbarProps> = ({ component }) => {
 
-const Navbar = () => {
-    const options = useMemo(() => [{ label: "Login", route: '/account/login' }, { label: 'Signup',route:'/account/signup' }], [])
+    const options = useMemo(() => [{ label: "Login", route: '/account/login' }, { label: 'Signup', route: '/account/signup' }], [])
     return (
         <div className='flex justify-between items-center container mx-auto my-3' >
+            {component}
             <h3 className='text-3xl font-mulish font-extrabold ' >
                 Briefly.AI
             </h3>

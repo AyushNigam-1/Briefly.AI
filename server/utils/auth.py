@@ -37,7 +37,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> Any:
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
-    expire = datetime.datetime.utcnow() + (expires_delta or timedelta(hours=1))
+    expire = datetime.datetime.utcnow() + (expires_delta or timedelta(hours=10))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 

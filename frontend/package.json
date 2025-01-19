@@ -12,6 +12,7 @@
     "@headlessui/react": "^2.2.0",
     "@radix-ui/react-dialog": "^1.1.4",
     "@shadcn/ui": "^0.0.4",
+    "@tailwindcss/typography": "^0.5.16",
     "@types/js-cookie": "^3.0.6",
     "axios": "^1.7.9",
     "class-variance-authority": "^0.7.1",
@@ -23,9 +24,13 @@
     "react": "^19.0.0",
     "react-customizable-progressbar": "^2.0.1",
     "react-dom": "^19.0.0",
+    "react-markdown": "^9.0.3",
     "react-spinners": "^0.15.0",
+    "remark-gfm": "^4.0.0",
+    "remark-markdown": "^0.0.1",
     "socket.io-client": "^4.8.1",
     "tailwind-merge": "^2.6.0",
+    "tailwind-scrollbar": "^3.1.0",
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {

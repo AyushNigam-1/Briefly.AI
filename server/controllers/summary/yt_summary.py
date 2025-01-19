@@ -101,7 +101,7 @@ def save_subtitles_to_file(subtitles: str, file_name: str) -> None:
 
 
 async def get_youtube_summary(
-    url: str, lang: str, tone: str, title: str, current_user
+    url: str, lang: str, format: str, title: str, current_user
 ) -> str:
     llm = ChatGroq(model="llama-3.3-70b-versatile", groq_api_key=api_key)
     video_id = extract_video_id(url)
@@ -117,7 +117,7 @@ async def get_youtube_summary(
         summarized_summary = existing_summary.get("summarized_summary", "No summarized summary available.")
         summary_id = str(existing_summary["_id"])
         queries = existing_summary.get("queries", "No queries available.")
-        await manager.send_message({"progress": 0, "message": "Summary already exists in the database."})
+        await manager.send_message({"progress": 100, "message": "Summary already exists in the database."})
         return {"summarized_summary": summarized_summary, "id": summary_id, "queries": queries}
 
     # Send progress updates
@@ -138,21 +138,25 @@ async def get_youtube_summary(
         prompt_template = user_prompt + "\n\nThe subtitle is - {text} and the language should strictly be - {language}."
     else:
         prompt_template = (
-            "Extract multiple 30-60 second segments from Osho's original speech without summarizing, rephrasing, or adding any additional words. "
-            "For each segment, provide a meaningful and engaging title that captures the essence of the excerpt. "
-            "Focus on powerful themes such as meditation, love, self-awareness, freedom, or inner transformation. "
-            "Ensure each segment starts and ends cleanly, preserving the original flow of Osho's words. Include as many impactful segments as possible, "
-            "with each one accompanied by a suitable title. The goal is to create multiple inspiring pieces that can stand alone and be paired with visuals "
-            "like nature scenes, meditative imagery, or serene moments for Instagram reels. The subtitle is - {text} and the language should strictly be - {language}."
+        "Convert the following YouTube transcript into a refined and human-friendly output based on the specified action."
+        "1. Action: Perform the task specified below:{format}"
+        "If shorten, reduce the transcript to its most essential points while maintaining clarity and meaning. Ensure brevity without losing important details."
+        "If extend, expand the transcript by adding more details, explanations, and examples to make the content richer and more engaging."
+        "    If summarize, condense the transcript into a concise overview by capturing only the main ideas and key points."
+        "    If key points, extract the most important and actionable points from the transcript in bullet form, without additional explanations."
+        "2. Language: Write the output in {language}."
+        "3. Style: Write in a natural, polished, and human-friendly tone."
+        "4. Enhancements: Ensure the content is clear, free of redundancy, and flows smoothly. Add transitions or structure (e.g., headings or bullet points) where necessary."
+        "Transcript: {text}"
         )
 
     prompt = PromptTemplate(
         template=prompt_template,
-        input_variables=["text", "language"]
+        input_variables=["text", "language" , "format"]
     )
 
     docs = [Document(page_content=corrected_transcript)]
-    input_data = {"input_documents": docs, "language": lang}
+    input_data = {"input_documents": docs, "language": lang,"format":format}
     await manager.send_message({"progress": 90, "message": "Generating summary..."})
 
     chain = load_summarize_chain(llm, chain_type="stuff", prompt=prompt)
