@@ -1,62 +1,87 @@
 import os
 from langchain.prompts import PromptTemplate
-from langchain.chains.question_answering import load_qa_chain
-from langchain.schema import Document
 from langchain_groq import ChatGroq
 from dotenv import load_dotenv
-from controllers.query.embeddings import generate_embedding
-from controllers.query.pinecone_db import query_embeddings
 from bson.objectid import ObjectId
 from controllers.db.conn import summary_collection
+from langchain.memory import ConversationBufferMemory
+from langchain.prompts import PromptTemplate
 
 load_dotenv()
 groq_api_key = os.getenv("groq_api_key")
 
 llm = ChatGroq(model="llama-3.3-70b-versatile", groq_api_key=groq_api_key)
 
-prompt_template = """
-You are an expert AI assistant. Based on the following summarized information and user query, provide a concise, human-like response without headings or unnecessary structure:
+# Initialize memory using ConversationBufferMemory (or you can use BaseMemory if needed)
+memory = ConversationBufferMemory()
 
-: {query}
-Summarized Information: {context}
+# Define the prompt template
+prompt_template = PromptTemplate(
+    input_variables=["summary", "history", "user_query"],
+    template="""
+    Video Summary:
+    {summary}
 
-Keep the response natural, to the point, and conversational.
-"""
+    Chat History:
+    {history}
 
-prompt = PromptTemplate(
-    template=prompt_template,
-    input_variables=["query", "context"]
+    User Query:
+    {user_query}
+
+    Response:
+    """
 )
 
 def chat_with_summary(user_input: str, id: str):
     """
-    Retrieves the summarized summary from MongoDB for a given ID and combines it with the user's input
-    to generate a detailed response using the LLM. The user query and AI response are saved to the query array in MongoDB.
+    Handles user queries using hybrid memory (static + dynamic).
+    Combines a static summary with the chat history for a context-aware response.
     """
-    summary_data = summary_collection.find_one({"_id": ObjectId(id)})
-    if not summary_data:
-        return "Could not find a summary associated with the given ID."
+    try:
+        # Retrieve the video summary from MongoDB
+        summary_data = summary_collection.find_one({"_id": ObjectId(id)})
+        if not summary_data:
+            return "Could not find a summary associated with the given ID."
+        
 
-    summarized_summary = summary_data.get("summarized_summary", "")
-    if not summarized_summary:
-        return "The summary is empty or not available."
+        summarized_summary = summary_data.get("summarized_summary", "")
+        if not summarized_summary:
+            return "The summary is empty or not available."
+        print(summarized_summary)
 
-    docs = [Document(page_content=summarized_summary)]
-    qa_chain = load_qa_chain(llm, chain_type="stuff", prompt=prompt)
-    input_data = {"input_documents": docs, "query": user_input}
+        # Retrieve chat history from memory
+        chat_history = memory.load_memory_variables({})
+        print(chat_history)
 
-    response = qa_chain.run(input_data)
+        # Create a prompt with static and dynamic memory
+        prompt = prompt_template.format(
+            summary=summarized_summary,
+            history=chat_history.get("history", ""),
+            user_query=user_input
+        )
 
-    user_query_entry = {"sender": "user", "content": user_input}
-    llm_response_entry = {"sender": "llm", "content": response}
+        # Generate the response
+        response = llm.invoke(prompt)
+        print("response", response.content)
+  
+        # Update memory with the new interaction
+        memory.save_context({"input": "User Query"}, {"output": user_input})
+        memory.save_context({"input": "AI Response"}, {"output": response.content})
 
-    # Update the database document to include the new query entries
-    update_result = summary_collection.update_one(
-        {"_id": ObjectId(id)},
-        {"$push": {"queries": {"$each": [user_query_entry, llm_response_entry]}}}
-    )
+        # Update the database document to include the new query entries
+        user_query_entry = {"sender": "user", "content": user_input}
+        llm_response_entry = {"sender": "llm", "content": response.content}
 
-    if update_result.modified_count == 1:
-        return response
-    else:
-        return "Response generated, but failed to save query to the database."
+        update_result = summary_collection.update_one(
+            {"_id": ObjectId(id)},
+            {"$push": {"queries": {"$each": [user_query_entry, llm_response_entry]}}}
+        )
+
+        if update_result.modified_count == 1:
+            return response.content
+        else:
+            return "Response generated, but failed to save query to the database."
+
+    except Exception as e:
+        # Handle exceptions and log errors
+        return f"An error occurred: {str(e)}"
