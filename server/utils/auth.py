@@ -1,5 +1,5 @@
 import jwt
-from datetime import datetime , timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 import os
 from pymongo import MongoClient
@@ -22,7 +22,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_HOURS= 30
 
 # OAuth2PasswordBearer will automatically extract the token from the Authorization header
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -37,7 +37,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> Any:
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
-    expire = datetime.datetime.utcnow() + (expires_delta or timedelta(hours=10))
+    expire = datetime.now(timezone.utc)+ (expires_delta or timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -55,13 +55,3 @@ def get_user_by_username(username: str):
 
 def create_user(user_data: dict):
     users_collection.insert_one(user_data)
-
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt

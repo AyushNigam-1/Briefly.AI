@@ -1,5 +1,5 @@
 from .conn import summary_collection 
-from datetime import datetime
+from datetime import datetime , timezone
 from bson.objectid import ObjectId
 
 def is_valid_object_id(id: str) -> bool:
@@ -12,17 +12,17 @@ def is_valid_object_id(id: str) -> bool:
     except:
         return False
 
-def save_summary_to_mongo(user_id: str, original_summary: str, summarized_summary: str,video_id:str,video_title:str) -> dict:
+def save_summary_to_mongo(user_id: str,url:str, original_summary: str, summarized_summary: str,title:str) -> dict:
     """Saves the original and summarized subtitles to the MongoDB 'summary' collection along with an empty queries array."""
     
     summary_data = {
         "user_id": user_id,
+        "url":url,
         "original_summary": original_summary,
         "summarized_summary": summarized_summary,
         "queries": [], 
-        "timestamp": datetime.utcnow(),
-        "video_id":video_id,
-        "video_title":video_title
+        "timestamp": datetime.now(timezone.utc),
+        "title":title
     }
     
     result = summary_collection.insert_one(summary_data)

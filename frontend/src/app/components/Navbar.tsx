@@ -6,7 +6,7 @@ interface NavbarProps {
 }
 const Navbar: React.FC<NavbarProps> = ({ component }) => {
 
-    const options = useMemo(() => [{ label: "Login", route: '/account/login' }, { label: 'Signup', route: '/account/signup' }], [])
+    const options = useMemo(() => [{ label: "Login", route: '/account/login' }, { label: 'Create Account', route: '/account/signup' }], [])
     return (
         <div className='flex justify-between items-center container mx-auto my-3' >
             {component}
@@ -21,10 +21,10 @@ const Navbar: React.FC<NavbarProps> = ({ component }) => {
                 <MenuItems
                     transition
                     anchor="bottom end"
-                    className="w-52 origin-top-right rounded-xl border border-white/5 bg-white/5 p-1 text-sm/6 text-white transition duration-100 ease-out [--anchor-gap:var(--spacing-1)] focus:outline-none data-[closed]:scale-95 data-[closed]:opacity-0">
+                    className="w-52 origin-top-right rounded-xl border border-white/5 bg-gray-900 p-1 text-sm/6 text-white transition duration-100 ease-out [--anchor-gap:var(--spacing-1)] focus:outline-none data-[closed]:scale-95 data-[closed]:opacity-0 z-50">
                     {
                         options.map(option => <MenuItem key={Math.random()}>
-                            <Link href={option.route} className="group flex w-full items-center gap-2 rounded-lg py-1.5 px-3 data-[focus]:bg-white/10">
+                            <Link href={option.route} className="group z-50 flex w-full items-center gap-2 rounded-lg py-1.5 px-3 data-[focus]:bg-white/10 text-lg font-semibold">
                                 {option.label}
                             </Link>
                         </MenuItem>

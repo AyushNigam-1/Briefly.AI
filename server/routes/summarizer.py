@@ -20,7 +20,7 @@ async def summarize_content(url: str,lang:str,format:str,title:str , current_use
         if "youtu.be" in url or "youtube.com" in url:
             summary = await get_youtube_summary(url,lang,format,title,current_user)
         else:
-            summary = get_web_summary(url,lang,format,current_user)
+            summary = await get_web_summary(url,lang,format,title,current_user)
             
         return {"summary":summary,}
 

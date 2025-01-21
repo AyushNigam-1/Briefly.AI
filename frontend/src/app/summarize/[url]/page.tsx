@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useParams, useSearchParams } from "next/navigation";
 import axios from 'axios';
 import Cookies from 'js-cookie';
-import { SummaryResponse, query } from '@/app/types';
+import { ProgressResponse, SummaryResponse, query } from '@/app/types';
 import { setupWebSocketListeners } from '@/websocket/webEvent';
 import { connectWebSocket } from "@/websocket/websocket";
 import BarLoader from "react-spinners/BarLoader";
@@ -12,6 +12,8 @@ import Sidebar from '@/app/components/Sidebar';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm'
 import QueryInput from '@/app/components/QueryInput';
+import { json } from 'stream/consumers';
+import { Console } from 'console';
 
 const fetchExisitingSummary = async (summaryId: string) => {
     try {
@@ -38,7 +40,7 @@ const page = () => {
     const [isLoading, setLoading] = useState<boolean>(false);
     const [summary, setSummary] = useState<SummaryResponse | undefined>();
     const [summaryId, setSummaryId] = useState<string | undefined>(undefined);
-    const [progress, setProgress] = useState(0);
+    const [progress, setProgress] = useState<ProgressResponse>();
     const searchParams = useSearchParams();
     const params = useParams();
     const url = params?.url as string;
@@ -61,6 +63,7 @@ const page = () => {
                     withCredentials: true,
                 }
             );
+            console.log(data)
             setSummary(data.summary);
             setQueries(data.summary.queries)
         } catch (error) {
@@ -106,27 +109,36 @@ const page = () => {
             });
         }
     }, [queries]);
-    // useEffect(() => {
-    //     setupWebSocketListeners({
-    //         onOpen: () => console.log("WebSocket connection established in EventListenerComponent"),
-    //         onMessage: (data) => setProgress(data.progress),
-    //         onClose: () => console.log("WebSocket connection closed in EventListenerComponent"),
-    //         onError: (error) => console.error("WebSocket error:", error),
-    //     });
-    // }, []);
+    useEffect(() => {
+        setupWebSocketListeners({
+            onOpen: () => console.log("WebSocket connection established in EventListenerComponent"),
+            onMessage: (data) => setProgress(data),
+            onClose: () => console.log("WebSocket connection closed in EventListenerComponent"),
+            onError: (error) => console.error("WebSocket error:", error),
+        });
+    }, []);
     return isLoading ?
-        <div className='h-screen w-screen flex items-center justify-center' >
-            <BarLoader
-                color={"#ffffff"}
-                loading={isLoading}
-                height={10}
-                width={600}
-                aria-label="Loading Spinner"
-                data-testid="loader" />
-        </div> : (
+        <div className='h-screen w-screen flex flex-col items-center justify-center' >
+            <div className='flex flex-col gap-3'>
+                <div className='flex justify-between ' >
+                    <h3 className='text-xl font-bold text-gray-200' > {progress?.message} </h3>
+                    <h3 className='text-xl font-bold text-gray-200' >
+                        {progress?.progress}%
+                    </h3>
+                </div>
+                <BarLoader
+                    color={"#ffffff"}
+                    loading={isLoading}
+                    height={10}
+                    width={600}
+                    aria-label="Loading Spinner"
+                    data-testid="loader" />
+            </div>
+        </div>
+        : (
             <>
-                <Navbar component={<Sidebar setId={setSummaryId} />} />
-                <div className='gap-1 flex items-center justify-center flex-col max-h-[100vh] max-w-[100vw]'>
+                {/* <Navbar component={<Sidebar setId={setSummaryId} />} /> */}
+                <div className='gap-1 flex items-center justify-center flex-col max-h-[100vh] max-w-[100vw] '>
                     <div className="flex flex-col gap-3 rounded-lg shadow container overflow-y-scroll mb-40 scrollbar-thumb-gray-500 scrollbar-track-transparent scrollbar-thin" ref={queriesContainerRef}>
                         <div className="bg-gray-900 font-mono border-gray-700 scrollbar-thumb-gray-500  w-100 p-4 rounded-lg prose-gray prose-lg w-full max-w-none">
                             <ReactMarkdown

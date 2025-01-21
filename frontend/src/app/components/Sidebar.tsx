@@ -135,7 +135,7 @@ const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
 
                 <div className="p-4 flex flex-col h-full">
                     <div className="flex items-center justify-between">
-                        <h2 className="text-lg font-semibold">History</h2>
+                        <h2 className="text-xl font-bold">History</h2>
                         <button
                             onClick={toggleSidebar}
                             className="text-gray-500 hover:text-gray-800"
@@ -162,11 +162,11 @@ const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
                         ) : error ? (
                             <p className="text-red-500">{error}</p>
                         ) : summaries.length === 0 ? (
-                            <p>No summaries found.</p>
+                            <p className="text-center text-gray-200">No summaries found.</p>
                         ) : (
                             <ul className="space-y-2">
                                 {Object.keys(groupedSummaries).map((date) => (
-                                    <div key={date}>
+                                    <div key={date} className={groupedSummaries[date].length === 0 ? "hidden" : ""}>
                                         <h3 className="font-semibold">{date}</h3>
                                         <ul>
                                             {groupedSummaries[date].map((summary) => (

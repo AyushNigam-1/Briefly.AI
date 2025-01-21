@@ -18,6 +18,7 @@ load_dotenv()
 api_key = os.getenv("groq_api_key")
 WebSocket_uri = "ws://localhost:8080" 
 session = requests.Session()
+llm = ChatGroq(model="llama-3.3-70b-versatile", groq_api_key=api_key)
 
 def session_request(method, url, *args, **kwargs):
     """Overrides the internal request function to use our session."""
@@ -65,7 +66,7 @@ def _fetch_first_auto_generated_transcript(video_id: str) -> str:
 
 def correct_subtitles(raw_subtitles: str, language: str = "en") -> str:
     """Corrects grammar, coherence, and clarity of extracted subtitles without altering the structure or summarizing."""
-    llm = ChatGroq(model="llama-3.3-70b-versatile", groq_api_key=api_key)
+    
     
     correction_prompt_template = """
     The following text is a transcript. Your task is to correct grammatical errors, incomplete words, 
@@ -103,7 +104,6 @@ def save_subtitles_to_file(subtitles: str, file_name: str) -> None:
 async def get_youtube_summary(
     url: str, lang: str, format: str, title: str, current_user
 ) -> str:
-    llm = ChatGroq(model="llama-3.3-70b-versatile", groq_api_key=api_key)
     video_id = extract_video_id(url)
 
     if not video_id:
@@ -111,7 +111,7 @@ async def get_youtube_summary(
         return "Invalid YouTube URL or video ID could not be extracted."
 
     user_id = str(current_user["user_id"])
-    existing_summary = summary_collection.find_one({"user_id": user_id, "video_id": video_id})
+    existing_summary = summary_collection.find_one({ "url": url})
 
     if existing_summary:
         summarized_summary = existing_summary.get("summarized_summary", "No summarized summary available.")
@@ -163,7 +163,7 @@ async def get_youtube_summary(
     summary = chain.run(input_data)
 
     await manager.send_message({"progress": 100, "message": "Summary generation completed."})
-    save_result = save_summary_to_mongo(user_id, transcript, summary, video_id, video_title=title)
+    save_result = save_summary_to_mongo(user_id,url, transcript, summary,title)
 
     return save_result
 
