@@ -4,7 +4,7 @@ import axios from "axios";
 
 interface Summary {
     id: string;
-    video_title: string;
+    title: string;
     timestamp: string;
 }
 interface SidebarProps {
@@ -163,7 +163,7 @@ const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
                             <p className="text-red-500">{error}</p>
                         ) : summaries.length === 0 ? (
                             <p>No summaries found.</p>
-                        ) : ( 
+                        ) : (
                             <ul className="space-y-2">
                                 {Object.keys(groupedSummaries).map((date) => (
                                     <div key={date}>
@@ -176,7 +176,7 @@ const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
                                                     onClick={() => setId(summary.id)}
                                                 >
                                                     <p className="text-white text-ellipsis overflow-hidden whitespace-nowrap">
-                                                        {summary.video_title}
+                                                        {summary.title}
                                                     </p>
                                                     <button
                                                         className="text-red-500 hover:text-red-700"

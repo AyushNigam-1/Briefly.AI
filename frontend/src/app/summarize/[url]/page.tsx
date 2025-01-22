@@ -137,7 +137,7 @@ const page = () => {
         </div>
         : (
             <>
-                {/* <Navbar component={<Sidebar setId={setSummaryId} />} /> */}
+                <Navbar component={<Sidebar setId={setSummaryId} />} />
                 <div className='gap-1 flex items-center justify-center flex-col max-h-[100vh] max-w-[100vw] '>
                     <div className="flex flex-col gap-3 rounded-lg shadow container overflow-y-scroll mb-40 scrollbar-thumb-gray-500 scrollbar-track-transparent scrollbar-thin" ref={queriesContainerRef}>
                         <div className="bg-gray-900 font-mono border-gray-700 scrollbar-thumb-gray-500  w-100 p-4 rounded-lg prose-gray prose-lg w-full max-w-none">

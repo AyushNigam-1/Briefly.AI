@@ -1,7 +1,7 @@
 "use client"
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { useRouter } from 'next/navigation';
+import { redirect, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 const page: React.FC = () => {
@@ -39,6 +39,9 @@ const page: React.FC = () => {
             setLoading(false);
         }
     };
+    // useEffect(() => {
+    //     redirect('/');
+    // }, [])
 
     return (
         <div className="w-screen h-screen flex justify-center items-center font-mono">

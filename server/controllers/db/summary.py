@@ -63,7 +63,7 @@ def get_summaries_by_user(user_id: str):
     Retrieves all summary titles, IDs, and timestamps for a specific user from MongoDB.
     """
     try:
-        summaries = summary_collection.find({"user_id": user_id}, {"_id": 1, "video_title": 1, "timestamp": 1})
+        summaries = summary_collection.find({"user_id": user_id}, {"_id": 1, "title": 1, "timestamp": 1})
 
         # Use len(list()) to count documents or check if the cursor is empty
         summary_list = list(summaries)
@@ -76,7 +76,7 @@ def get_summaries_by_user(user_id: str):
         for summary in summary_list:
             result.append({
                 "id": str(summary["_id"]),
-                "video_title": summary["video_title"],
+                "title": summary["title"],
                 "timestamp": summary["timestamp"]
             })
         

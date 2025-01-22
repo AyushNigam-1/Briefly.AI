@@ -4,7 +4,7 @@ import axios from "axios";
 
 interface Summary {
     id: string;
-    video_title: string;
+    title: string;
     timestamp: string;
 }
 interface SidebarProps {
@@ -95,6 +95,7 @@ const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
                 },
                 withCredentials: true,
             });
+            console.log(response)
             setSummaries(response.data.summaries)
         } catch (error) {
             console.error("Error fetching user summaries:", error);
@@ -176,7 +177,7 @@ const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
                                                     onClick={() => setId(summary.id)}
                                                 >
                                                     <p className="text-white text-ellipsis overflow-hidden whitespace-nowrap">
-                                                        {summary.video_title}
+                                                        {summary.title}
                                                     </p>
                                                     <button
                                                         className="text-red-500 hover:text-red-700"
