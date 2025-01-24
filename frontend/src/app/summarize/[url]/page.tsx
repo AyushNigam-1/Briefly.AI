@@ -12,8 +12,6 @@ import Sidebar from '@/app/components/Sidebar';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm'
 import QueryInput from '@/app/components/QueryInput';
-import { json } from 'stream/consumers';
-import { Console } from 'console';
 
 const fetchExisitingSummary = async (summaryId: string) => {
     try {
@@ -50,33 +48,51 @@ const page = () => {
     const queriesContainerRef = useRef<HTMLDivElement | null>(null);
     const [state, setState] = useState<string | undefined>(undefined);
 
-    const getSummary = async (url?: string, lang?: string, format?: string, title?: string) => {
+    const getSummary = async (url?: string, fileUrl?: string, lang?: string, format?: string, title?: string) => {
         setLoading(true);
         try {
             const token = Cookies.get("access_token");
-            const { data } = await axios.get(`http://localhost:8000/summarize/?url=${url}&format=${format}&lang=${lang}&title=${title}`
-                ,
+
+            let file: File | null = null;
+            if (fileUrl) {
+                const response = await fetch(fileUrl);
+                const blob = await response.blob();
+                file = new File([blob], title || "uploaded_file", { type: blob.type });
+            }
+
+            const formData = new FormData();
+            if (url) formData.append("url", url)
+            if (file) formData.append("file", file);
+            if (lang) formData.append("lang", lang);
+            if (format) formData.append("format", format);
+            if (title) formData.append("title", title);
+
+            const { data } = await axios.post(
+                "http://localhost:8000/summarize/",
+                formData,
                 {
                     headers: {
                         "Authorization": `Bearer ${token}`,
+                        "Content-Type": "multipart/form-data",
                     },
                     withCredentials: true,
                 }
             );
-            console.log(data)
+
+            console.log(data);
             setSummary(data.summary);
-            setQueries(data.summary.queries)
+            setQueries(data.summary.queries);
         } catch (error) {
             if (axios.isAxiosError(error)) {
                 throw new Error(error.response?.data?.message || error.message);
             } else {
                 throw new Error(String(error));
             }
-        }
-        finally {
+        } finally {
             setLoading(false);
         }
     };
+
 
     useEffect(() => {
         connectWebSocket("ws://127.0.0.1:8000/ws")

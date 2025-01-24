@@ -5,7 +5,6 @@ import { redirect } from 'next/navigation';
 const Logout = () => {
 
     useEffect(() => {
-
         const logout = async () => {
             try {
                 await axios.post(

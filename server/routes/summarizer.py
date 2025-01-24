@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException , Depends , UploadFile , File
+from fastapi import APIRouter, HTTPException , Depends , UploadFile , File , Form
 from controllers.summary.yt_summary import get_youtube_summary
 from controllers.summary.web_summary import get_web_summary
 from controllers.summary.file_summary import get_file_summary
@@ -10,23 +10,44 @@ from io import BytesIO
 from typing import Any, Dict
 from controllers.db.conn import summary_collection
 from controllers.db.summary import get_summaries_by_user , get_summary_by_id , delete_summary_by_id
+import validators
+
 router = APIRouter()
 
-@router.get("/summarize/")
-async def summarize_content(url: str,lang:str,format:str,title:str , current_user: dict = Depends(get_current_user)):
-    if not validators.url(url):
-        raise HTTPException(status_code=400, detail="Invalid URL")
+@router.post("/summarize/")
+async def summarize_content(
+   url: str = Form(None),
+    lang: str = Form(None),
+    format: str = Form(None),
+    title: str = Form(None),
+    file: UploadFile = File(None),
+    current_user: dict = Depends(get_current_user)
+):
+    if not url and not file:
+        raise HTTPException(status_code=400, detail="Either 'url' or 'file' must be provided.")
+
     try:
-        if "youtu.be" in url or "youtube.com" in url:
-            summary = await get_youtube_summary(url,lang,format,title,current_user)
-        else:
-            summary = await get_web_summary(url,lang,format,title,current_user)
+        if url:
+            if not validators.url(url):
+                raise HTTPException(status_code=400, detail="Invalid URL")
             
-        return {"summary":summary,}
+            if "youtu.be" in url or "youtube.com" in url:
+                summary = await get_youtube_summary(url, lang, format, title, current_user)
+            else:
+                summary = await get_web_summary(url, lang, format, title, current_user)
+
+        elif file:
+
+            file_content = await file.read()
+            file_summary = await get_file_summary(file_content, lang, format, title, current_user)
+            summary = file_summary
+
+        return {"summary": summary}
 
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
     
 
 

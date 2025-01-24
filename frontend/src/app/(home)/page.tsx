@@ -33,7 +33,7 @@ const page = () => {
       return false;
     }
   }
- 
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLoading(true);
     if (e.target.files) {
@@ -47,6 +47,8 @@ const page = () => {
       } else {
         icon = ' https://img.icons8.com/color/50/google-docs.png';
       }
+      sessionStorage.setItem("file_url", icon)
+      setUrl(icon)
       const fileMetaData = { title: uploadedFile.name, metadata, icon };
       setMetadata(fileMetaData)
     }

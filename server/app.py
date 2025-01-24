@@ -5,7 +5,7 @@ from routes.metadata import router as metadata_router
 from routes.query import router as query_router
 from routes.auth import router as auth_router
 from routes.prompt import router as prompt_router
-from middleware.auth_middleware import auth_middleware  
+# from middleware.auth_middleware import auth_middleware  
 from fastapi import FastAPI, WebSocket
 from utils.websocket_manager import manager
 app = FastAPI()

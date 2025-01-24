@@ -25,29 +25,33 @@ const groupSummariesByDate = (summaries: Summary[]) => {
     const startOfLast7Days = new Date(startOfToday.getTime() - 7 * 24 * 60 * 60 * 1000);
     const startOfLast30Days = new Date(startOfToday.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    summaries?.forEach((summary) => {
-        const summaryDate = new Date(summary.timestamp);
+    summaries
+        ?.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        .forEach((summary) => {
+            const summaryDate = new Date(summary.timestamp);
 
-        if (summaryDate >= startOfToday) {
-            groupedSummaries["Today"].push(summary);
-        } else if (summaryDate >= startOfYesterday) {
-            groupedSummaries["Yesterday"].push(summary);
-        } else if (summaryDate >= startOfLast7Days) {
-            groupedSummaries["Previous 7 Days"].push(summary);
-        } else if (summaryDate >= startOfLast30Days) {
-            groupedSummaries["Previous 30 Days"].push(summary);
-        } else {
-            groupedSummaries["Older"].push(summary);
-        }
-    });
+            if (summaryDate >= startOfToday) {
+                groupedSummaries["Today"].push(summary);
+            } else if (summaryDate >= startOfYesterday) {
+                groupedSummaries["Yesterday"].push(summary);
+            } else if (summaryDate >= startOfLast7Days) {
+                groupedSummaries["Previous 7 Days"].push(summary);
+            } else if (summaryDate >= startOfLast30Days) {
+                groupedSummaries["Previous 30 Days"].push(summary);
+            } else {
+                groupedSummaries["Older"].push(summary);
+            }
+        });
 
     return groupedSummaries;
 };
+
 const menuItems = [
     { label: "Edit", onClick: () => alert("Edit clicked") },
     { label: "Delete", onClick: () => alert("Delete clicked") },
     { label: "View", onClick: () => alert("View clicked") },
 ];
+
 const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [summaries, setSummaries] = useState<Summary[]>([]);
@@ -60,7 +64,7 @@ const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
 
     const handleDeleteSummary = async (summaryId: string) => {
         if (!window.confirm("Are you sure you want to delete this summary?")) {
-            return; // Exit if user cancels confirmation
+            return;
         }
 
         try {
@@ -74,7 +78,6 @@ const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
             });
 
             if (response.status === 200) {
-                // Successfully deleted
                 const updatedSummaries = summaries?.filter((summary) => summary.id !== summaryId);
                 setSummaries(updatedSummaries);
             } else {

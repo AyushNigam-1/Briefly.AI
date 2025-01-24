@@ -12,10 +12,8 @@ groq_api_key = os.getenv("groq_api_key")
 
 llm = ChatGroq(model="llama-3.3-70b-versatile", groq_api_key=groq_api_key)
 
-# Initialize memory using ConversationBufferMemory (or you can use BaseMemory if needed)
 memory = ConversationBufferMemory()
 
-# Define the prompt template
 prompt_template = PromptTemplate(
     input_variables=["summary", "history", "user_query"],
     template="""
@@ -28,47 +26,44 @@ prompt_template = PromptTemplate(
     User Query:
     {user_query}
 
+    If the user asks about who made you or the ownership of this product, respond with "I was created by Ayush Nigam and his team."
+    
     Response:
     """
 )
 
 def chat_with_summary(user_input: str, id: str):
-    """
-    Handles user queries using hybrid memory (static + dynamic).
-    Combines a static summary with the chat history for a context-aware response.
-    """
     try:
-        # Retrieve the video summary from MongoDB
         summary_data = summary_collection.find_one({"_id": ObjectId(id)})
         if not summary_data:
             return "Could not find a summary associated with the given ID."
-        
 
         summarized_summary = summary_data.get("summarized_summary", "")
         if not summarized_summary:
             return "The summary is empty or not available."
-        print(summarized_summary)
+        print(f"Summarized Summary: {summarized_summary}")
 
-        # Retrieve chat history from memory
-        chat_history = memory.load_memory_variables({})
-        print(chat_history)
+        static_chat_history = summary_data.get("queries", [])
+        static_history = "\n".join(
+            [f"{q['sender']}: {q['content']}" for q in static_chat_history]
+        ) if static_chat_history else ""
 
-        # Create a prompt with static and dynamic memory
+        dynamic_chat_history = memory.load_memory_variables({})
+        dynamic_history = dynamic_chat_history.get("history", "")
+
+        combined_history = f"{static_history}\n{dynamic_history}".strip()
+
         prompt = prompt_template.format(
             summary=summarized_summary,
-            history=chat_history.get("history", ""),
+            history=combined_history,
             user_query=user_input
         )
 
-        # Generate the response
         response = llm.invoke(prompt)
-        print("response", response.content)
-  
-        # Update memory with the new interaction
-        memory.save_context({"input": "User Query"}, {"output": user_input})
-        memory.save_context({"input": "AI Response"}, {"output": response.content})
+        print(f"Response: {response.content}")
 
-        # Update the database document to include the new query entries
+        memory.save_context({"input": user_input}, {"output": response.content})
+
         user_query_entry = {"sender": "user", "content": user_input}
         llm_response_entry = {"sender": "llm", "content": response.content}
 
@@ -83,5 +78,7 @@ def chat_with_summary(user_input: str, id: str):
             return "Response generated, but failed to save query to the database."
 
     except Exception as e:
-        # Handle exceptions and log errors
         return f"An error occurred: {str(e)}"
+
+
+

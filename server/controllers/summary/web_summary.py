@@ -27,7 +27,8 @@ async def get_web_summary(
 ) -> dict:
     user_id = str(current_user["user_id"])
 
-    # Check if summary already exists
+    await manager.send_message({"progress": 10, "message": "Extracting webpage content..."})
+
     existing_summary = summary_collection.find_one({"user_id": user_id, "url": url})
     if existing_summary:
         summary_id = str(existing_summary["_id"])
@@ -35,9 +36,7 @@ async def get_web_summary(
         await manager.send_message({"progress": 100, "message": "Summary already exists in the database."})
         return {"summary": summarized_summary, "id": summary_id}
 
-    # Send progress updates
-    await manager.send_message({"progress": 10, "message": "Extracting webpage content..."})
-
+    
     loader = UnstructuredURLLoader(
         urls=[url],
         ssl_verify=False,
