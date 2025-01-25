@@ -48,20 +48,34 @@ const page = () => {
     const queriesContainerRef = useRef<HTMLDivElement | null>(null);
     const [state, setState] = useState<string | undefined>(undefined);
 
-    const getSummary = async (url?: string, fileUrl?: string, lang?: string, format?: string, title?: string) => {
+    const getSummary = async (url?: string, lang?: string, format?: string, title?: string) => {
         setLoading(true);
         try {
             const token = Cookies.get("access_token");
 
             let file: File | null = null;
-            if (fileUrl) {
-                const response = await fetch(fileUrl);
-                const blob = await response.blob();
-                file = new File([blob], title || "uploaded_file", { type: blob.type });
-            }
 
+            if (url) {
+                const decodedUrl = decodeURIComponent(url);
+
+                const isLocalFile = decodedUrl.startsWith("blob:") || decodedUrl.startsWith("file:");
+
+                if (isLocalFile) {
+                    const response = await fetch(decodedUrl);
+                    if (!response.ok) {
+                        throw new Error("Failed to fetch the file from the provided URL.");
+                    }
+                    const blob = await response.blob();
+                    file = new File([blob], title || "uploaded_file", { type: blob.type });
+                } else {
+                    const urlRegex = /^(https?:\/\/[^\s/$.?#].[^\s]*)$/i;
+                    if (!urlRegex.test(decodedUrl)) {
+                        throw new Error("Invalid URL provided.");
+                    }
+                }
+            }
             const formData = new FormData();
-            if (url) formData.append("url", url)
+            if (url && !file) formData.append("url", url);
             if (file) formData.append("file", file);
             if (lang) formData.append("lang", lang);
             if (format) formData.append("format", format);
@@ -78,11 +92,10 @@ const page = () => {
                     withCredentials: true,
                 }
             );
-
-            console.log(data);
             setSummary(data.summary);
             setQueries(data.summary.queries);
         } catch (error) {
+            console.log(error)
             if (axios.isAxiosError(error)) {
                 throw new Error(error.response?.data?.message || error.message);
             } else {

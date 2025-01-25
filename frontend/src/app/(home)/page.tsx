@@ -47,7 +47,7 @@ const page = () => {
       } else {
         icon = ' https://img.icons8.com/color/50/google-docs.png';
       }
-      sessionStorage.setItem("file_url", icon)
+      sessionStorage.setItem("url", icon)
       setUrl(icon)
       const fileMetaData = { title: uploadedFile.name, metadata, icon };
       setMetadata(fileMetaData)

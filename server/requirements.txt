@@ -19,8 +19,10 @@ Werkzeug
 pymongo
 python-multipart
 PyPDF2
-pytesseract
 pillow
+setuptools
+paddleocr
+paddlepaddle
 scikit-learn
 python-socketio[asyncio_server]
 fastapi-socketio

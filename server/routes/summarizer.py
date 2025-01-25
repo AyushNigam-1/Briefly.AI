@@ -7,10 +7,10 @@ from utils.auth import get_current_user
 from fastapi.responses import StreamingResponse
 from bson import ObjectId
 from io import BytesIO
-from typing import Any, Dict
 from controllers.db.conn import summary_collection
 from controllers.db.summary import get_summaries_by_user , get_summary_by_id , delete_summary_by_id
 import validators
+from urllib.parse import unquote
 
 router = APIRouter()
 
@@ -28,24 +28,22 @@ async def summarize_content(
 
     try:
         if url:
-            if not validators.url(url):
+            url = unquote(url)
+            if not ("youtu.be" in url or "youtube.com" in url or validators.url(url)):
                 raise HTTPException(status_code=400, detail="Invalid URL")
-            
             if "youtu.be" in url or "youtube.com" in url:
+                print("routes - title",title)
                 summary = await get_youtube_summary(url, lang, format, title, current_user)
             else:
                 summary = await get_web_summary(url, lang, format, title, current_user)
 
         elif file:
-
-            file_content = await file.read()
-            file_summary = await get_file_summary(file_content, lang, format, title, current_user)
-            summary = file_summary
-
+            file_summary = get_file_summary(file)  
+        print(summary)
         return {"summary": summary}
 
     except Exception as e:
-        print(e)
+        print("this error ---------------------->",e)
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
     

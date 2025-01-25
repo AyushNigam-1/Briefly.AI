@@ -104,7 +104,9 @@ def save_subtitles_to_file(subtitles: str, file_name: str) -> None:
 async def get_youtube_summary(
     url: str, lang: str, format: str, title: str, current_user
 ) -> str:
+    print("video_id", url)
     video_id = extract_video_id(url)
+    print("title",title)
 
     if not video_id:
         await manager.send_message({"progress": 0, "message": "Invalid YouTube URL or video ID could not be extracted."})
