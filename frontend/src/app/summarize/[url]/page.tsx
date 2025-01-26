@@ -92,6 +92,7 @@ const page = () => {
                     withCredentials: true,
                 }
             );
+            console.log(data)
             setSummary(data.summary);
             setQueries(data.summary.queries);
         } catch (error) {
@@ -130,6 +131,7 @@ const page = () => {
 
         fetchData();
     }, [summaryId]);
+
     useEffect(() => {
         if (queriesContainerRef.current) {
             queriesContainerRef.current.scrollTo({

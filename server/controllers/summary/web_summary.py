@@ -18,6 +18,7 @@ api_key = os.getenv("groq_api_key")
 
 llm = ChatGroq(model="llama-3.3-70b-versatile", groq_api_key=api_key)
 
+
 async def get_web_summary(
     url: str,
     lang: str,

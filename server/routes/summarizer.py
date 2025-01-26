@@ -38,7 +38,7 @@ async def summarize_content(
                 summary = await get_web_summary(url, lang, format, title, current_user)
 
         elif file:
-            file_summary = get_file_summary(file)  
+            summary = await get_file_summary(file, lang, format, title, current_user)  
         print(summary)
         return {"summary": summary}
 
@@ -103,7 +103,6 @@ def get_summary(id: str):
     except HTTPException as http_exc:
         raise http_exc
     except Exception as e:
-        # Handle unexpected errors
         print(f"Unexpected error: {e}")
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
     
