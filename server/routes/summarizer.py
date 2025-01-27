@@ -11,6 +11,8 @@ from controllers.db.conn import summary_collection
 from controllers.db.summary import get_summaries_by_user , get_summary_by_id , delete_summary_by_id
 import validators
 from urllib.parse import unquote
+from controllers.db.conn import fs
+from bson import ObjectId
 
 router = APIRouter()
 
@@ -23,6 +25,7 @@ async def summarize_content(
     file: UploadFile = File(None),
     current_user: dict = Depends(get_current_user)
 ):
+    print("Calling summarization function...")
     if not url and not file:
         raise HTTPException(status_code=400, detail="Either 'url' or 'file' must be provided.")
 
@@ -128,12 +131,20 @@ async def delete_summary(id: str):
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
     
 
-    
-@router.post('/summarize-file')
-async def extract_text(file: UploadFile = File(...)):
+
+@router.get("/files")
+async def get_file(id: str):
+    print(id)
     try:
-        extracted_text = get_file_summary(file)
-        return {"extracted_text": extracted_text}
-    except ValueError as ve:
-        raise HTTPException(status_code=400, detail=str(ve))
+        object_id = ObjectId(id)
+        file_data = fs.find_one({"_id": object_id}) 
+        
+        if not file_data:
+            raise HTTPException(status_code=404, detail="File not found")
+
+        return StreamingResponse(file_data, media_type="application/octet-stream")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 

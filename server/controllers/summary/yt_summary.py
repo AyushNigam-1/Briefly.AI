@@ -117,6 +117,7 @@ async def get_youtube_summary(
     if existing_summary:
         summarized_summary = existing_summary.get("summarized_summary", "No summarized summary available.")
         summary_id = str(existing_summary["_id"])
+        print("exisiting summary")
         queries = existing_summary.get("queries", "No queries available.")
         await manager.send_message({"progress": 100, "message": "Summary already exists in the database."})
         return {"summarized_summary": summarized_summary, "id": summary_id, "queries": queries}

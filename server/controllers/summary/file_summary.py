@@ -12,9 +12,11 @@ from controllers.db.conn import summary_collection
 import os
 from controllers.db.prompt import get_prompt_by_user
 from controllers.db.summary import save_summary_to_mongo
+from io import BytesIO
+from controllers.db.conn import fs
 
-# Initialize environment variables
 load_dotenv()
+
 api_key = os.getenv("groq_api_key")
 ocrspace_api_key = os.getenv("ocrspace_api_key")
 llm = ChatGroq(model="llama-3.3-70b-versatile", groq_api_key=api_key)
@@ -59,88 +61,90 @@ def correct_summary(summary: str, lang: str) -> str:
 
 async def get_file_summary(file, lang: str, format: str, title: str, current_user: dict):
     try:
-        await manager.send_message({"progress": 30, "message": "Extracting text"})
+        await manager.send_message({"progress": 10, "message": "Processing started"})
         user_id = str(current_user["user_id"])
+
         if not file or not hasattr(file, "read"):
-            raise ValueError("Invalid file instance provided. File must have a 'read' method.")
+            raise ValueError("Invalid file instance provided.")
 
-        if not hasattr(file, "filename") or not file.filename:
-            raise ValueError("File instance must have a 'filename' attribute.")
+        if not file.filename:
+            raise ValueError("File must have a valid filename.")
 
-        user_id = str(current_user["user_id"])
         mime_type = mimetypes.guess_type(file.filename)[0]
         if not mime_type:
-            raise ValueError("Unsupported file type. Please provide an image or a PDF.")
+            raise ValueError("Unsupported file type. Only images and PDFs are allowed.")
 
-        # Check if summary for this file already exists in the database
-        existing_summary = summary_collection.find_one({"user_id": user_id, "filename": file.filename})
+        existing_summary = summary_collection.find_one({"user_id": user_id, "title": file.filename})
         if existing_summary:
+            summarized_summary = existing_summary.get("summarized_summary", "No summarized summary available.")
             summary_id = str(existing_summary["_id"])
-            summarized_summary = existing_summary.get("summary", "No summary available.")
+            print("exisiting summary")
+            queries = existing_summary.get("queries", "No queries available.")
+            file_url = existing_summary.get("url",'unavailable')
+            file_title = existing_summary.get('title',"not available")
             await manager.send_message({"progress": 100, "message": "Summary already exists in the database."})
-            return {"summary": summarized_summary, "id": summary_id}
+            return {"summarized_summary": summarized_summary, "id": summary_id, "queries": queries ,"url":file_url , "title":file_title }
 
         file_stream = file.file
         extracted_text = ""
 
+        # Handle image
         if mime_type.startswith("image"):
             file_stream.seek(0)
             image = Image.open(file_stream)
-
-            # Check if the image has an alpha channel (RGBA) and convert it to RGB
             if image.mode == "RGBA":
                 image = image.convert("RGB")
             max_size = (1024, 1024)
             image = ImageOps.contain(image, max_size)
-            image.save("temp_image.jpg")  # Save for OCR.space processing
-
+            image.save("temp_image.jpg")
             extracted_text = extract_text_with_ocrspace("temp_image.jpg")
-            print(extracted_text)
 
+            img_byte_arr = BytesIO()
+            image.save(img_byte_arr, format="JPEG")
+            img_byte_arr.seek(0)  # Rewind the file pointer to the beginning
+            gridfs_file = fs.put(img_byte_arr, filename=file.filename, content_type="image/jpeg")
 
+            file_url = f'files/?id={gridfs_file}'
+
+        # Handle PDF
         elif mime_type == "application/pdf":
             file_stream.seek(0)
             pdf_reader = PdfReader(file_stream)
             extracted_text = " ".join(page.extract_text() or "" for page in pdf_reader.pages)
 
         else:
-            raise ValueError("Unsupported file type. Please provide an image or a PDF.")
+            raise ValueError("Unsupported file type.")
 
         if not extracted_text.strip():
-            raise ValueError("No text could be extracted from the file.")
+            raise ValueError("No text extracted from the file.")
 
-        await manager.send_message({"progress": 50, "message": "Correcting extracted text..."})
+        await manager.send_message({"progress": 50, "message": "Text extracted. Refining..."})
         corrected_text = correct_summary(extracted_text, lang)
 
-        # Generate summary using LLM
         await manager.send_message({"progress": 75, "message": "Generating summary..."})
         user_prompt_data = get_prompt_by_user(user_id)
-        user_prompt = None if "error" in user_prompt_data else user_prompt_data.get("prompt")
+        user_prompt = user_prompt_data.get("prompt") if user_prompt_data and "error" not in user_prompt_data else None
 
         if user_prompt:
             prompt_template = user_prompt + "\n\nThe subtitle is - {text} and the language should strictly be - {language}."
         else:
             prompt_template = (
                 "Convert the following content into a refined and human-friendly output:"
-                "1. Action: Perform the task specified below: {format}"
-                "2. Language: Write the output in {language}."
-                "3. Style: Write in a natural, polished, and human-friendly tone."
-                "4. Enhancements: Ensure the content is clear, concise, and free of redundancy."
-                "Content: {text}"
+                " Content: {text} Language: {language} Format: {output_format}"
             )
 
         prompt = PromptTemplate(template=prompt_template, input_variables=["text", "language", "output_format"])
         chain = load_summarize_chain(llm, chain_type="stuff", prompt=prompt)
         document = Document(page_content=corrected_text)
-        input_data = {"input_documents": [document], "language": lang, "format": format}
-        summary = chain.run(input_data)
+        summary = chain.run({"input_documents": [document], "language": lang, "output_format": format})
 
-        await manager.send_message({"progress": 90, "message": "Saving summary to the database..."})
-        save_result = save_summary_to_mongo(user_id, file.filename, corrected_text, summary, title)
+        await manager.send_message({"progress": 90, "message": "Saving summary..."})
+        save_result = save_summary_to_mongo(user_id, file_url ,corrected_text, summary, title)
+
         await manager.send_message({"progress": 100, "message": "Summary generation completed."})
-
         return save_result
 
     except Exception as e:
-        print(f"Error in get_file_summary: {e}")
-        raise ValueError(f"An unexpected error occurred: {e}")
+        await manager.send_message({"progress": 100, "message": f"Error: {str(e)}"})
+        raise ValueError(f"An error occurred: {e}")
+

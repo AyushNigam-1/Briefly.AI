@@ -26,3 +26,4 @@ paddlepaddle
 scikit-learn
 python-socketio[asyncio_server]
 fastapi-socketio
+gridfs

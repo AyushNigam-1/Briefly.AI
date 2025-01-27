@@ -1,5 +1,4 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File
-from typing import Dict
+from fastapi import APIRouter, HTTPException
 from controllers.metadata.web_metadata import get_website_metadata
 from controllers.metadata.yt_metadata import get_youtube_metadata
 import validators

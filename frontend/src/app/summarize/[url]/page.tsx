@@ -31,7 +31,30 @@ const fetchExisitingSummary = async (summaryId: string) => {
     }
 };
 
+export const previewFile = async (file_url: string) => {
+    try {
+        const response = await fetch(`http://localhost:8000/${file_url}`, {
+            method: 'GET',
+        });
 
+        if (!response.ok) {
+            throw new Error(`File not found with id ${file_url}`);
+        }
+
+        const fileBlob = await response.blob();
+        const fileUrl = URL.createObjectURL(fileBlob);
+
+        return fileUrl;
+    } catch (error) {
+        console.error('Error fetching file:', error);
+        throw error;
+    }
+};
+
+type Metadata = {
+    icon: string,
+    title: string
+}
 const page = () => {
 
     const [queries, setQueries] = useState<query[]>([]);
@@ -39,6 +62,7 @@ const page = () => {
     const [summary, setSummary] = useState<SummaryResponse | undefined>();
     const [summaryId, setSummaryId] = useState<string | undefined>(undefined);
     const [progress, setProgress] = useState<ProgressResponse>();
+    const [metadata, setMetadata] = useState<Metadata | undefined>(undefined)
     const searchParams = useSearchParams();
     const params = useParams();
     const url = params?.url as string;
@@ -49,6 +73,7 @@ const page = () => {
     const [state, setState] = useState<string | undefined>(undefined);
 
     const getSummary = async (url?: string, lang?: string, format?: string, title?: string) => {
+        console.log("called getSummary")
         setLoading(true);
         try {
             const token = Cookies.get("access_token");
@@ -92,6 +117,8 @@ const page = () => {
                     withCredentials: true,
                 }
             );
+            const preview_url = await previewFile(data.summary.url)
+            setMetadata({ icon: preview_url, title: data.summary.title })
             console.log(data)
             setSummary(data.summary);
             setQueries(data.summary.queries);
@@ -109,6 +136,7 @@ const page = () => {
 
 
     useEffect(() => {
+        if (summary) return
         connectWebSocket("ws://127.0.0.1:8000/ws")
         getSummary(url, language, format, title);
     }, []);
@@ -119,7 +147,6 @@ const page = () => {
             setLoading(true);
             try {
                 const data = await fetchExisitingSummary(summaryId);
-                console.log(data)
                 setSummary(data.summary);
                 setQueries(data.summary.queries)
             } catch (error) {
@@ -171,7 +198,12 @@ const page = () => {
                 <Navbar component={<Sidebar setId={setSummaryId} />} />
                 <div className='gap-1 flex items-center justify-center flex-col max-h-[100vh] max-w-[100vw] '>
                     <div className="flex flex-col gap-3 rounded-lg shadow container overflow-y-scroll mb-40 scrollbar-thumb-gray-500 scrollbar-track-transparent scrollbar-thin" ref={queriesContainerRef}>
+
                         <div className="bg-gray-900 font-mono border-gray-700 scrollbar-thumb-gray-500  w-100 p-4 rounded-lg prose-gray prose-lg w-full max-w-none">
+                            <div className='bg-gray-600 rounded-lg w-80 flex p-1 gap-2'>
+                                <img src={metadata?.icon} alt="" className='m-0 w-16 rounded-lg' />
+                                <h4 className='m-0 text-lg' >{metadata?.title}</h4>
+                            </div>
                             <ReactMarkdown
                                 remarkPlugins={[remarkGfm]}
                                 components={{
