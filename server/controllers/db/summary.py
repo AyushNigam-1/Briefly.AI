@@ -12,12 +12,13 @@ def is_valid_object_id(id: str) -> bool:
     except:
         return False
 
-def save_summary_to_mongo(user_id: str,url:str, original_summary: str, summarized_summary: str,title:str) -> dict:
+def save_summary_to_mongo(user_id: str,url:str, original_summary: str, summarized_summary: str,title:str,type:str) -> dict:
     """Saves the original and summarized subtitles to the MongoDB 'summary' collection along with an empty queries array."""
     
     summary_data = {
         "user_id": user_id,
         "url":url,
+        "type":type,
         "original_summary": original_summary,
         "summarized_summary": summarized_summary,
         "queries": [], 
@@ -30,9 +31,47 @@ def save_summary_to_mongo(user_id: str,url:str, original_summary: str, summarize
     return {
         "id": str(result.inserted_id),
         "summarized_summary": summarized_summary,
-        "queries":  summary_data.get("queries", [])
-
+        "queries":  summary_data.get("queries", []),
+        "title":summary_data.get("title", []),
+        "url":summary_data.get("url", []),
+        "type":summary_data.get("type", [])
     }
+
+async def fetch_existing_summary(user_id, url, manager):
+    """
+    Fetches an existing summary from the database based on user_id and URL.
+
+    Args:
+        user_id (str): The ID of the user.
+        url (str): The URL to look for in the database.
+        manager: The manager object for sending progress updates.
+
+    Returns:
+        dict: A dictionary containing the existing summary details if found, otherwise an empty dictionary.
+    """
+    existing_summary = summary_collection.find_one({"user_id": user_id, "title": url})
+    print(existing_summary , user_id , url)
+    if existing_summary:
+        summary_id = str(existing_summary["_id"])
+        summarized_summary = existing_summary.get("summary", "No summary available.")
+        queries = existing_summary.get("queries", "No queries available.")
+        url = existing_summary.get("url", "unavailable")
+        title = existing_summary.get("title", "not available")
+        summary_type = existing_summary.get("type", "not available")
+
+        await manager.send_message({"progress": 100, "message": "Summary already exists in the database."})
+
+        return {
+            "summarized_summary": summarized_summary,
+            "id": summary_id,
+            "queries": queries,
+            "url": url,
+            "title": title,
+            "type": summary_type,
+        }
+    
+    return {}  
+
 
 def get_summary_by_id(id: str):
     if not is_valid_object_id(id):
@@ -51,7 +90,10 @@ def get_summary_by_id(id: str):
         return { 
              "id": str(summary_data["_id"]),
             "summarized_summary": summarized_summary,
-            "queries": query_history
+            "queries": query_history,
+            "title":summary_data.get("title", []),
+            "url":summary_data.get("url", []),
+            "type":summary_data.get("type", [])
         }
     except Exception as e:
         return f"An error occurred: {str(e)}"

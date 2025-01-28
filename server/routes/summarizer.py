@@ -23,9 +23,10 @@ async def summarize_content(
     format: str = Form(None),
     title: str = Form(None),
     file: UploadFile = File(None),
+    icon:str = Form(None),
     current_user: dict = Depends(get_current_user)
 ):
-    print("Calling summarization function...")
+
     if not url and not file:
         raise HTTPException(status_code=400, detail="Either 'url' or 'file' must be provided.")
 
@@ -35,14 +36,12 @@ async def summarize_content(
             if not ("youtu.be" in url or "youtube.com" in url or validators.url(url)):
                 raise HTTPException(status_code=400, detail="Invalid URL")
             if "youtu.be" in url or "youtube.com" in url:
-                print("routes - title",title)
-                summary = await get_youtube_summary(url, lang, format, title, current_user)
+                summary = await get_youtube_summary(url, lang, format, title,icon, current_user)
             else:
                 summary = await get_web_summary(url, lang, format, title, current_user)
 
         elif file:
             summary = await get_file_summary(file, lang, format, title, current_user)  
-        print(summary)
         return {"summary": summary}
 
     except Exception as e:

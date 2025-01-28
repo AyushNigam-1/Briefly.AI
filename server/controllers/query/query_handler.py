@@ -41,7 +41,6 @@ def chat_with_summary(user_input: str, id: str):
         summarized_summary = summary_data.get("summarized_summary", "")
         if not summarized_summary:
             return "The summary is empty or not available."
-        print(f"Summarized Summary: {summarized_summary}")
 
         static_chat_history = summary_data.get("queries", [])
         static_history = "\n".join(
@@ -60,7 +59,6 @@ def chat_with_summary(user_input: str, id: str):
         )
 
         response = llm.invoke(prompt)
-        print(f"Response: {response.content}")
 
         memory.save_context({"input": user_input}, {"output": response.content})
 

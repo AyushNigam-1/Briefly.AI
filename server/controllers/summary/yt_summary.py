@@ -9,10 +9,12 @@ from urllib.parse import urlparse, parse_qs
 from dotenv import load_dotenv
 from youtube_transcript_api import _api
 import os
-from controllers.db.summary import save_summary_to_mongo
-from controllers.db.conn import summary_collection
+from controllers.db.summary import save_summary_to_mongo , fetch_existing_summary
 from controllers.db.prompt import get_prompt_by_user
 from utils.websocket_manager import manager
+from io import BytesIO
+from PIL import Image
+from controllers.db.conn import fs
 
 load_dotenv()
 api_key = os.getenv("groq_api_key")
@@ -102,7 +104,7 @@ def save_subtitles_to_file(subtitles: str, file_name: str) -> None:
 
 
 async def get_youtube_summary(
-    url: str, lang: str, format: str, title: str, current_user
+    url: str, lang: str, format: str, title: str,icon:str, current_user
 ) -> str:
     video_id = extract_video_id(url)
     await manager.send_message({"progress": 10, "message": "Extracting transcript..."})
@@ -112,15 +114,9 @@ async def get_youtube_summary(
         return "Invalid YouTube URL or video ID could not be extracted."
 
     user_id = str(current_user["user_id"])
-    existing_summary = summary_collection.find_one({ "url": url})
-
-    if existing_summary:
-        summarized_summary = existing_summary.get("summarized_summary", "No summarized summary available.")
-        summary_id = str(existing_summary["_id"])
-        print("exisiting summary")
-        queries = existing_summary.get("queries", "No queries available.")
-        await manager.send_message({"progress": 100, "message": "Summary already exists in the database."})
-        return {"summarized_summary": summarized_summary, "id": summary_id, "queries": queries}
+    result = await fetch_existing_summary(user_id, title, manager)
+    if result:
+        return result
 
     # Send progress updates
     await manager.send_message({"progress": 10, "message": "Extracting transcript..."})
@@ -129,7 +125,21 @@ async def get_youtube_summary(
     if transcript in ["Subtitles not available.", "Transcripts are disabled for this video."]:
         await manager.send_message({"progress": 0, "message": "Transcript extraction failed."})
         return transcript
+    try:
+        await manager.send_message({"progress": 20, "message": "Extracting video thumbnail..."})
+        response = requests.get(icon, stream=True)
+        response.raise_for_status()
 
+        image = Image.open(BytesIO(response.content))
+        img_byte_arr = BytesIO()
+        image.save(img_byte_arr, format="JPEG")
+        img_byte_arr.seek(0)  # Rewind the file pointer to the beginning
+
+        gridfs_file = fs.put(img_byte_arr, filename=f"{video_id}_thumbnail.jpg", content_type="image/jpeg")
+        file_url = f"files/?id={gridfs_file}"
+    except Exception as e:
+        await manager.send_message({"progress": 0, "message": f"Thumbnail extraction failed: {str(e)}"})
+        return f"Thumbnail extraction failed: {str(e)}"
     await manager.send_message({"progress": 50, "message": "Correcting subtitles..."})
     corrected_transcript = correct_subtitles(transcript, language=lang)
 
@@ -165,7 +175,7 @@ async def get_youtube_summary(
     summary = chain.run(input_data)
 
     await manager.send_message({"progress": 100, "message": "Summary generation completed."})
-    save_result = save_summary_to_mongo(user_id,url, transcript, summary,title)
+    save_result = save_summary_to_mongo(user_id,file_url, transcript, summary,title , type='Video')
 
     return save_result
 

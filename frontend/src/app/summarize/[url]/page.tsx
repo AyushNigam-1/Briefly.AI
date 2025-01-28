@@ -32,28 +32,32 @@ const fetchExisitingSummary = async (summaryId: string) => {
 };
 
 export const previewFile = async (file_url: string) => {
-    try {
-        const response = await fetch(`http://localhost:8000/${file_url}`, {
-            method: 'GET',
-        });
+    if (file_url) {
+        try {
+            const response = await fetch(`http://localhost:8000/${file_url}`, {
+                method: 'GET',
+            });
 
-        if (!response.ok) {
-            throw new Error(`File not found with id ${file_url}`);
+            if (!response.ok) {
+                throw new Error(`File not found with id ${file_url}`);
+            }
+
+            const fileBlob = await response.blob();
+            const fileUrl = URL.createObjectURL(fileBlob);
+
+            return fileUrl;
+        } catch (error) {
+            console.error('Error fetching file:', error);
+            throw error;
         }
-
-        const fileBlob = await response.blob();
-        const fileUrl = URL.createObjectURL(fileBlob);
-
-        return fileUrl;
-    } catch (error) {
-        console.error('Error fetching file:', error);
-        throw error;
-    }
-};
+    };
+    return ""
+}
 
 type Metadata = {
     icon: string,
-    title: string
+    title: string,
+    type: string
 }
 const page = () => {
 
@@ -69,10 +73,12 @@ const page = () => {
     const title = searchParams.get('title') as string;
     const language = searchParams.get('language') as string
     const format = searchParams.get('format') as string;
+    const icon = searchParams.get('icon') as string;
+
     const queriesContainerRef = useRef<HTMLDivElement | null>(null);
     const [state, setState] = useState<string | undefined>(undefined);
 
-    const getSummary = async (url?: string, lang?: string, format?: string, title?: string) => {
+    const getSummary = async (url?: string, lang?: string, format?: string, title?: string, icon?: string) => {
         console.log("called getSummary")
         setLoading(true);
         try {
@@ -105,6 +111,7 @@ const page = () => {
             if (lang) formData.append("lang", lang);
             if (format) formData.append("format", format);
             if (title) formData.append("title", title);
+            if (icon) formData.append('icon', icon)
 
             const { data } = await axios.post(
                 "http://localhost:8000/summarize/",
@@ -118,7 +125,7 @@ const page = () => {
                 }
             );
             const preview_url = await previewFile(data.summary.url)
-            setMetadata({ icon: preview_url, title: data.summary.title })
+            setMetadata({ icon: preview_url, title: data.summary.title, type: data.summary.type })
             console.log(data)
             setSummary(data.summary);
             setQueries(data.summary.queries);
@@ -138,7 +145,7 @@ const page = () => {
     useEffect(() => {
         if (summary) return
         connectWebSocket("ws://127.0.0.1:8000/ws")
-        getSummary(url, language, format, title);
+        getSummary(url, language, format, title, icon);
     }, []);
 
     useEffect(() => {
@@ -147,6 +154,8 @@ const page = () => {
             setLoading(true);
             try {
                 const data = await fetchExisitingSummary(summaryId);
+                const preview_url = await previewFile(data.summary.url)
+                setMetadata({ icon: preview_url, title: data.summary.title, type: data.summary.type })
                 setSummary(data.summary);
                 setQueries(data.summary.queries)
             } catch (error) {
@@ -198,12 +207,15 @@ const page = () => {
                 <Navbar component={<Sidebar setId={setSummaryId} />} />
                 <div className='gap-1 flex items-center justify-center flex-col max-h-[100vh] max-w-[100vw] '>
                     <div className="flex flex-col gap-3 rounded-lg shadow container overflow-y-scroll mb-40 scrollbar-thumb-gray-500 scrollbar-track-transparent scrollbar-thin" ref={queriesContainerRef}>
-
+                        <div className='bg-gray-900 w-max rounded-lg flex p-2 gap-2 m-1 '>
+                            <img src={metadata?.icon} alt="" className='m-0 h-14 rounded-lg' />
+                            <span>
+                                <h4 className='m-0 truncate text-lg font-semibold text-gray-200' >{metadata?.title.split(" ").slice(0, 5).join(" ")}...</h4>
+                                <h6 className='text-sm bg-gray-600 w-min py-1 px-2  rounded-lg' >{metadata?.type}</h6>
+                            </span>
+                        </div>
                         <div className="bg-gray-900 font-mono border-gray-700 scrollbar-thumb-gray-500  w-100 p-4 rounded-lg prose-gray prose-lg w-full max-w-none">
-                            <div className='bg-gray-600 rounded-lg w-80 flex p-1 gap-2'>
-                                <img src={metadata?.icon} alt="" className='m-0 w-16 rounded-lg' />
-                                <h4 className='m-0 text-lg' >{metadata?.title}</h4>
-                            </div>
+
                             <ReactMarkdown
                                 remarkPlugins={[remarkGfm]}
                                 components={{

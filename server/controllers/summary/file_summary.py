@@ -11,7 +11,7 @@ from utils.websocket_manager import manager
 from controllers.db.conn import summary_collection
 import os
 from controllers.db.prompt import get_prompt_by_user
-from controllers.db.summary import save_summary_to_mongo
+from controllers.db.summary import save_summary_to_mongo , fetch_existing_summary
 from io import BytesIO
 from controllers.db.conn import fs
 
@@ -74,22 +74,15 @@ async def get_file_summary(file, lang: str, format: str, title: str, current_use
         if not mime_type:
             raise ValueError("Unsupported file type. Only images and PDFs are allowed.")
 
-        existing_summary = summary_collection.find_one({"user_id": user_id, "title": file.filename})
-        if existing_summary:
-            summarized_summary = existing_summary.get("summarized_summary", "No summarized summary available.")
-            summary_id = str(existing_summary["_id"])
-            print("exisiting summary")
-            queries = existing_summary.get("queries", "No queries available.")
-            file_url = existing_summary.get("url",'unavailable')
-            file_title = existing_summary.get('title',"not available")
-            await manager.send_message({"progress": 100, "message": "Summary already exists in the database."})
-            return {"summarized_summary": summarized_summary, "id": summary_id, "queries": queries ,"url":file_url , "title":file_title }
+        result = await fetch_existing_summary(user_id, file.filename, manager)
+        if result:
+            return result
 
         file_stream = file.file
         extracted_text = ""
 
-        # Handle image
         if mime_type.startswith("image"):
+            type = "image"
             file_stream.seek(0)
             image = Image.open(file_stream)
             if image.mode == "RGBA":
@@ -108,6 +101,7 @@ async def get_file_summary(file, lang: str, format: str, title: str, current_use
 
         # Handle PDF
         elif mime_type == "application/pdf":
+            type = "pdf"
             file_stream.seek(0)
             pdf_reader = PdfReader(file_stream)
             extracted_text = " ".join(page.extract_text() or "" for page in pdf_reader.pages)
@@ -139,7 +133,7 @@ async def get_file_summary(file, lang: str, format: str, title: str, current_use
         summary = chain.run({"input_documents": [document], "language": lang, "output_format": format})
 
         await manager.send_message({"progress": 90, "message": "Saving summary..."})
-        save_result = save_summary_to_mongo(user_id, file_url ,corrected_text, summary, title)
+        save_result = save_summary_to_mongo(user_id, file_url ,corrected_text, summary, title,type=type)
 
         await manager.send_message({"progress": 100, "message": "Summary generation completed."})
         return save_result

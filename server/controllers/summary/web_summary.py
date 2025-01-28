@@ -7,9 +7,14 @@ from utils.websocket_manager import manager
 from controllers.db.conn import summary_collection
 import os
 from controllers.db.prompt import get_prompt_by_user
-from controllers.db.summary import save_summary_to_mongo
+from controllers.db.summary import save_summary_to_mongo , fetch_existing_summary
 import urllib3
 import nltk
+from io import BytesIO
+from PIL import Image
+from controllers.db.conn import fs
+import requests
+from datetime import datetime
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 load_dotenv()
@@ -24,18 +29,16 @@ async def get_web_summary(
     lang: str,
     format: str,
     title: str,
+    icon:str,
     current_user: dict,
 ) -> dict:
     user_id = str(current_user["user_id"])
 
     await manager.send_message({"progress": 10, "message": "Extracting webpage content..."})
 
-    existing_summary = summary_collection.find_one({"user_id": user_id, "url": url})
-    if existing_summary:
-        summary_id = str(existing_summary["_id"])
-        summarized_summary = existing_summary.get("summary", "No summary available.")
-        await manager.send_message({"progress": 100, "message": "Summary already exists in the database."})
-        return {"summary": summarized_summary, "id": summary_id}
+    result = await fetch_existing_summary(user_id, title, manager)
+    if result:
+        return result
 
     
     loader = UnstructuredURLLoader(
@@ -51,7 +54,22 @@ async def get_web_summary(
     except Exception as e:
         await manager.send_message({"progress": 0, "message": f"Failed to load content from URL. Error: {str(e)}"})
         return {"error": f"Failed to load content from URL.. Error: {str(e)}"}
+    try:
+        await manager.send_message({"progress": 20, "message": "Extracting video thumbnail..."})
+        response = requests.get(icon, stream=True)
+        response.raise_for_status()
 
+        image = Image.open(BytesIO(response.content))
+        img_byte_arr = BytesIO()
+        image.save(img_byte_arr, format="JPEG")
+        img_byte_arr.seek(0)  # Rewind the file pointer to the beginning
+
+        gridfs_file = fs.put(img_byte_arr, filename=f"{datetime.now()}_thumbnail.jpg", content_type="image/jpeg")
+        file_url = f"files/?id={gridfs_file}"
+
+    except Exception as e:
+        await manager.send_message({"progress": 0, "message": f"Thumbnail extraction failed: {str(e)}"})
+        return f"Thumbnail extraction failed: {str(e)}"
 
     await manager.send_message({"progress": 50, "message": "Correcting summary..."})
     corrected_summary = correct_summary(docs[0].page_content, lang)
@@ -91,7 +109,7 @@ async def get_web_summary(
         return {"error": f"Summary generation failed.{str(e)}"}
 
     await manager.send_message({"progress": 90, "message": "Summary generation completed."})
-    save_result = save_summary_to_mongo(user_id,url,corrected_summary, summary, title)
+    save_result = save_summary_to_mongo(user_id,file_url,corrected_summary, summary, title,type='web')
     return save_result
 
 

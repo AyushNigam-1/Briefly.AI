@@ -12,7 +12,6 @@ class QueryRequest(BaseModel):
 async def query_handler(request: QueryRequest):
     query = request.query
     id = request.id
-    print(query , id)
     try:
         response = chat_with_summary(query,id)
         return response

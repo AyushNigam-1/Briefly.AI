@@ -220,7 +220,7 @@ const page = () => {
                     <h6 className='font-mulish text-xl font-bold' > CONTENT </h6>
                     <div className='flex gap-2' >
                       <Link
-                        href={`/summarize/${encodeURIComponent(url ? url : "")}?title=${metadata?.title}&language=${language}&format=${action}`}
+                        href={`/summarize/${encodeURIComponent(url ? url : "")}?title=${metadata?.title}&language=${language}&format=${action}&icon=${metadata?.icon}`}
                       >
                         <button className='bg-gradient-to-t from-blue-500 to-gray-900 p-1 rounded-full' >
                           <span className='bg-gray-900 p-2 text-xl rounded-full  flex items-center justify-center' >
