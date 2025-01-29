@@ -74,10 +74,38 @@ const page = () => {
     const language = searchParams.get('language') as string
     const format = searchParams.get('format') as string;
     const icon = searchParams.get('icon') as string;
+    const [text, setText] = useState('Copy')
 
     const queriesContainerRef = useRef<HTMLDivElement | null>(null);
     const [state, setState] = useState<string | undefined>(undefined);
 
+    const copyToClipboard = async (text?: string) => {
+        if (text)
+            try {
+                await navigator.clipboard.writeText(text);
+                console.log('Text copied to clipboard');
+                setText('Copied!')
+                setTimeout(() => {
+                    setText('Copy')
+                }, 2000)
+                return true; // Success
+            } catch (err) {
+                console.error('Failed to copy text: ', err);
+                return false; // Failure
+            }
+    };
+    const handleRegenerate = async () => {
+        // setLoading(true);
+        try {
+            console.log({ id: summaryId, language, format })
+            const response = await axios.post(`http://localhost:8000/regenerate_summary?id=${summaryId}&language=${language}&format=${format}`)
+            // setSearchParams(new URLSearchParams(response.data.newParams));
+        } catch (err) {
+            // setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
     const getSummary = async (url?: string, lang?: string, format?: string, title?: string, icon?: string) => {
         console.log("called getSummary")
         setLoading(true);
@@ -127,6 +155,7 @@ const page = () => {
             const preview_url = await previewFile(data.summary.url)
             setMetadata({ icon: preview_url, title: data.summary.title, type: data.summary.type })
             console.log(data)
+            setSummaryId(data.summary.id)
             setSummary(data.summary);
             setQueries(data.summary.queries);
         } catch (error) {
@@ -207,15 +236,14 @@ const page = () => {
                 <Navbar component={<Sidebar setId={setSummaryId} />} />
                 <div className='gap-1 flex items-center justify-center flex-col max-h-[100vh] max-w-[100vw] '>
                     <div className="flex flex-col gap-3 rounded-lg shadow container overflow-y-scroll mb-40 scrollbar-thumb-gray-500 scrollbar-track-transparent scrollbar-thin" ref={queriesContainerRef}>
-                        <div className='bg-gray-900 w-max rounded-lg flex p-2 gap-2 m-1 '>
-                            <img src={metadata?.icon} alt="" className='m-0 h-14 rounded-lg' />
+                        <div className='bg-gray-900 w-max rounded-lg flex p-2 gap-2 m-1 border-2 border-gray-500 '>
+                            <img src={metadata?.icon} alt="" className='m-0 h-14 w-14 rounded-lg' />
                             <span>
-                                <h4 className='m-0 truncate text-lg font-semibold text-gray-200' >{metadata?.title.split(" ").slice(0, 5).join(" ")}...</h4>
+                                <h4 className='m-0 truncate  font-semibold text-gray-200' >{metadata?.title.split(" ").slice(0, 6).join(" ")}...</h4>
                                 <h6 className='text-sm bg-gray-600 w-min py-1 px-2  rounded-lg' >{metadata?.type}</h6>
                             </span>
                         </div>
                         <div className="bg-gray-900 font-mono border-gray-700 scrollbar-thumb-gray-500  w-100 p-4 rounded-lg prose-gray prose-lg w-full max-w-none">
-
                             <ReactMarkdown
                                 remarkPlugins={[remarkGfm]}
                                 components={{
@@ -224,6 +252,19 @@ const page = () => {
                             >
                                 {summary?.summarized_summary}
                             </ReactMarkdown>
+                        </div>
+                        <div className='flex justify-center gap-3' >
+                            <button onClick={() => copyToClipboard(summary?.summarized_summary)} className="bg-gray-900 py-3 px-4 rounded-full flex gap-2 items-center text-lg">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
+                                </svg>
+                                {text}
+                            </button><button onClick={handleRegenerate} className="bg-gray-900 py-3 px-4 rounded-full flex gap-2 items-center text-lg">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                                </svg>
+                                Regenrate
+                            </button>
                         </div>
                         <div className="flex flex-col gap-3">
                             {queries?.map((query, index) =>

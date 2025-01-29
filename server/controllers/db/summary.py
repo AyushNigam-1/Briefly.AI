@@ -1,6 +1,16 @@
 from .conn import summary_collection 
 from datetime import datetime , timezone
 from bson.objectid import ObjectId
+from langchain.prompts import PromptTemplate
+from langchain.schema import Document
+from langchain.chains.summarize import load_summarize_chain
+from dotenv import load_dotenv
+import os
+from langchain_groq import ChatGroq
+
+load_dotenv()
+api_key = os.getenv("groq_api_key")
+llm = ChatGroq(model="llama-3.3-70b-versatile", groq_api_key=api_key)
 
 def is_valid_object_id(id: str) -> bool:
     """
@@ -53,7 +63,7 @@ async def fetch_existing_summary(user_id, url, manager):
     print(existing_summary , user_id , url)
     if existing_summary:
         summary_id = str(existing_summary["_id"])
-        summarized_summary = existing_summary.get("summary", "No summary available.")
+        summarized_summary = existing_summary.get("summarized_summary", "No summary available.")
         queries = existing_summary.get("queries", "No queries available.")
         url = existing_summary.get("url", "unavailable")
         title = existing_summary.get("title", "not available")
@@ -71,6 +81,37 @@ async def fetch_existing_summary(user_id, url, manager):
         }
     
     return {}  
+
+
+def generate_summary(prompt_template: str, summary: str, language: str, format: str):
+    prompt = PromptTemplate(template=prompt_template, input_variables=["text", "language", "format"])
+    docs = [Document(page_content=summary)]
+    input_data = {"input_documents": docs, "language": language, "format": format}
+    chain = load_summarize_chain(llm, chain_type="stuff", prompt=prompt)
+    return chain.run(input_data)
+
+def regenerate(id: str,  language: str, format: str):
+    print(id,language,format)
+    if not is_valid_object_id(id):
+        return "Invalid ObjectId. It must be a 24-character hex string."
+
+    summary_data = summary_collection.find_one({"_id": ObjectId(id)})
+    if not summary_data:
+        return "Summary not found."
+
+    prompt_template = "Regenerate the summary for the following transcript - {text} while maintaining clarity and conciseness. in this lanuage - {language} with the format - {format}"
+    
+    # manager.send_message({"progress": 90, "message": "Generating summary..."})
+    
+    summary = generate_summary(prompt_template, summary_data.get('summarized_summary'), language, format)
+    print(summary)
+    
+    summary_collection.update_one(
+        {"_id": ObjectId(id)},
+        {"$set": {"summarized_summary": summary, "timestamp": datetime.now(timezone.utc)}}
+    )
+    
+    return {"id": id, "summarized_summary": summary}
 
 
 def get_summary_by_id(id: str):

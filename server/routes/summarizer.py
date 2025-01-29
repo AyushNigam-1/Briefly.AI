@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException , Depends , UploadFile , File , For
 from controllers.summary.yt_summary import get_youtube_summary
 from controllers.summary.web_summary import get_web_summary
 from controllers.summary.file_summary import get_file_summary
+from controllers.db.summary import regenerate
 import validators
 from utils.auth import get_current_user
 from fastapi.responses import StreamingResponse
@@ -13,6 +14,7 @@ import validators
 from urllib.parse import unquote
 from controllers.db.conn import fs
 from bson import ObjectId
+
 
 router = APIRouter()
 
@@ -49,7 +51,17 @@ async def summarize_content(
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
     
-
+@router.post("/regenerate_summary/")
+async def regenerate_summary(
+    id: str,
+    language: str ,
+    format: str ,
+):
+    try:
+        result = await regenerate(id, language, format)
+        return {"message": "Summary regeneration completed.", "result": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/download/")
 async def download_summary(summary_id: str, type: str):
