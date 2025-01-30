@@ -1,11 +1,7 @@
 from langchain_community.document_loaders import UnstructuredURLLoader
 from langchain.prompts import PromptTemplate
 from langchain.chains.summarize import load_summarize_chain
-from langchain_groq import ChatGroq
-from dotenv import load_dotenv
 from utils.websocket_manager import manager
-from controllers.db.conn import summary_collection
-import os
 from controllers.db.prompt import get_prompt_by_user
 from controllers.db.summary import save_summary_to_mongo , fetch_existing_summary
 import urllib3
@@ -14,15 +10,9 @@ from io import BytesIO
 from PIL import Image
 from controllers.db.conn import fs
 import requests
+from utils.llm import llm
 from datetime import datetime
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-load_dotenv()
-
-api_key = os.getenv("groq_api_key")
-
-llm = ChatGroq(model="llama-3.3-70b-versatile", groq_api_key=api_key)
-
 
 async def get_web_summary(
     url: str,
@@ -77,24 +67,24 @@ async def get_web_summary(
 
     await manager.send_message({"progress": 75, "message": "Generating summary..."})
 
-    user_prompt_data = get_prompt_by_user(user_id)
-    user_prompt = None if "error" in user_prompt_data else user_prompt_data.get("prompt")
-
-    if user_prompt:
-        prompt_template = user_prompt + "\n\nThe subtitle is - {text} and the language should strictly be - {language}."
-    else:
-        prompt_template = (
-        "Convert the following web transcript into a refined and human-friendly output based on the specified action."
-        "1. Action: Perform the task specified below:{format}"
-        "If shorten, reduce the transcript to its most essential points while maintaining clarity and meaning. Ensure brevity without losing important details."
-        "If extend, expand the transcript by adding more details, explanations, and examples to make the content richer and more engaging."
-        "    If summarize, condense the transcript into a concise overview by capturing only the main ideas and key points."
-        "    If key points, extract the most important and actionable points from the transcript in bullet form, without additional explanations."
-        "2. Language: Write the output in {language}."
-        "3. Style: Write in a natural, polished, and human-friendly tone."
-        "4. Enhancements: Ensure the content is clear, free of redundancy, and flows smoothly. Add transitions or structure (e.g., headings or bullet points) where necessary."
-        "Transcript: {text}"
-        )
+    prompt_template = (
+            "Convert the following YouTube transcript into a refined and human-friendly output based on the specified action."
+            "1. Action: Perform the task specified below:{format}"
+            "If shorten, reduce the transcript to its most essential points while maintaining clarity and meaning. Ensure brevity without losing important details."
+            "If extend, expand the transcript by adding more details, explanations, and examples to make the content richer and more engaging."
+            "    If summarize, condense the transcript into a concise overview by capturing only the main ideas and key points."
+            "    If key points, extract the most important and actionable points from the transcript in bullet form, without additional explanations."
+            "2. Language: Write the output in {language}."
+            "3. Style: Write in a natural, polished, and human-friendly tone."
+            "4. Enhancements: Ensure the content is clear, free of redundancy, and flows smoothly. Add transitions or structure (e.g., headings or bullet points) where necessary."
+            "Transcript: {text}"
+            )
+    
+    if format == 'Custom':
+        user_prompt_data = get_prompt_by_user(user_id)
+        user_prompt = None if "error" in user_prompt_data else user_prompt_data.get("prompt")
+        if user_prompt:
+            prompt_template = user_prompt + "\n\nThe subtitle is - {text} and the language should strictly be - {language}."
 
     
     prompt = PromptTemplate(template=prompt_template, input_variables=["text", "language", "output_format"])

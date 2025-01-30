@@ -59,7 +59,7 @@ async def regenerate_summary(
 ):
     try:
         result = await regenerate(id, language, format)
-        return {"message": "Summary regeneration completed.", "result": result}
+        return  result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

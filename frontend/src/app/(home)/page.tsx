@@ -22,8 +22,15 @@ const page = () => {
   const [url, setUrl] = useState<string | null>(null)
   const [metadata, setMetadata] = useState<metadata | null>(null)
   const [file, setFile] = useState<File | undefined>()
+  const [prompt, setPrompt] = useState<string | undefined>()
   const doc = useRef<HTMLInputElement | null>(null);
+  const promptInput = useRef<HTMLInputElement | null>(null);
 
+  interface PromptResponse {
+    prompt?: string
+    error?: string
+
+  }
 
   function isValidUrl(urlString: string): boolean {
     try {
@@ -33,7 +40,28 @@ const page = () => {
       return false;
     }
   }
+  const getPrompt = async () => {
+    const token = Cookies.get("access_token");
 
+    try {
+      const response = await axios.get<PromptResponse>(`http://127.0.0.1:8000/get-prompt`, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+        withCredentials: true,
+      });
+      setPrompt(response.data.prompt);
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        const axiosError = error as AxiosError<PromptResponse>;
+        console.error('Error fetching prompts:', axiosError.response?.data || axiosError.message);
+        return { error: axiosError.response?.data?.error || axiosError.message };
+      } else {
+        console.error('An unexpected error occurred:', error);
+        return { error: 'An unexpected error occurred' };
+      }
+    }
+  };
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLoading(true);
     if (e.target.files) {
@@ -95,7 +123,37 @@ const page = () => {
     }
   };
 
-
+  const updatePrompt = async (newPrompt: string | undefined) => {
+    if (newPrompt != prompt) {
+      const token = Cookies.get("access_token");
+      try {
+        const response = await axios.post<PromptResponse>(`http://127.0.0.1:8000/update-prompt`, {
+          new_prompt: newPrompt,
+        }, {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+          withCredentials: true,
+        });
+        setPrompt(response.data.prompt)
+        console.log(response)
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error)) {
+          const axiosError = error as AxiosError<PromptResponse>;
+          console.error('Error updating prompt:', axiosError.response?.data || axiosError.message);
+          return { error: axiosError.response?.data?.error || axiosError.message };
+        } else {
+          console.error('An unexpected error occurred:', error);
+          return { error: 'An unexpected error occurred' };
+        }
+      }
+    }
+    setOpen(false)
+    // console.log(newPrompt)
+  };
+  useEffect(() => {
+    getPrompt()
+  }, [])
   return (
     <>
       <Navbar />
@@ -152,8 +210,10 @@ const page = () => {
               </button>
               )
             }
-            <button className='bg-gray-900 p-3 px-4 text-xl rounded-full  flex items-center justify-center' onClick={() => setOpen(true)}>
-              Custom
+            <button className={` ${action == 'Custom' ? 'bg-gradient-to-t from-blue-500 to-gray-900 p-1 rounded-full' : ''}`} onClick={() => { setOpen(true); setAction('Custom') }}>
+              <span className='bg-gray-900 p-3 px-4 text-xl rounded-full  flex items-center justify-center' >
+                Custom
+              </span>
             </button>
             <Dialog open={open} as="div" className="relative z-10 focus:outline-none" onClose={() => setOpen(false)}>
               <DialogBackdrop className="fixed inset-0 bg-black/50" />
@@ -166,7 +226,7 @@ const page = () => {
                     <div className='flex justify-between items-center w-full' >
                       <h6 className='font-mulish text-xl font-bold' > CUSTOM PROMPT </h6>
                       <div className='flex gap-2' >
-                        <button className='bg-gradient-to-t from-blue-500 to-gray-900 p-1 rounded-full' >
+                        <button className='bg-gradient-to-t from-blue-500 to-gray-900 p-1 rounded-full' onClick={() => updatePrompt(promptInput.current?.value)} >
                           <span className='bg-gray-900 p-2 text-xl rounded-full  flex items-center justify-center' >
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5">
                               <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
@@ -183,6 +243,8 @@ const page = () => {
                       </div>
                     </div>
                     <Textarea placeholder='Write Your Custom Prompt'
+                      ref={promptInput}
+                      defaultValue={prompt}
                       className={clsx(
                         'block w-full resize-none rounded-lg border-none bg-gray-900 py-1.5 px-3 text-xl text-white',
                         'focus:outline-none data-[focus]:outline-2 data-[focus]:-outline-offset-2 data-[focus]:outline-white/25'

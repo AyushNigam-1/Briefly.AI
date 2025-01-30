@@ -1,12 +1,9 @@
 from langchain.prompts import PromptTemplate
 from langchain.chains.summarize import load_summarize_chain
-from langchain_groq import ChatGroq
 from langchain.schema import Document
 from youtube_transcript_api import YouTubeTranscriptApi, NoTranscriptFound, TranscriptsDisabled
-import os
 import requests
 from urllib.parse import urlparse, parse_qs
-from dotenv import load_dotenv
 from youtube_transcript_api import _api
 import os
 from controllers.db.summary import save_summary_to_mongo , fetch_existing_summary
@@ -15,12 +12,11 @@ from utils.websocket_manager import manager
 from io import BytesIO
 from PIL import Image
 from controllers.db.conn import fs
-
-load_dotenv()
-api_key = os.getenv("groq_api_key")
+from utils.llm import llm
+from utils.common import split_content
 WebSocket_uri = "ws://localhost:8080" 
 session = requests.Session()
-llm = ChatGroq(model="llama-3.3-70b-versatile", groq_api_key=api_key)
+
 
 def session_request(method, url, *args, **kwargs):
     """Overrides the internal request function to use our session."""
@@ -143,24 +139,24 @@ async def get_youtube_summary(
     await manager.send_message({"progress": 50, "message": "Correcting subtitles..."})
     corrected_transcript = correct_subtitles(transcript, language=lang)
 
-    user_prompt_data = get_prompt_by_user(user_id)
-    user_prompt = None if "error" in user_prompt_data else user_prompt_data.get("prompt")
-
-    if user_prompt:
-        prompt_template = user_prompt + "\n\nThe subtitle is - {text} and the language should strictly be - {language}."
-    else:
-        prompt_template = (
-        "Convert the following YouTube transcript into a refined and human-friendly output based on the specified action."
-        "1. Action: Perform the task specified below:{format}"
-        "If shorten, reduce the transcript to its most essential points while maintaining clarity and meaning. Ensure brevity without losing important details."
-        "If extend, expand the transcript by adding more details, explanations, and examples to make the content richer and more engaging."
-        "    If summarize, condense the transcript into a concise overview by capturing only the main ideas and key points."
-        "    If key points, extract the most important and actionable points from the transcript in bullet form, without additional explanations."
-        "2. Language: Write the output in {language}."
-        "3. Style: Write in a natural, polished, and human-friendly tone."
-        "4. Enhancements: Ensure the content is clear, free of redundancy, and flows smoothly. Add transitions or structure (e.g., headings or bullet points) where necessary."
-        "Transcript: {text}"
-        )
+    prompt_template = (
+            "Convert the following YouTube transcript into a refined and human-friendly output based on the specified action."
+            "1. Action: Perform the task specified below:{format}"
+            "If shorten, reduce the transcript to its most essential points while maintaining clarity and meaning. Ensure brevity without losing important details."
+            "If extend, expand the transcript by adding more details, explanations, and examples to make the content richer and more engaging."
+            "    If summarize, condense the transcript into a concise overview by capturing only the main ideas and key points."
+            "    If key points, extract the most important and actionable points from the transcript in bullet form, without additional explanations."
+            "2. Language: Write the output in {language}."
+            "3. Style: Write in a natural, polished, and human-friendly tone."
+            "4. Enhancements: Ensure the content is clear, free of redundancy, and flows smoothly. Add transitions or structure (e.g., headings or bullet points) where necessary."
+            "Transcript: {text}"
+            )
+    
+    if format == 'Custom':
+        user_prompt_data = get_prompt_by_user(user_id)
+        user_prompt = None if "error" in user_prompt_data else user_prompt_data.get("prompt")
+        if user_prompt:
+            prompt_template = user_prompt + "\n\nThe subtitle is - {text} and the language should strictly be - {language}."
 
     prompt = PromptTemplate(
         template=prompt_template,
@@ -173,9 +169,9 @@ async def get_youtube_summary(
 
     chain = load_summarize_chain(llm, chain_type="stuff", prompt=prompt)
     summary = chain.run(input_data)
-
+    think_part, main_part = split_content(summary)
     await manager.send_message({"progress": 100, "message": "Summary generation completed."})
-    save_result = save_summary_to_mongo(user_id,file_url, transcript, summary,title , type='Video')
+    save_result = save_summary_to_mongo(user_id,file_url,main_part,think_part, transcript,title , type='Video')
 
     return save_result
 

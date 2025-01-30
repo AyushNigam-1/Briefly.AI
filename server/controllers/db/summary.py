@@ -4,13 +4,9 @@ from bson.objectid import ObjectId
 from langchain.prompts import PromptTemplate
 from langchain.schema import Document
 from langchain.chains.summarize import load_summarize_chain
-from dotenv import load_dotenv
-import os
-from langchain_groq import ChatGroq
+from utils.llm import llm
+from utils.websocket_manager import manager
 
-load_dotenv()
-api_key = os.getenv("groq_api_key")
-llm = ChatGroq(model="llama-3.3-70b-versatile", groq_api_key=api_key)
 
 def is_valid_object_id(id: str) -> bool:
     """
@@ -22,13 +18,14 @@ def is_valid_object_id(id: str) -> bool:
     except:
         return False
 
-def save_summary_to_mongo(user_id: str,url:str, original_summary: str, summarized_summary: str,title:str,type:str) -> dict:
+def save_summary_to_mongo(user_id: str,url:str, summarized_summary: str,thought:str,original_summary:str,title:str,type:str) -> dict:
     """Saves the original and summarized subtitles to the MongoDB 'summary' collection along with an empty queries array."""
     
     summary_data = {
         "user_id": user_id,
         "url":url,
         "type":type,
+        "thought":thought,
         "original_summary": original_summary,
         "summarized_summary": summarized_summary,
         "queries": [], 
@@ -40,7 +37,8 @@ def save_summary_to_mongo(user_id: str,url:str, original_summary: str, summarize
     
     return {
         "id": str(result.inserted_id),
-        "summarized_summary": summarized_summary,
+        "summarized_summary": summary_data.get("summarized_summary", []),
+        "thought":summary_data.get("thought", []),
         "queries":  summary_data.get("queries", []),
         "title":summary_data.get("title", []),
         "url":summary_data.get("url", []),
@@ -63,6 +61,7 @@ async def fetch_existing_summary(user_id, url, manager):
     print(existing_summary , user_id , url)
     if existing_summary:
         summary_id = str(existing_summary["_id"])
+        thought=existing_summary.get("thought", []),
         summarized_summary = existing_summary.get("summarized_summary", "No summary available.")
         queries = existing_summary.get("queries", "No queries available.")
         url = existing_summary.get("url", "unavailable")
@@ -72,6 +71,7 @@ async def fetch_existing_summary(user_id, url, manager):
         await manager.send_message({"progress": 100, "message": "Summary already exists in the database."})
 
         return {
+            "thought":thought,
             "summarized_summary": summarized_summary,
             "id": summary_id,
             "queries": queries,
@@ -83,14 +83,16 @@ async def fetch_existing_summary(user_id, url, manager):
     return {}  
 
 
-def generate_summary(prompt_template: str, summary: str, language: str, format: str):
+async def generate_summary(prompt_template: str, summary: str, language: str, format: str):
     prompt = PromptTemplate(template=prompt_template, input_variables=["text", "language", "format"])
     docs = [Document(page_content=summary)]
     input_data = {"input_documents": docs, "language": language, "format": format}
     chain = load_summarize_chain(llm, chain_type="stuff", prompt=prompt)
-    return chain.run(input_data)
 
-def regenerate(id: str,  language: str, format: str):
+    return chain.run(input_data)  # Remove `await` here if .arun() is not available
+
+
+async def regenerate(id: str,  language: str, format: str):
     print(id,language,format)
     if not is_valid_object_id(id):
         return "Invalid ObjectId. It must be a 24-character hex string."
@@ -101,9 +103,9 @@ def regenerate(id: str,  language: str, format: str):
 
     prompt_template = "Regenerate the summary for the following transcript - {text} while maintaining clarity and conciseness. in this lanuage - {language} with the format - {format}"
     
-    # manager.send_message({"progress": 90, "message": "Generating summary..."})
+    manager.send_message({"progress": 90, "message": "Regenerating summary..."})
     
-    summary = generate_summary(prompt_template, summary_data.get('summarized_summary'), language, format)
+    summary = await generate_summary(prompt_template, summary_data.get('summarized_summary'), language, format)
     print(summary)
     
     summary_collection.update_one(

@@ -5,21 +5,18 @@ import mimetypes
 from langchain.schema import Document
 from langchain.prompts import PromptTemplate
 from langchain.chains.summarize import load_summarize_chain
-from langchain_groq import ChatGroq
 from dotenv import load_dotenv
 from utils.websocket_manager import manager
-from controllers.db.conn import summary_collection
-import os
 from controllers.db.prompt import get_prompt_by_user
 from controllers.db.summary import save_summary_to_mongo , fetch_existing_summary
 from io import BytesIO
 from controllers.db.conn import fs
-
+from utils.llm import llm
+import os
 load_dotenv()
 
-api_key = os.getenv("groq_api_key")
 ocrspace_api_key = os.getenv("ocrspace_api_key")
-llm = ChatGroq(model="llama-3.3-70b-versatile", groq_api_key=api_key)
+
 
 def extract_text_with_ocrspace(image_path: str) -> str:
     """Extract text from an image using OCR.space API."""
@@ -116,21 +113,28 @@ async def get_file_summary(file, lang: str, format: str, title: str, current_use
         corrected_text = correct_summary(extracted_text, lang)
 
         await manager.send_message({"progress": 75, "message": "Generating summary..."})
-        user_prompt_data = get_prompt_by_user(user_id)
-        user_prompt = user_prompt_data.get("prompt") if user_prompt_data and "error" not in user_prompt_data else None
-
-        if user_prompt:
-            prompt_template = user_prompt + "\n\nThe subtitle is - {text} and the language should strictly be - {language}."
-        else:
-            prompt_template = (
-                "Convert the following content into a refined and human-friendly output:"
-                " Content: {text} Language: {language} Format: {output_format}"
+        prompt_template = (
+            "Convert the following YouTube transcript into a refined and human-friendly output based on the specified action."
+            "1. Action: Perform the task specified below:{format}"
+            "If shorten, reduce the transcript to its most essential points while maintaining clarity and meaning. Ensure brevity without losing important details."
+            "If extend, expand the transcript by adding more details, explanations, and examples to make the content richer and more engaging."
+            "    If summarize, condense the transcript into a concise overview by capturing only the main ideas and key points."
+            "    If key points, extract the most important and actionable points from the transcript in bullet form, without additional explanations."
+            "2. Language: Write the output in {language}."
+            "3. Style: Write in a natural, polished, and human-friendly tone."
+            "4. Enhancements: Ensure the content is clear, free of redundancy, and flows smoothly. Add transitions or structure (e.g., headings or bullet points) where necessary."
+            "Transcript: {text}"
             )
-
-        prompt = PromptTemplate(template=prompt_template, input_variables=["text", "language", "output_format"])
+        if format == 'Custom':
+            user_prompt_data = get_prompt_by_user(user_id)
+            user_prompt = None if "error" in user_prompt_data else user_prompt_data.get("prompt")
+            if user_prompt:
+                prompt_template = user_prompt + "\n\nThe subtitle is - {text} and the language should strictly be - {language}."
+            
+        prompt = PromptTemplate(template=prompt_template, input_variables=["text", "language", "format"])
         chain = load_summarize_chain(llm, chain_type="stuff", prompt=prompt)
         document = Document(page_content=corrected_text)
-        summary = chain.run({"input_documents": [document], "language": lang, "output_format": format})
+        summary = chain.run({"input_documents": [document], "language": lang, "format": format})
 
         await manager.send_message({"progress": 90, "message": "Saving summary..."})
         save_result = save_summary_to_mongo(user_id, file_url ,corrected_text, summary, title,type=type)

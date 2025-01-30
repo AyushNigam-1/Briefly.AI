@@ -1,16 +1,9 @@
-import os
 from langchain.prompts import PromptTemplate
-from langchain_groq import ChatGroq
-from dotenv import load_dotenv
 from bson.objectid import ObjectId
 from controllers.db.conn import summary_collection
 from langchain.memory import ConversationBufferMemory
 from langchain.prompts import PromptTemplate
-
-load_dotenv()
-groq_api_key = os.getenv("groq_api_key")
-
-llm = ChatGroq(model="llama-3.3-70b-versatile", groq_api_key=groq_api_key)
+from utils.llm import llm
 
 memory = ConversationBufferMemory()
 
@@ -26,7 +19,6 @@ prompt_template = PromptTemplate(
     User Query:
     {user_query}
 
-    If the user asks about who made you or the ownership of this product, respond with "I was created by Ayush Nigam and his team."
     
     Response:
     """

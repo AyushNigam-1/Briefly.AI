@@ -10,6 +10,7 @@ export type query = {
 };
 
 export type SummaryResponse = {
+    thought: string;
     summarized_summary: string;
     id: string;
     queries: query[] | [];
@@ -25,4 +26,4 @@ export type WebSocketListeners = {
     onOpen?: (event: Event) => void;
     onClose?: (event: CloseEvent) => void;
     onError?: (event: Event) => void;
-  }
+}

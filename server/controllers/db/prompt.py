@@ -34,6 +34,8 @@ def update_prompt_for_user(user_id: str, new_prompt: str) -> dict:
             return {"error": f"No update was made for user with ID {user_id}."}
         
         updated_user = users_collection.find_one({"_id": ObjectId(user_id)})
+
+        print(updated_user)
         
         return {
             "prompt": updated_user.get("prompt", "No prompt set")
