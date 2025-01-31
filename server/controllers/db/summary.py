@@ -6,7 +6,7 @@ from langchain.schema import Document
 from langchain.chains.summarize import load_summarize_chain
 from utils.llm import llm
 from utils.websocket_manager import manager
-
+from utils.common import split_content
 
 def is_valid_object_id(id: str) -> bool:
     """
@@ -32,17 +32,18 @@ def save_summary_to_mongo(user_id: str,url:str, summarized_summary: str,thought:
         "timestamp": datetime.now(timezone.utc),
         "title":title
     }
+    # return summary_data
     
     result = summary_collection.insert_one(summary_data)
     
     return {
         "id": str(result.inserted_id),
-        "summarized_summary": summary_data.get("summarized_summary", []),
-        "thought":summary_data.get("thought", []),
+        "summarized_summary": summary_data.get("summarized_summary", ""),
+        "thought":summary_data.get("thought", ""),
         "queries":  summary_data.get("queries", []),
-        "title":summary_data.get("title", []),
-        "url":summary_data.get("url", []),
-        "type":summary_data.get("type", [])
+        "title":summary_data.get("title", ""),
+        "url":summary_data.get("url", ""),
+        "type":summary_data.get("type", "")
     }
 
 async def fetch_existing_summary(user_id, url, manager):
@@ -61,7 +62,7 @@ async def fetch_existing_summary(user_id, url, manager):
     print(existing_summary , user_id , url)
     if existing_summary:
         summary_id = str(existing_summary["_id"])
-        thought=existing_summary.get("thought", []),
+        thought=existing_summary.get("thought",""),
         summarized_summary = existing_summary.get("summarized_summary", "No summary available.")
         queries = existing_summary.get("queries", "No queries available.")
         url = existing_summary.get("url", "unavailable")
@@ -101,19 +102,20 @@ async def regenerate(id: str,  language: str, format: str):
     if not summary_data:
         return "Summary not found."
 
-    prompt_template = "Regenerate the summary for the following transcript - {text} while maintaining clarity and conciseness. in this lanuage - {language} with the format - {format}"
+    prompt_template = "Regenerate the summary for the following transcript - {text} in {language} with the format - {format}.  Focus on highlighting different aspects or providing a new perspective on the information compared to the previous summary.  Avoid simply rephrasing the existing summary. Aim for a fresh and distinct summary."
     
     manager.send_message({"progress": 90, "message": "Regenerating summary..."})
     
     summary = await generate_summary(prompt_template, summary_data.get('summarized_summary'), language, format)
     print(summary)
-    
+    thought, response = split_content(summary)
+
     summary_collection.update_one(
         {"_id": ObjectId(id)},
-        {"$set": {"summarized_summary": summary, "timestamp": datetime.now(timezone.utc)}}
+        {"$set": {"summarized_summary": response,"thought":thought, "timestamp": datetime.now(timezone.utc)}}
     )
     
-    return {"id": id, "summarized_summary": summary}
+    return {"id": id, "summarized_summary": response , "thought":thought}
 
 
 def get_summary_by_id(id: str):
@@ -129,8 +131,10 @@ def get_summary_by_id(id: str):
         
         summarized_summary = summary_data.get("summarized_summary", "")
         query_history = summary_data.get("queries", [])
-        
+        thought=summary_data.get("thought",""),
+
         return { 
+            "thought":thought,
              "id": str(summary_data["_id"]),
             "summarized_summary": summarized_summary,
             "queries": query_history,
@@ -148,21 +152,23 @@ def get_summaries_by_user(user_id: str):
     Retrieves all summary titles, IDs, and timestamps for a specific user from MongoDB.
     """
     try:
-        summaries = summary_collection.find({"user_id": user_id}, {"_id": 1, "title": 1, "timestamp": 1})
+        summaries = summary_collection.find({"user_id": user_id}, {"_id": 1, "title": 1, "timestamp": 1, "url":1,"queries":1})
 
         # Use len(list()) to count documents or check if the cursor is empty
         summary_list = list(summaries)
 
-        if not summary_list:  # Check if the list is empty
+        if not summary_list:  
             return []
         
-        # Process summaries if found
         result = []
+        print(summary_list)
         for summary in summary_list:
             result.append({
                 "id": str(summary["_id"]),
                 "title": summary["title"],
-                "timestamp": summary["timestamp"]
+                "timestamp": summary["timestamp"],
+                "queries":len(summary["queries"]),
+                "url":summary["url"],
             })
         
         return result

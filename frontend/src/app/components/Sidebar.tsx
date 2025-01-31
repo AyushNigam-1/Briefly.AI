@@ -1,17 +1,11 @@
 import { useState, useEffect } from "react";
 import Cookies from "js-cookie";
 import axios from "axios";
+import { SummaryHistoryResponse, SidebarProps } from "../types";
 
-interface Summary {
-    id: string;
-    title: string;
-    timestamp: string;
-}
-interface SidebarProps {
-    setId: React.Dispatch<React.SetStateAction<string | undefined>>;
-}
-const groupSummariesByDate = (summaries: Summary[]) => {
-    const groupedSummaries: Record<string, Summary[]> = {
+
+const groupSummariesByDate = (summaries: SummaryHistoryResponse[]) => {
+    const groupedSummaries: Record<string, SummaryHistoryResponse[]> = {
         Today: [],
         Yesterday: [],
         "Previous 7 Days": [],
@@ -54,7 +48,7 @@ const menuItems = [
 
 const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const [summaries, setSummaries] = useState<Summary[]>([]);
+    const [summaries, setSummaries] = useState<SummaryHistoryResponse[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
 

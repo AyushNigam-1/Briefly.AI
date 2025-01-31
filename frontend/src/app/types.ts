@@ -6,7 +6,8 @@ export type metadata = {
 
 export type query = {
     sender?: string;
-    content?: string
+    content?: string;
+    thought?: string;
 };
 
 export type SummaryResponse = {
@@ -19,6 +20,18 @@ export type SummaryResponse = {
 export type ProgressResponse = {
     progress: number;
     message: string;
+}
+
+export type SummaryHistoryResponse = {
+    id: string;
+    title: string;
+    timestamp: string;
+    url: string;
+    queries: number
+}
+
+export interface SidebarProps {
+    setId: React.Dispatch<React.SetStateAction<string | undefined>>;
 }
 
 export type WebSocketListeners = {

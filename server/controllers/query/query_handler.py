@@ -4,7 +4,7 @@ from controllers.db.conn import summary_collection
 from langchain.memory import ConversationBufferMemory
 from langchain.prompts import PromptTemplate
 from utils.llm import llm
-
+from utils.common import split_content
 memory = ConversationBufferMemory()
 
 prompt_template = PromptTemplate(
@@ -51,11 +51,12 @@ def chat_with_summary(user_input: str, id: str):
         )
 
         response = llm.invoke(prompt)
+        thought, res = split_content(response.content)
 
-        memory.save_context({"input": user_input}, {"output": response.content})
+        memory.save_context({"input": user_input}, {"output": res})
 
         user_query_entry = {"sender": "user", "content": user_input}
-        llm_response_entry = {"sender": "llm", "content": response.content}
+        llm_response_entry = {"sender": "llm", "content": res , "thought":thought}
 
         update_result = summary_collection.update_one(
             {"_id": ObjectId(id)},
@@ -63,7 +64,7 @@ def chat_with_summary(user_input: str, id: str):
         )
 
         if update_result.modified_count == 1:
-            return response.content
+            return {"res":res,"thought":thought}
         else:
             return "Response generated, but failed to save query to the database."
 

@@ -22,7 +22,8 @@ const QueryInput = ({ setQueries, url, setState, id }: QueryInputProps) => {
             }
             try {
                 const result = await fetchQueryResult(inputValue);
-                setQueries((queries) => ([...queries, { sender: "llm", content: result }]));
+                // console.log(result)
+                setQueries((queries) => ([...queries, { sender: "llm", content: result.res, thought: result.thought }]));
 
             } catch (error) {
                 console.error("Error fetching query result:", error);
