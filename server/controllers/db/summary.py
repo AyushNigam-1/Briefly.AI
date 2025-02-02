@@ -90,7 +90,7 @@ async def generate_summary(prompt_template: str, summary: str, language: str, fo
     input_data = {"input_documents": docs, "language": language, "format": format}
     chain = load_summarize_chain(llm, chain_type="stuff", prompt=prompt)
 
-    return chain.run(input_data)  # Remove `await` here if .arun() is not available
+    return chain.run(input_data)  
 
 
 async def regenerate(id: str,  language: str, format: str):
@@ -152,7 +152,7 @@ def get_summaries_by_user(user_id: str):
     Retrieves all summary titles, IDs, and timestamps for a specific user from MongoDB.
     """
     try:
-        summaries = summary_collection.find({"user_id": user_id}, {"_id": 1, "title": 1, "timestamp": 1, "url":1,"queries":1})
+        summaries = summary_collection.find({"user_id": user_id}, {"_id": 1, "title": 1, "timestamp": 1, "url":1,"queries":1,"type":1})
 
         # Use len(list()) to count documents or check if the cursor is empty
         summary_list = list(summaries)

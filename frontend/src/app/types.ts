@@ -27,7 +27,8 @@ export type SummaryHistoryResponse = {
     title: string;
     timestamp: string;
     url: string;
-    queries: number
+    queries: number;
+    type: string
 }
 
 export interface SidebarProps {
