@@ -45,7 +45,7 @@ const page: React.FC = () => {
 
     return (
         <div className="w-screen h-screen flex justify-center items-center font-mono">
-            <div className="rounded-lg shadow-xl z-20 bg-gradient-to-t from-red-500  to-blue-500 p-1">
+            <div className="rounded-lg shadow-xl z-20 bg-gradient-to-t from-blue-500  to-gray-900 p-1">
                 <div className='p-8 bg-gray-900 rounded-lg' >
                     <form action="" onSubmit={handleSubmit} className="flex flex-col gap-6 ">
                         <span className='bg-gray-700 p-1.5 w-min rounded-full self-center'>

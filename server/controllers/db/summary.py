@@ -46,7 +46,7 @@ def save_summary_to_mongo(user_id: str,url:str, summarized_summary: str,thought:
         "type":summary_data.get("type", "")
     }
 
-async def fetch_existing_summary(user_id, url, manager):
+async def fetch_existing_summary(user_id, title, manager):
     """
     Fetches an existing summary from the database based on user_id and URL.
 
@@ -58,7 +58,7 @@ async def fetch_existing_summary(user_id, url, manager):
     Returns:
         dict: A dictionary containing the existing summary details if found, otherwise an empty dictionary.
     """
-    existing_summary = summary_collection.find_one({"user_id": user_id, "title": url})
+    existing_summary = summary_collection.find_one({"user_id": user_id, "title": title})
     print(existing_summary , user_id , url)
     if existing_summary:
         summary_id = str(existing_summary["_id"])
@@ -169,6 +169,7 @@ def get_summaries_by_user(user_id: str):
                 "timestamp": summary["timestamp"],
                 "queries":len(summary["queries"]),
                 "url":summary["url"],
+                "type":summary["type"]
             })
         
         return result

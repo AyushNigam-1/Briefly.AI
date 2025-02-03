@@ -1,3 +1,5 @@
+import { JSX } from "react";
+
 export type metadata = {
     title: string;
     icon: string;
@@ -9,7 +11,11 @@ export type query = {
     content?: string;
     thought?: string;
 };
-
+export type SortOptions = {
+    icon: JSX.Element;
+    sort: string;
+    order: string;
+}
 export type SummaryResponse = {
     thought: string;
     summarized_summary: string;
