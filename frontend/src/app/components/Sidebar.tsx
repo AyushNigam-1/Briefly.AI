@@ -40,11 +40,6 @@ const groupSummariesByDate = (summaries: SummaryHistoryResponse[]) => {
     return groupedSummaries;
 };
 
-const menuItems = [
-    { label: "Edit", onClick: () => alert("Edit clicked") },
-    { label: "Delete", onClick: () => alert("Delete clicked") },
-    { label: "View", onClick: () => alert("View clicked") },
-];
 
 const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
     const [isOpen, setIsOpen] = useState(false);

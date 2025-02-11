@@ -50,11 +50,11 @@ const Navbar: React.FC<NavbarProps> = ({ component }) => {
     ));
 
     return (
-        <div className='flex justify-between items-center container mx-auto py-3 border-b-2 border-gray-400' >
-            {component}
-            <h3 className='text-3xl font-mulish font-extrabold ' >
-                Briefly.AI
-            </h3>
+        <div className='flex justify-between relative  items-center container mx-auto py-3 border-b-2 border-gray-400' >
+            {component ? component : <div></div>}
+            <div>
+                <img src="/logo.png" alt="" className='w-40 h-auto ' />
+            </div>
             <Menu>
                 <MenuButton className="bg-gray-900 py-3 px-4 rounded-full flex gap-2 items-center text-lg">
                     Account

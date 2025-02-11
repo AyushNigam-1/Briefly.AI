@@ -237,8 +237,8 @@ const page = () => {
                 <Navbar component={<Sidebar setId={setSummaryId} />} />
                 <div className='gap-1 flex items-center justify-center flex-col max-h-[100vh] max-w-[100vw] '>
                     <div className="flex flex-col gap-3 rounded-lg shadow container overflow-y-scroll mb-40 scrollbar-thumb-gray-500 scrollbar-track-transparent scrollbar-thin" ref={queriesContainerRef}>
-                        <div className='bg-gray-900 w-max rounded-lg flex p-2 gap-2 m-1 border-2 border-gray-500 '>
-                            <img src={metadata?.icon} alt="" className=' object-cover m-0 h-14 w-14 rounded-full border-gray-500 border-2' />
+                        <div className='bg-gray-900 w-max rounded-lg flex p-2 gap-2 mt-2 border-2 border-gray-500 '>
+                            <img src={metadata?.icon} alt="" className=' object-cover m-0 w-20 rounded-lg border-gray-500 border-2' />
                             <span>
                                 <h4 className='m-0 truncate text-lg font-bold text-gray-200' >{metadata?.title.split(" ").slice(0, 5).join(" ")}. . .</h4>
                                 <h6 className='text-gray-300 font-semibold w-min py-1 rounded-lg' >{metadata?.type}</h6>

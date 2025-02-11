@@ -18,12 +18,12 @@ def is_valid_object_id(id: str) -> bool:
     except:
         return False
 
-def save_summary_to_mongo(user_id: str,url:str, summarized_summary: str,thought:str,original_summary:str,title:str,type:str) -> dict:
+def save_summary_to_mongo(user_id: str,file_url:str, summarized_summary: str,thought:str,original_summary:str,title:str,type:str) -> dict:
     """Saves the original and summarized subtitles to the MongoDB 'summary' collection along with an empty queries array."""
     
     summary_data = {
         "user_id": user_id,
-        "url":url,
+        "url":file_url,
         "type":type,
         "thought":thought,
         "original_summary": original_summary,
@@ -59,10 +59,9 @@ async def fetch_existing_summary(user_id, title, manager):
         dict: A dictionary containing the existing summary details if found, otherwise an empty dictionary.
     """
     existing_summary = summary_collection.find_one({"user_id": user_id, "title": title})
-    print(existing_summary , user_id , url)
     if existing_summary:
         summary_id = str(existing_summary["_id"])
-        thought=existing_summary.get("thought",""),
+        thought=existing_summary.get("thought","")
         summarized_summary = existing_summary.get("summarized_summary", "No summary available.")
         queries = existing_summary.get("queries", "No queries available.")
         url = existing_summary.get("url", "unavailable")
@@ -161,7 +160,7 @@ def get_summaries_by_user(user_id: str):
             return []
         
         result = []
-        print(summary_list)
+        # print(summary_list)
         for summary in summary_list:
             result.append({
                 "id": str(summary["_id"]),

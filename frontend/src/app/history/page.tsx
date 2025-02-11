@@ -52,7 +52,7 @@ const SummaryCard = ({ summary }: { summary: SummaryHistoryResponse }) => {
                         className='object-cover m-0 w-20 rounded-lg border-gray-500 border-2'
                     />
                 ) : (
-                    <div className='m-0 h-14 w-14 rounded-full border-gray-500 border-2 bg-gray-700' />
+                    <div className='m-0 w-20 rounded-lg border-gray-500 border-2 bg-gray-700' />
                 )}
                 <span>
                     <h4 className='m-0 truncate text-lg font-bold text-gray-200'>
@@ -155,28 +155,37 @@ const Page = () => {
         <>
             <div className='container mx-auto flex flex-col gap-4 '>
                 <Navbar />
-                <div className='flex justify-between' >
-                    <h3 className='text-3xl font-bold'> History</h3>
-                    <Menu>
-                        <MenuButton className="bg-gray-900 p-3 px-5 rounded-full flex gap-1 items-center" >Sort By <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
-                        </svg>
-                        </MenuButton>
-                        <MenuItems transition
-                            anchor="bottom end" className="w-52 origin-top-right my-2 rounded-xl border-2 border-gray-500 bg-gray-900 p-1 text-sm/6 text-white transition duration-100 ease-out [--anchor-gap:var(--spacing-1)] focus:outline-none data-[closed]:scale-95 data-[closed]:opacity-0 z-50">
+                <div className='flex justify-between items-center' >
+                    <h6 className='text-2xl font-bold text-gray-200'>History</h6>
+                    <div className='flex gap-2 items-center' >
+                        <span className='flex gap-2 items-center bg-gray-900 py-1 px-4 rounded-full' >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                            </svg>
+                            <input type="text" className='py-2 bg-transparent ' placeholder='Search' />
 
-                            {options.map((option, i) => {
-                                return (
-                                    <MenuItem key={i} as="div" className="group z-50 flex w-full items-center gap-2 rounded-lg py-1.5 px-3 data-[focus]:bg-white/10 text-lg font-semibold">
-                                        <button onClick={() => handleSortChange(option.sort)} className="flex w-full items-center gap-2">
-                                            {option.icon}
-                                            {option.order}
-                                        </button>
-                                    </MenuItem>
-                                )
-                            })}
-                        </MenuItems>
-                    </Menu>
+                        </span>
+                        <Menu>
+                            <MenuButton className="bg-gray-900 p-3 px-5 rounded-full flex gap-1 items-center" >Sort By <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
+                            </svg>
+                            </MenuButton>
+                            <MenuItems transition
+                                anchor="bottom end" className="w-52 origin-top-right my-2 rounded-xl border-2 border-gray-500 bg-gray-900 p-1 text-sm/6 text-white transition duration-100 ease-out [--anchor-gap:var(--spacing-1)] focus:outline-none data-[closed]:scale-95 data-[closed]:opacity-0 z-50">
+
+                                {options.map((option, i) => {
+                                    return (
+                                        <MenuItem key={i} as="div" className="group z-50 flex w-full items-center gap-2 rounded-lg py-1.5 px-3 data-[focus]:bg-white/10 text-lg font-semibold">
+                                            <button onClick={() => handleSortChange(option.sort)} className="flex w-full items-center gap-2">
+                                                {option.icon}
+                                                {option.order}
+                                            </button>
+                                        </MenuItem>
+                                    )
+                                })}
+                            </MenuItems>
+                        </Menu>
+                    </div>
                 </div>
                 <div className='grid grid-cols-2 gap-4' >
                     {summaries.map((summary) => (

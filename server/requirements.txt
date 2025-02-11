@@ -21,9 +21,6 @@ python-multipart
 PyPDF2
 pillow
 setuptools
-paddleocr
-paddlepaddle
 scikit-learn
 python-socketio[asyncio_server]
 fastapi-socketio
-gridfs

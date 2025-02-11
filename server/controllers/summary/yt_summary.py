@@ -29,6 +29,7 @@ _api.request = session_request
 def extract_video_id(url: str) -> str:
     """Extracts the video ID from various YouTube URL formats."""
     parsed_url = urlparse(url)
+    print(parsed_url)
     if parsed_url.hostname in ["www.youtube.com", "youtube.com"]:
         return parse_qs(parsed_url.query).get("v", [None])[0]
     elif parsed_url.hostname in ["youtu.be"]:
@@ -98,21 +99,21 @@ def save_subtitles_to_file(subtitles: str, file_name: str) -> None:
         file.write(subtitles)
     print(f"Saved subtitles to {file_path}")
 
-
 async def get_youtube_summary(
     url: str, lang: str, format: str, title: str,icon:str, current_user
 ) -> str:
-    
-    user_id = str(current_user["user_id"])
-    result = await fetch_existing_summary(user_id, title, manager)
-    if result:
-        return result
     video_id = extract_video_id(url)
     await manager.send_message({"progress": 10, "message": "Extracting transcript..."})
+    print(video_id)
 
     if not video_id:
         await manager.send_message({"progress": 0, "message": "Invalid YouTube URL or video ID could not be extracted."})
         return "Invalid YouTube URL or video ID could not be extracted."
+
+    user_id = str(current_user["user_id"])
+    result = await fetch_existing_summary(user_id, title, manager)
+    if result:
+        return result
 
     # Send progress updates
     await manager.send_message({"progress": 10, "message": "Extracting transcript..."})
@@ -175,5 +176,6 @@ async def get_youtube_summary(
     save_result = save_summary_to_mongo(user_id,file_url,main_part,think_part, transcript,title , type='Video')
 
     return save_result
+    # return ""
 
 

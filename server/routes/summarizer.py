@@ -28,6 +28,7 @@ async def summarize_content(
     icon:str = Form(None),
     current_user: dict = Depends(get_current_user)
 ):
+    print("this is the url",url)
 
     if not url and not file:
         raise HTTPException(status_code=400, detail="Either 'url' or 'file' must be provided.")
@@ -38,7 +39,9 @@ async def summarize_content(
             if not ("youtu.be" in url or "youtube.com" in url or validators.url(url)):
                 raise HTTPException(status_code=400, detail="Invalid URL")
             if "youtu.be" in url or "youtube.com" in url:
+                print("this is the url",url)
                 summary = await get_youtube_summary(url, lang, format, title,icon, current_user)
+                print("this is the summary",summary)
             else:
                 summary = await get_web_summary(url, lang, format, title, current_user)
 
