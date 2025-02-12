@@ -139,6 +139,7 @@ async def get_youtube_summary(
         return f"Thumbnail extraction failed: {str(e)}"
     await manager.send_message({"progress": 50, "message": "Correcting subtitles..."})
     corrected_transcript = correct_subtitles(transcript, language=lang)
+    
 
     prompt_template = (
             "Convert the following YouTube transcript into a refined and human-friendly output based on the specified action."
@@ -171,9 +172,8 @@ async def get_youtube_summary(
     chain = load_summarize_chain(llm, chain_type="stuff", prompt=prompt)
     summary = chain.run(input_data)
     think_part, main_part = split_content(summary)
-    print(think_part , "think_part")
     await manager.send_message({"progress": 100, "message": "Summary generation completed."})
-    save_result = save_summary_to_mongo(user_id,file_url,main_part,think_part, transcript,title , type='Video')
+    save_result = save_summary_to_mongo(user_id,file_url,url,main_part,think_part, transcript,title , type='Video')
 
     return save_result
     # return ""

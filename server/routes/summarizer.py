@@ -39,9 +39,7 @@ async def summarize_content(
             if not ("youtu.be" in url or "youtube.com" in url or validators.url(url)):
                 raise HTTPException(status_code=400, detail="Invalid URL")
             if "youtu.be" in url or "youtube.com" in url:
-                print("this is the url",url)
                 summary = await get_youtube_summary(url, lang, format, title,icon, current_user)
-                print("this is the summary",summary)
             else:
                 summary = await get_web_summary(url, lang, format, title, current_user)
 
@@ -152,7 +150,7 @@ async def get_file(id: str):
     try:
         object_id = ObjectId(id)
         file_data = fs.find_one({"_id": object_id}) 
-        
+        print(file_data)
         if not file_data:
             raise HTTPException(status_code=404, detail="File not found")
 

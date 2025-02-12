@@ -34,7 +34,8 @@ export type SummaryHistoryResponse = {
     timestamp: string;
     url: string;
     queries: number;
-    type: string
+    type: string;
+    thumbnail: string;
 }
 
 export interface SidebarProps {
@@ -46,4 +47,12 @@ export type WebSocketListeners = {
     onOpen?: (event: Event) => void;
     onClose?: (event: CloseEvent) => void;
     onError?: (event: Event) => void;
+}
+
+
+export interface SummaryCardProps {
+    summary: SummaryHistoryResponse;
+    handleDeleteSummary: (id: string) => void;
+    setIsDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    setSummaryId: React.Dispatch<React.SetStateAction<string | undefined>>;
 }

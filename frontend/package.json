@@ -26,6 +26,7 @@
     "react-dom": "^19.0.0",
     "react-markdown": "^9.0.3",
     "react-spinners": "^0.15.0",
+    "react-toastify": "^11.0.3",
     "remark-gfm": "^4.0.0",
     "remark-markdown": "^0.0.1",
     "socket.io-client": "^4.8.1",

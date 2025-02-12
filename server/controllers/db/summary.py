@@ -18,12 +18,13 @@ def is_valid_object_id(id: str) -> bool:
     except:
         return False
 
-def save_summary_to_mongo(user_id: str,file_url:str, summarized_summary: str,thought:str,original_summary:str,title:str,type:str) -> dict:
+def save_summary_to_mongo(user_id: str,file_url:str,url:str, summarized_summary: str,thought:str,original_summary:str,title:str,type:str) -> dict:
     """Saves the original and summarized subtitles to the MongoDB 'summary' collection along with an empty queries array."""
     
     summary_data = {
         "user_id": user_id,
-        "url":file_url,
+        "thumbnail":file_url,
+        "url":url,
         "type":type,
         "thought":thought,
         "original_summary": original_summary,
@@ -43,6 +44,7 @@ def save_summary_to_mongo(user_id: str,file_url:str, summarized_summary: str,tho
         "queries":  summary_data.get("queries", []),
         "title":summary_data.get("title", ""),
         "url":summary_data.get("url", ""),
+        "thumbnail":summary_data.get("thumbnail", ""),
         "type":summary_data.get("type", "")
     }
 
@@ -65,20 +67,22 @@ async def fetch_existing_summary(user_id, title, manager):
         summarized_summary = existing_summary.get("summarized_summary", "No summary available.")
         queries = existing_summary.get("queries", "No queries available.")
         url = existing_summary.get("url", "unavailable")
+        thumbnail = existing_summary.get("thumbnail", "")
         title = existing_summary.get("title", "not available")
         summary_type = existing_summary.get("type", "not available")
 
         await manager.send_message({"progress": 100, "message": "Summary already exists in the database."})
-
         return {
             "thought":thought,
             "summarized_summary": summarized_summary,
             "id": summary_id,
             "queries": queries,
             "url": url,
+            "thumbnail":thumbnail,
             "title": title,
             "type": summary_type,
-        }
+            'haha':'lol'       
+            }
     
     return {}  
 
@@ -137,6 +141,7 @@ def get_summary_by_id(id: str):
              "id": str(summary_data["_id"]),
             "summarized_summary": summarized_summary,
             "queries": query_history,
+            "thumbnail": summary_data.get("thumbnail", ""),
             "title":summary_data.get("title", []),
             "url":summary_data.get("url", []),
             "type":summary_data.get("type", [])
@@ -151,7 +156,7 @@ def get_summaries_by_user(user_id: str):
     Retrieves all summary titles, IDs, and timestamps for a specific user from MongoDB.
     """
     try:
-        summaries = summary_collection.find({"user_id": user_id}, {"_id": 1, "title": 1, "timestamp": 1, "url":1,"queries":1,"type":1})
+        summaries = summary_collection.find({"user_id": user_id}, {"_id": 1, "title": 1, "timestamp": 1, "url":1,"queries":1,"type":1,"thumbnail":1})
 
         # Use len(list()) to count documents or check if the cursor is empty
         summary_list = list(summaries)
@@ -165,6 +170,7 @@ def get_summaries_by_user(user_id: str):
             result.append({
                 "id": str(summary["_id"]),
                 "title": summary["title"],
+                "thumbnail": summary.get("thumbnail", ""),
                 "timestamp": summary["timestamp"],
                 "queries":len(summary["queries"]),
                 "url":summary["url"],
