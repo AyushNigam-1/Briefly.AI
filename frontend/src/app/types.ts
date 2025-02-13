@@ -1,4 +1,4 @@
-import { JSX } from "react";
+import { JSX, ReactNode } from "react";
 
 export type metadata = {
     title: string;
@@ -49,6 +49,32 @@ export type WebSocketListeners = {
     onError?: (event: Event) => void;
 }
 
+export interface NavbarProps {
+    component?: ReactNode;
+}
+export interface PromptResponse {
+    prompt?: string
+    error?: string
+
+}
+export type Option = {
+    label: string;
+    route: string;
+    icon?: JSX.Element
+};
+
+export type Metadata = {
+    icon: string,
+    title: string,
+    type: string
+}
+
+export interface QueryInputProps {
+    setQueries: React.Dispatch<React.SetStateAction<query[]>>;
+    url: string;
+    setState: React.Dispatch<React.SetStateAction<string | undefined>>;
+    id?: string
+}
 
 export interface SummaryCardProps {
     summary: SummaryHistoryResponse;

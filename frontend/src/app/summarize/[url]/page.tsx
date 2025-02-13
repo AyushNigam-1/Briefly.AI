@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useParams, useSearchParams } from "next/navigation";
 import axios from 'axios';
 import Cookies from 'js-cookie';
-import { ProgressResponse, SummaryResponse, query } from '@/app/types';
+import { Metadata, ProgressResponse, SummaryResponse, query } from '@/app/types';
 import { setupWebSocketListeners } from '@/websocket/webEvent';
 import { connectWebSocket } from "@/websocket/websocket";
 import BarLoader from "react-spinners/BarLoader";
@@ -55,11 +55,6 @@ export const previewFile = async (file_url: string) => {
     return ""
 }
 
-type Metadata = {
-    icon: string,
-    title: string,
-    type: string
-}
 const page = () => {
 
     const [queries, setQueries] = useState<query[]>([]);
@@ -349,7 +344,6 @@ const page = () => {
                 </div>
             </>
         )
-
 }
 
 export default page

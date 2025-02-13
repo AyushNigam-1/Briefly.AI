@@ -1,18 +1,8 @@
-import React, { JSX, ReactNode, useMemo } from 'react'
+import React, { useMemo } from 'react'
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
 import Link from 'next/link';
 import Cookies from 'js-cookie';
-
-
-interface NavbarProps {
-    component?: ReactNode;
-}
-
-type Option = {
-    label: string;
-    route: string;
-    icon?: JSX.Element
-};
+import { NavbarProps, Option } from '../types';
 
 const Navbar: React.FC<NavbarProps> = ({ component }) => {
 
@@ -45,7 +35,7 @@ const Navbar: React.FC<NavbarProps> = ({ component }) => {
 
     return (
         <div className='flex justify-between relative  items-center container mx-auto py-3 border-b-2 border-gray-400' >
-            {component ? component : <div></div>}
+            {component ?? null}
             <div>
                 <img src="/logo.png" alt="" className='w-40 h-auto ' />
             </div>

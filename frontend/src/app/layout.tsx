@@ -1,8 +1,5 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
 import "./globals.css";
-
-
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -17,22 +14,22 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-    <head>
-      <link
-        href="https://fonts.googleapis.com/css2?family=Mulish:wght@100;200;300;400;500;600;700;800;900&display=swap"
-        rel="stylesheet"
-      />
-      <meta name="viewport" content="width=device-width, initial-scale=1" />
-    </head>
-    <body
-      className="font-mulish antialiased bg-fixed bg-cover bg-center h-screen"
-      style={{ backgroundImage: "url('/1092758.jpg')" }}
-    >
-      <div className="relative max-h-screen max-w-screen overflow-hidden">
-        <div className="relative z-10">{children}</div>
-      </div>
-    </body>
-  </html>
+      <head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=Mulish:wght@100;200;300;400;500;600;700;800;900&display=swap"
+          rel="stylesheet"
+        />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </head>
+      <body
+        className="font-mulish antialiased bg-fixed bg-cover bg-center h-screen"
+        style={{ backgroundImage: "url('/1092758.jpg')" }}
+      >
+        <div className="relative max-h-screen max-w-screen overflow-hidden">
+          <div className="relative z-10">{children}</div>
+        </div>
+      </body>
+    </html>
   );
 }
 

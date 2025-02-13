@@ -1,12 +1,6 @@
 import { KeyboardEvent, useRef } from "react";
-import { query } from "@/app/types";
+import { query, QueryInputProps } from "@/app/types";
 
-interface QueryInputProps {
-    setQueries: React.Dispatch<React.SetStateAction<query[]>>;
-    url: string;
-    setState: React.Dispatch<React.SetStateAction<string | undefined>>;
-    id?: string
-}
 
 const QueryInput = ({ setQueries, url, setState, id }: QueryInputProps) => {
     const inputRef = useRef<HTMLInputElement>(null);

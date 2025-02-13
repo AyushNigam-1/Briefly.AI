@@ -2,19 +2,28 @@
 import React, { useMemo, useRef, useState } from 'react'
 import Navbar from '../components/Navbar'
 import Image from 'next/image'
-import { motion, AnimatePresence } from "framer-motion";
 import Cookies from "js-cookie";
 import axios, { AxiosError } from "axios";
 import { Dialog, DialogBackdrop, DialogPanel, Textarea } from '@headlessui/react'
 import clsx from 'clsx'
-import { metadata } from '../types';
+import { metadata, PromptResponse } from '../types';
 import Link from 'next/link';
 import { useEffect } from "react";
+import { Combobox, ComboboxInput, ComboboxOption, ComboboxOptions } from '@headlessui/react'
 
 const page = () => {
+  const people = [
+    { id: 1, name: 'Tom Cook' },
+    { id: 2, name: 'Wade Cooper' },
+    { id: 3, name: 'Tanya Fox' },
+    { id: 4, name: 'Arlene Mccoy' },
+    { id: 5, name: 'Devon Webb' },
+  ]
+  const [selected, setSelected] = useState({ id: 0, name: '' })
 
   const [action, setAction] = useState('Summarize')
   const [language, setLanguage] = useState('Hindi')
+  const [openComboBox, setOpenComboBox] = useState(false)
   const actions = useMemo(() => ["Summarize", "Extend", "Shorten", "Key Points"], [])
   const languages = useMemo(() => ['Hindi', 'English', 'Urdu', 'Sanskrit'], [])
   const [open, setOpen] = useState(false);
@@ -25,13 +34,15 @@ const page = () => {
   const [prompt, setPrompt] = useState<string | undefined>()
   const doc = useRef<HTMLInputElement | null>(null);
   const promptInput = useRef<HTMLInputElement | null>(null);
+  const [query, setQuery] = useState('')
 
-  interface PromptResponse {
-    prompt?: string
-    error?: string
-
-  }
-
+  const filteredPeople =
+    (query === '')
+      ? people
+      : people.filter((person) => {
+        return person.name.toLowerCase().includes(query.toLowerCase())
+      })
+  console.log(filteredPeople)
   function isValidUrl(urlString: string): boolean {
     try {
       new URL(urlString);
@@ -42,23 +53,24 @@ const page = () => {
   }
   const getPrompt = async () => {
     const token = Cookies.get("access_token");
-
-    try {
-      const response = await axios.get<PromptResponse>(`http://127.0.0.1:8000/get-prompt`, {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
-        withCredentials: true,
-      });
-      setPrompt(response.data.prompt);
-    } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
-        const axiosError = error as AxiosError<PromptResponse>;
-        console.error('Error fetching prompts:', axiosError.response?.data || axiosError.message);
-        return { error: axiosError.response?.data?.error || axiosError.message };
-      } else {
-        console.error('An unexpected error occurred:', error);
-        return { error: 'An unexpected error occurred' };
+    if (token) {
+      try {
+        const response = await axios.get<PromptResponse>(`http://127.0.0.1:8000/get-prompt`, {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+          withCredentials: true,
+        });
+        setPrompt(response.data.prompt);
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error)) {
+          const axiosError = error as AxiosError<PromptResponse>;
+          console.error('Error fetching prompts:', axiosError.response?.data || axiosError.message);
+          return { error: axiosError.response?.data?.error || axiosError.message };
+        } else {
+          console.error('An unexpected error occurred:', error);
+          return { error: 'An unexpected error occurred' };
+        }
       }
     }
   };
@@ -251,7 +263,6 @@ const page = () => {
                       )}
                       rows={9}
                     />
-
                   </DialogPanel>
                 </div>
               </div>
@@ -266,10 +277,11 @@ const page = () => {
               </button>
               )
             }
-            <button className='bg-gray-900 p-3 px-4 text-xl rounded-full  flex items-center justify-center'>
+            <button onClick={() => setOpenComboBox(true)} className='bg-gray-900 p-3 px-4 text-xl rounded-full flex items-center justify-center'>
               Other
             </button>
           </div>
+
           <Dialog open={Boolean(metadata)} as="div" className="relative z-10 focus:outline-none" onClose={() => setMetadata(null)}>
             <DialogBackdrop className="fixed inset-0 bg-black/50" />
             <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
@@ -320,6 +332,49 @@ const page = () => {
               </div>
             </div>
           </Dialog >
+          <Dialog open={openComboBox} as="div" className="relative z-10 focus:outline-none" onClose={() => setOpenComboBox(false)}>
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+              <DialogPanel
+                transition
+                className="w-full max-w-lg rounded-xl flex flex-col gap-3 bg-[#1b283b] shadow-md p-6 backdrop-blur-2xl duration-300 ease-out data-[closed]:transform-[scale(95%)] data-[closed]:opacity-0"
+              >
+                <div className='flex flex-col gap-3' >
+                  <h6 className='font-mulish text-xl font-bold' > Choose Language</h6>
+                  <Combobox value={selected} onChange={(value: { id: number, name: string }) => setSelected(value || { id: 0, name: '' })} onClose={() => setQuery('')} >
+                    <div className="relative">
+                      <ComboboxInput
+                        className={clsx(
+                          'w-full rounded-lg border-none bg-white/5 py-1.5 pr-8 pl-3 text-sm/6 text-white',
+                          'focus:outline-none data-[focus]:outline-2 data-[focus]:-outline-offset-2 data-[focus]:outline-white/25'
+                        )}
+                        displayValue={(person: { id: number, name: string }) => person?.name}
+                        onChange={(event) => setQuery(event.target.value)}
+                      />
+                    </div>
+
+                    <ComboboxOptions
+                      anchor="bottom"
+                      transition
+                      className={clsx(
+                        'w-[var(--input-width)] rounded-xl border border-white/5 bg-white/5 p-1 [--anchor-gap:var(--spacing-1)] empty:invisible',
+                        'transition duration-100 ease-in data-[leave]:data-[closed]:opacity-0'
+                      )}
+                    >
+                      {filteredPeople.map((person) => (
+                        <ComboboxOption
+                          key={person.id}
+                          value={person}
+                          className="group flex cursor-default items-center gap-2 rounded-lg py-1.5 px-3 select-none data-[focus]:bg-white/10"
+                        >
+                          <div className="text-sm/6 text-white">{person.name}</div>
+                        </ComboboxOption>
+                      ))}
+                    </ComboboxOptions>
+                  </Combobox>
+                </div>
+              </DialogPanel>
+            </div>
+          </Dialog>
         </div >
       </div >
     </>
