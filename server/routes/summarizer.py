@@ -34,7 +34,7 @@ async def summarize_content(
         raise HTTPException(status_code=400, detail="Either 'url' or 'file' must be provided.")
 
     try:
-        if url:
+        if url and not file:
             url = unquote(url)
             if not ("youtu.be" in url or "youtube.com" in url or validators.url(url)):
                 raise HTTPException(status_code=400, detail="Invalid URL")
@@ -44,7 +44,7 @@ async def summarize_content(
                 summary = await get_web_summary(url, lang, format, title, current_user)
 
         elif file:
-            summary = await get_file_summary(file, lang, format, title, current_user)  
+            summary = await get_file_summary(url ,file, lang, format, title, current_user)  
         return {"summary": summary}
 
     except Exception as e:

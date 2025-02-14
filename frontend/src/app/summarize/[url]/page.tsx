@@ -131,7 +131,7 @@ const page = () => {
                 }
             }
             const formData = new FormData();
-            if (url && !file) formData.append("url", url);
+            if (url) formData.append("url", url);
             if (file) formData.append("file", file);
             if (lang) formData.append("lang", lang);
             if (format) formData.append("format", format);

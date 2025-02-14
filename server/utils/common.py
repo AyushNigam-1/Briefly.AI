@@ -1,5 +1,6 @@
 import re
 
+
 def split_content(text):
     think_pattern = r"<think>(.*?)</think>"
     think_content = re.search(think_pattern, text, re.DOTALL)

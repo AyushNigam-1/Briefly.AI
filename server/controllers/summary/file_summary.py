@@ -13,6 +13,8 @@ from io import BytesIO
 from controllers.db.conn import fs
 from utils.llm import llm
 import os
+from utils.common import split_content
+
 load_dotenv()
 
 ocrspace_api_key = os.getenv("ocrspace_api_key")
@@ -56,7 +58,7 @@ def correct_summary(summary: str, lang: str) -> str:
     except Exception as e:
         raise ValueError(f"Failed to correct summary: {str(e)}")
 
-async def get_file_summary(file, lang: str, format: str, title: str, current_user: dict):
+async def get_file_summary(url ,file, lang: str, format: str, title: str, current_user: dict):
     try:
         await manager.send_message({"progress": 10, "message": "Processing started"})
         user_id = str(current_user["user_id"])
@@ -135,11 +137,9 @@ async def get_file_summary(file, lang: str, format: str, title: str, current_use
         chain = load_summarize_chain(llm, chain_type="stuff", prompt=prompt)
         document = Document(page_content=corrected_text)
         summary = chain.run({"input_documents": [document], "language": lang, "format": format})
-
-        await manager.send_message({"progress": 90, "message": "Saving summary..."})
-        save_result = save_summary_to_mongo(user_id, file_url ,corrected_text, summary, title,type=type)
-
+        think_part, main_part = split_content(summary)
         await manager.send_message({"progress": 100, "message": "Summary generation completed."})
+        save_result = save_summary_to_mongo(user_id,file_url,url,main_part,think_part, extracted_text,title , type='Video')
         return save_result
 
     except Exception as e:
