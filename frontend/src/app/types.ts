@@ -4,6 +4,8 @@ export type metadata = {
     title: string;
     icon: string;
     metadata: string;
+    preview: boolean;
+    type: string
 };
 
 export type query = {

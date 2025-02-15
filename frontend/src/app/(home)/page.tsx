@@ -4,7 +4,7 @@ import Navbar from '../components/Navbar'
 import Image from 'next/image'
 import Cookies from "js-cookie";
 import axios, { AxiosError } from "axios";
-import { Dialog, DialogBackdrop, DialogPanel, Textarea } from '@headlessui/react'
+import { ComboboxOption, ComboboxOptions, Dialog, DialogBackdrop, DialogPanel, Textarea } from '@headlessui/react'
 import clsx from 'clsx'
 import { metadata, PromptResponse } from '../types';
 import Link from 'next/link';
@@ -15,7 +15,6 @@ import { languagesList } from '@/app/languages';
 const page = () => {
 
   const [selected, setSelected] = useState<string | null>("")
-
   const [action, setAction] = useState('Summarize')
   const [language, setLanguage] = useState('Hindi')
   const [openComboBox, setOpenComboBox] = useState(false)
@@ -37,7 +36,7 @@ const page = () => {
       : languagesList.filter((language) => {
         return language.toLowerCase().includes(query.toLowerCase())
       })
-  console.log(filteredLanguages)
+
   function isValidUrl(urlString: string): boolean {
     try {
       new URL(urlString);
@@ -46,6 +45,7 @@ const page = () => {
       return false;
     }
   }
+
   const getPrompt = async () => {
     const token = Cookies.get("access_token");
     if (token) {
@@ -69,6 +69,7 @@ const page = () => {
       }
     }
   };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLoading(true);
     if (e.target.files) {
@@ -83,14 +84,19 @@ const page = () => {
         icon = ' https://img.icons8.com/color/50/google-docs.png';
       }
       sessionStorage.setItem("url", icon)
-      setUrl(icon)
-      const fileMetaData = { title: uploadedFile.name, metadata, icon };
+      const fileMetaData = { title: uploadedFile.name, metadata, icon, preview: false, type: 'file' };
+      setUrl(fileMetaData.title)
       setMetadata(fileMetaData)
     }
     setLoading(false);
   }
 
   const getMetadata = async () => {
+    if (metadata?.type == 'file') {
+      setMetadata((metadata) => metadata ? { ...metadata, preview: true } : null)
+      setUrl(metadata.icon)
+      return
+    }
     if (typeof url == 'string' && isValidUrl(url)) {
       setLoading(true);
       try {
@@ -166,11 +172,11 @@ const page = () => {
       <Navbar />
       <div className='fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 font-mono'>
         <div className='flex flex-col gap-7'>
-          <div>
+          <div className='flex flex-col gap-3'>
             <h3 className='font-black  text-5xl text-[rgba(206, 203, 203, 1)]'>
               Summarize, Understand, Save Time!
             </h3>
-            <h6 className='font-medium  text-sm text-[rgba(206, 203, 203, 1)'>
+            <h6 className='font-medium text-[rgba(206, 203, 203, 1)'>
               Summarize PDFs, text, images with text, YouTube videos, and website links. Save time and get concise insights instantly!
             </h6>
           </div>
@@ -181,7 +187,7 @@ const page = () => {
 
                 <img width="20" height="20" src="https://img.icons8.com/forma-regular/50/FFFFFF/attach.png" alt="attach" />
               </button>
-              <input type="text" onChange={({ target }) => setUrl(target.value)} placeholder='e.g https://youtu.be/IHkGe92LG_A?si=cjovoaz-goQNn00Y or https://heroicons.com/' className='appearance-none border-none outline-none bg-transparent p-0 m-0 w-full h-14' />
+              <input type="text" onChange={({ target }) => setUrl(target.value)} value={url ?? ''} placeholder='e.g https://youtu.be/IHkGe92LG_A?si=cjovoaz-goQNn00Y or https://heroicons.com/' className='appearance-none border-none outline-none bg-transparent p-0 m-0 w-full h-14' />
               <span className="px-4  bg-gray-700/50 rounded-e-full flex gap-1.5 items-center justify-center text-gray-400">
                 {loading ? (<>
                   <Image src="/805.svg" alt="loader" width="20" height="20" />
@@ -277,7 +283,7 @@ const page = () => {
             </button>
           </div>
 
-          <Dialog open={Boolean(metadata)} as="div" className="relative z-10 focus:outline-none" onClose={() => setMetadata(null)}>
+          <Dialog open={!!(metadata && metadata.preview)} as="div" className="relative z-10 focus:outline-none" onClose={() => setMetadata(null)}>
             <DialogBackdrop className="fixed inset-0 bg-black/50" />
             <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
               <div className="flex min-h-full items-center justify-center p-4">
@@ -286,7 +292,7 @@ const page = () => {
                   className="w-full max-w-lg rounded-xl flex flex-col gap-3 bg-[#1b283b] shadow-md  p-6 backdrop-blur-2xl duration-300 ease-out data-[closed]:transform-[scale(95%)] data-[closed]:opacity-0"
                 >
                   <div className='flex justify-between items-center' >
-                    <h6 className='font-mulish text-xl font-bold' > Content </h6>
+                    <h6 className='font-mulish text-2xl font-bold' > Content </h6>
                     <div className='flex gap-2' >
                       <Link
                         href={`/summarize/${encodeURIComponent(url ? url : "")}?title=${metadata?.title}&language=${language}&format=${action}&icon=${metadata?.icon}`}
@@ -363,21 +369,20 @@ const page = () => {
                         )}
                         placeholder='Select Language'
                         displayValue={(language: string) => language}
-                        onChange={(event) => setQuery(event.target.value)}
+                        onChange={(event) => { setQuery(event.target.value) }}
                       />
                     </div>
-
-                    <div className="overflow-y-auto max-h-52 flex flex-col gap-2 scrollbar-thumb-gray-500 scrollbar-track-transparent scrollbar-thin" >
+                    <ComboboxOptions className="overflow-y-auto max-h-52 flex flex-col gap-2 scrollbar-thumb-gray-500 scrollbar-track-transparent scrollbar-thin" >
                       {filteredLanguages.map((language, i) => (
-                        <button
-                          onClick={() => setSelected(language)}
+                        <ComboboxOption
                           key={i}
-                          className="group flex cursor-default bg-gray-500/50 items-center gap-2 rounded-lg py-1.5 px-3 select-none data-[focus]:bg-white/10"
+                          value={language}
+                          className="cursor-pointer group flex  bg-gray-500/50 items-center gap-2 rounded-lg py-1.5 px-3 select-none data-[focus]:bg-white/10"
                         >
                           <p className="text-sm/6 text-white">{language}</p>
-                        </button>
+                        </ComboboxOption>
                       ))}
-                    </div>
+                    </ComboboxOptions>
                   </Combobox>
                 </div>
               </DialogPanel>

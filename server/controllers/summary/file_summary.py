@@ -81,7 +81,7 @@ async def get_file_summary(url ,file, lang: str, format: str, title: str, curren
         extracted_text = ""
 
         if mime_type.startswith("image"):
-            type = "image"
+            type = "Image"
             file_stream.seek(0)
             image = Image.open(file_stream)
             if image.mode == "RGBA":
@@ -100,7 +100,7 @@ async def get_file_summary(url ,file, lang: str, format: str, title: str, curren
 
         # Handle PDF
         elif mime_type == "application/pdf":
-            type = "pdf"
+            type = "File"
             file_stream.seek(0)
             pdf_reader = PdfReader(file_stream)
             extracted_text = " ".join(page.extract_text() or "" for page in pdf_reader.pages)
@@ -139,7 +139,7 @@ async def get_file_summary(url ,file, lang: str, format: str, title: str, curren
         summary = chain.run({"input_documents": [document], "language": lang, "format": format})
         think_part, main_part = split_content(summary)
         await manager.send_message({"progress": 100, "message": "Summary generation completed."})
-        save_result = save_summary_to_mongo(user_id,file_url,url,main_part,think_part, extracted_text,title , type='Video')
+        save_result = save_summary_to_mongo(user_id,file_url,url,main_part,think_part, extracted_text,title , type)
         return save_result
 
     except Exception as e:

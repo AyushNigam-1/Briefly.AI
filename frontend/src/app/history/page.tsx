@@ -5,11 +5,31 @@ import axios from 'axios';
 import { SummaryHistoryResponse, SortOptions, SummaryCardProps } from '../types';
 import Navbar from '../components/Navbar';
 import Loader from '../components/Loader';
-import { Dialog, Menu, MenuButton, MenuItem, MenuItems, Select } from '@headlessui/react'
+import { Dialog, Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
 import Link from 'next/link';
 import { ToastContainer, toast } from 'react-toastify';
 import { Description, DialogPanel, DialogTitle } from '@headlessui/react'
 
+function formatRelativeDate(timestamp: string): string {
+    const date = new Date(timestamp);
+    const now = new Date();
+
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+
+    const differenceInDays = Math.floor((today.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (date >= today) {
+        return "Today";
+    } else if (date >= yesterday) {
+        return "Yesterday";
+    } else if (differenceInDays <= 7) {
+        return "Previous 7 Days";
+    } else {
+        return date.toLocaleDateString();
+    }
+}
 const previewFile = async (file_url: string): Promise<string> => {
     if (file_url) {
         try {
@@ -31,7 +51,7 @@ const previewFile = async (file_url: string): Promise<string> => {
 
 const SummaryCard = ({ summary, setIsDialogOpen, setSummaryId }: SummaryCardProps) => {
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-
+    console.log(summary)
 
     useEffect(() => {
         const fetchPreview = async () => {
@@ -46,27 +66,32 @@ const SummaryCard = ({ summary, setIsDialogOpen, setSummaryId }: SummaryCardProp
     }, [summary.url, summary.id]);
 
     return (
-        <div className='bg-gray-900 w-full rounded-lg flex justify-between items-center p-2 gap-2 m-1 border-2 border-gray-500 '>
-            <div className='flex gap-2' >
+        <div className='bg-gray-900 w-full rounded-lg flex justify-between items-center  gap-2 m-1 border-2 border-gray-500 transition-all delay-100 hover:border-gray-300 hover:shadow-[0_0_10px_rgba(255,255,255,0.8)] cursor-pointer  '>
+            <Link href={`/summarize/${encodeURIComponent(summary.url)}?id=${summary.id}`} className='flex flex-col gap-2' >
                 {previewUrl ? (
                     <img
                         src={previewUrl}
                         alt="Preview"
-                        className='object-cover m-0 w-20 rounded-lg border-gray-500 border-2'
+                        className='object-cover m-0 rounded-lg'
                     />
                 ) : (
-                    <div className='m-0 w-20 rounded-lg border-gray-500 border-2 bg-gray-700' />
+                    <div className='m-0 h-64 rounded-lg bg-gray-700' />
                 )}
-                <span>
-                    <h4 className='m-0 truncate text-lg font-bold text-gray-200'>
-                        {summary.title.split(" ").slice(0, 5).join(" ")}. . .
+                <span className='p-2'>
+                    <h4 className='m-0 truncate line-clamp-2 text-lg font-bold text-gray-100 text-wrap'>
+                        {summary.title}
                     </h4>
                     <div className='flex gap-3'>
                         <h6 className='text-gray-300 font-bold w-min py-1 p-1 rounded-xl flex items-center gap-1'>
                             {
                                 summary.type == 'Video' ? <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" />
-                                </svg> : ''
+                                </svg> : summary.type == 'Image' ? <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                                </svg>
+                                    : <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                                    </svg>
                             }
                             {summary.type}
                         </h6>
@@ -77,17 +102,16 @@ const SummaryCard = ({ summary, setIsDialogOpen, setSummaryId }: SummaryCardProp
 
                             {summary.queries}
                         </span>
+                        <span className='text-gray-300 font-bold w-min py-1 rounded-lg flex gap-1 items-center text-nowrap'>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                            </svg>
+                            {formatRelativeDate(summary.timestamp)}
+                        </span>
                     </div>
                 </span>
-            </div>
-            <div className='flex gap-2' >
-                <Link href={`/summarize/${encodeURIComponent(summary.url)}?title=${summary?.title}`} className='bg-gradient-to-t from-blue-500 to-gray-900 p-1 rounded-full'>
-                    <span className='bg-gray-900 p-2 text-xl rounded-full  flex items-center justify-center' >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-                        </svg>
-                    </span>
-                </Link>
+            </Link>
+            {/* <div className='flex gap-2' >
                 <button onClick={() => { setSummaryId(summary.id); setIsDialogOpen(true) }} className='bg-gradient-to-t from-red-500 to-gray-900 p-1 rounded-full'  >
                     <span className='bg-gray-900 p-2 text-xl rounded-full  flex items-center justify-center' >
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
@@ -96,7 +120,7 @@ const SummaryCard = ({ summary, setIsDialogOpen, setSummaryId }: SummaryCardProp
                     </span>
                 </button>
 
-            </div>
+            </div> */}
         </div>
 
     );
@@ -179,11 +203,7 @@ const Page = () => {
         });
     };
 
-    if (loading) {
-        return <div className='w-screen h-screen flex justify-center items-center' >
-            <Loader />
-        </div>
-    }
+
 
     return (
         <>
@@ -207,26 +227,29 @@ const Page = () => {
                             </MenuButton>
                             <MenuItems transition
                                 anchor="bottom end" className="w-52 origin-top-right my-2 rounded-xl border-2 border-gray-500 bg-gray-900 p-1 text-sm/6 text-white transition duration-100 ease-out [--anchor-gap:var(--spacing-1)] focus:outline-none data-[closed]:scale-95 data-[closed]:opacity-0 z-50">
-
-                                {options.map((option, i) => {
-                                    return (
-                                        <MenuItem key={i} as="div" className="group z-50 flex w-full items-center gap-2 rounded-lg py-1.5 px-3 data-[focus]:bg-white/10 text-lg font-semibold">
-                                            <button onClick={() => handleSortChange(option.sort)} className="flex w-full items-center gap-2">
-                                                {option.icon}
-                                                {option.order}
-                                            </button>
-                                        </MenuItem>
-                                    )
-                                })}
+                                {
+                                    options.map((option, i) => {
+                                        return (
+                                            <MenuItem key={i} as="div" className="group z-50 flex w-full items-center gap-2 rounded-lg py-1.5 px-3 data-[focus]:bg-white/10 text-lg font-semibold">
+                                                <button onClick={() => handleSortChange(option.sort)} className="flex w-full items-center gap-2">
+                                                    {option.icon}
+                                                    {option.order}
+                                                </button>
+                                            </MenuItem>
+                                        )
+                                    })
+                                }
                             </MenuItems>
                         </Menu>
                     </div>
                 </div>
-                <div className='grid grid-cols-2 gap-4' >
+                {loading ? <div className='w-full flex justify-center items-center' >
+                    <Loader />
+                </div> : <div className='grid grid-cols-4 gap-4  h-full' >
                     {summaries.map((summary) => (
                         <SummaryCard key={summary.id} summary={summary} handleDeleteSummary={handleDeleteSummary} setIsDialogOpen={setIsDialogOpen} setSummaryId={setSummaryId} />
                     ))}
-                </div>
+                </div>}
                 <Dialog open={isDialogOpen} onClose={() => setIsDialogOpen(false)} className="fixed inset-0 z-10 flex items-center justify-center bg-black bg-opacity-50">
                     <DialogPanel
                         transition
