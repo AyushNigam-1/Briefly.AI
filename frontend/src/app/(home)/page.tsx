@@ -110,7 +110,7 @@ const page = () => {
         });
 
         const data = response.data;
-        setMetadata(data);
+        setMetadata({ ...data, preview: true })
         console.log(data)
         // setError(null);
       } catch (err: any) {
