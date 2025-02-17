@@ -24,3 +24,7 @@ setuptools
 scikit-learn
 python-socketio[asyncio_server]
 fastapi-socketio
+phidata 
+python-dotenv
+packaging
+duckduckgo-search

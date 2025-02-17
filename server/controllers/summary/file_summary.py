@@ -100,10 +100,27 @@ async def get_file_summary(url ,file, lang: str, format: str, title: str, curren
 
         # Handle PDF
         elif mime_type == "application/pdf":
+            page_summaries = []  # Array to store summaries for each page
+            page_titles = []  # Array to store titles for each page
             type = "File"
             file_stream.seek(0)
             pdf_reader = PdfReader(file_stream)
-            extracted_text = " ".join(page.extract_text() or "" for page in pdf_reader.pages)
+            total_pages = len(pdf_reader.pages)
+            for page_num, page in enumerate(pdf_reader.pages):
+                # Extract text for the current page
+                page_text = page.extract_text() or ""
+                page_summaries.append(page_text)
+                page_titles.append(f"Reading page {page_num + 1} and summarizing page {page_num + 1}")
+                await manager.send_message({"progress": (10 + (80 / total_pages) * (page_num + 1)), 
+                                            "message": page_titles[-1]})  # Progress and page title
+                
+                # Summarize the page text
+                corrected_text = correct_summary(page_text, lang)
+                document = Document(page_content=corrected_text)
+                prompt = PromptTemplate(template="Summarize the following text succinctly and clearly.", input_variables=["text"])
+                chain = load_summarize_chain(llm, chain_type="stuff", prompt=prompt)
+                page_summary = chain.run({"input_documents": [document], "language": lang, "format": format})
+                page_summaries[page_num] = page_summary
 
         else:
             raise ValueError("Unsupported file type.")
