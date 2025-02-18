@@ -1,25 +1,36 @@
 import os
-from phidata.agent import Agent
-from phidata.llm import Groq
-from googlesearch import search
-from phi.tools.duckduckgo import DuckDuckGo
+from crewai import Agent, Task, Crew
+from crewai.tools import DuckDuckGoSearchTool, YoutubeSearchTool
+from crewai.llms import ChatGroq
 
 # Set up Groq API key
-GROQ_API_KEY = os.getenv('GROQ_API_KEY')
+GROQ_API_KEY = os.getenv('groq_api_key')
 
-# Define the Recommendation Agent
-def create_recommendation_agent():
-    recommendation_agent = Agent(
-        name="Recommendation Agent",
-        role="Take a summary as input and find similar websites and YouTube videos.",
-        model=Groq(id="mixtral-8x7b-32768", api_key=GROQ_API_KEY), 
-        tools=[DuckDuckGo()],
-        instructions=[
-            "Take a summary as input.",
-            "Find similar websites by searching the web using the summary as a query.",
-            "Find relevant YouTube videos by searching YouTube using the summary as a query.",
-            "Return the list of similar websites and YouTube videos."
-        ],
-        markdown=False,
-    )
-    return recommendation_agent
+# Define the LLM
+llm = ChatGroq(model="mixtral-8x7b-32768", api_key=GROQ_API_KEY)
+
+# Define the Search Agent
+search_agent = Agent(
+    role="Search Expert",
+    goal="Find relevant websites and YouTube videos based on a given summary.",
+    backstory="An expert researcher who quickly finds useful information online.",
+    tools=[DuckDuckGoSearchTool(), YoutubeSearchTool()],
+    llm=llm
+)
+
+# Define the Search Task
+search_task = Task(
+    description=(
+        "Given a summary, search the web for similar websites and relevant YouTube videos."
+        "Return a list of relevant links."
+    ),
+    agent=search_agent
+)
+
+# Create the Crew
+recommendation_crew = Crew(agents=[search_agent], tasks=[search_task])
+
+def get_recommendations(summary):
+    return recommendation_crew.kickoff(inputs={"summary": summary})
+
+

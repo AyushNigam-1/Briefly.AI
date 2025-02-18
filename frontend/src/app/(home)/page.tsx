@@ -116,17 +116,7 @@ const page = () => {
         icon = URL.createObjectURL(uploadedFile);
       }
       else if (uploadedFile.type === 'application/pdf') {
-        try {
-          const buffer = await fileToBuffer(uploadedFile); // Convert the file to a buffer
-          const stream = await pdfThumbnail(buffer); // Generate thumbnail (ReadableStream)
-          // Convert ReadableStream to Blob
-          const thumbnailBlob = await streamToBlob(stream as unknown as ReadableStream<Uint8Array>);
-          icon = URL.createObjectURL(thumbnailBlob);
-        } catch (error) {
-          console.error('Error generating PDF thumbnail:', error);
-          // Fallback to default if thumbnail generation fails
-          icon = 'https://img.icons8.com/color/50/google-docs.png';
-        }
+        icon = 'https://img.icons8.com/color/50/google-docs.png'
       }
       else {
         icon = 'https://img.icons8.com/color/50/google-docs.png'; // Default for other document types

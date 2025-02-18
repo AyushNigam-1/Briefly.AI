@@ -14,7 +14,7 @@ import validators
 from urllib.parse import unquote
 from controllers.db.conn import fs
 from bson import ObjectId
-
+from agent.recommendation_agent import get_recommendations
 
 router = APIRouter()
 
@@ -44,8 +44,11 @@ async def summarize_content(
                 summary = await get_web_summary(url, lang, format, title, current_user)
 
         elif file:
-            summary = await get_file_summary(url ,file, lang, format, title, current_user)  
-        return {"summary": summary}
+            summary = await get_file_summary(url ,file, lang, format, title, current_user) 
+
+        recommendation =  get_recommendations(summary=summary)
+
+        return {"summary": summary , "recommendations":recommendation}
 
     except Exception as e:
         print("this error ---------------------->",e)

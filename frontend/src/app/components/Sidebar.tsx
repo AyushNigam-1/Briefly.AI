@@ -44,6 +44,9 @@ const groupSummariesByDate = (summaries: SummaryHistoryResponse[]) => {
 const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [summaries, setSummaries] = useState<SummaryHistoryResponse[]>([]);
+    const [filteredSummaries, setFilteredSummaries] = useState<SummaryHistoryResponse[]>([]);
+    const [searchQuery, setSearchQuery] = useState<string>("");
+
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -101,7 +104,15 @@ const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
     useEffect(() => {
         fetchUserSummaries();
     }, []);
-    const groupedSummaries = groupSummariesByDate(summaries);
+    useEffect(() => {
+        setFilteredSummaries(
+            summaries.filter((summary) =>
+                summary.title.toLowerCase().includes(searchQuery.toLowerCase())
+            )
+        );
+    }, [searchQuery, summaries]);
+
+    const groupedSummaries = groupSummariesByDate(filteredSummaries);
     return (
         <div>
             <button
@@ -126,7 +137,7 @@ const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
                     } shadow-lg`}
             >
 
-                <div className="p-4 flex flex-col h-full">
+                <div className="p-4 flex flex-col h-full gap-6">
                     <div className="flex items-center justify-between">
                         <h2 className="text-xl font-bold">History</h2>
                         <button
@@ -149,13 +160,26 @@ const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
                             </svg>
                         </button>
                     </div>
-                    <span className="h-0.5 my-4 bg-gray-600" />
-                    <div className="flex-grow">
+                    {/* <span className="h-0.5 my-4 bg-gray-600" /> */}
+                    <div className="flex bg-gray-800 rounded-md px-2">
+                        <svg className="w-6  text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0z" />
+                        </svg>
+                        <input
+                            type="text"
+                            placeholder="Search by title..."
+                            className="p-2 text-gray-400 bg-transparent rounded-md w-full outline-none"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                    {/* <span className="h-0.5 my-4 bg-gray-600" /> */}
+                    <div className="">
                         {loading ? (
                             <p>Loading summaries...</p>
                         ) : error ? (
                             <p className="text-red-500">{error}</p>
-                        ) : summaries.length === 0 ? (
+                        ) : filteredSummaries.length === 0 ? (
                             <p className="text-center text-gray-200">No summaries found.</p>
                         ) : (
                             <ul className="space-y-2">

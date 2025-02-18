@@ -12,7 +12,6 @@ bs4
 tldextract
 youtube-transcript-api
 unstructured
-meta_yt
 pinecone-client
 PyJWT
 Werkzeug
@@ -24,7 +23,11 @@ setuptools
 scikit-learn
 python-socketio[asyncio_server]
 fastapi-socketio
-phidata 
-python-dotenv
+phidata
 packaging
 duckduckgo-search
+crewai
+openai
+groq
+pydantic
+youtube-search-python
