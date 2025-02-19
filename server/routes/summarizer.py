@@ -14,7 +14,7 @@ import validators
 from urllib.parse import unquote
 from controllers.db.conn import fs
 from bson import ObjectId
-from agent.recommendation_agent import get_recommendations
+from agent.recommendation_agent import create_recommendation_agent
 
 router = APIRouter()
 
@@ -45,10 +45,8 @@ async def summarize_content(
 
         elif file:
             summary = await get_file_summary(url ,file, lang, format, title, current_user) 
+        return {"summary": summary }
 
-        recommendation =  get_recommendations(summary=summary)
-
-        return {"summary": summary , "recommendations":recommendation}
 
     except Exception as e:
         print("this error ---------------------->",e)
@@ -163,3 +161,30 @@ async def get_file(id: str):
 
 
 
+@router.get("/summary/recommendations/")
+async def get_summary_with_recommendations(summary_id: str):
+    """
+    Retrieve a summary by its ID and generate recommendations.
+    """
+    try:
+        # Fetch summary from MongoDB
+        summary = summary_collection.find_one({"_id": ObjectId(summary_id)})
+
+        if not summary:
+            raise HTTPException(status_code=404, detail="Summary not found.")
+
+        summarized_content = summary.get("summarized_summary")
+
+        if not summarized_content:
+            raise HTTPException(status_code=404, detail="Summarized content not available.")
+
+        # Pass the summary to the recommendation agent
+        recommendation_agent = create_recommendation_agent()
+        recommendation = recommendation_agent.run(summarized_content)
+
+        return {
+            "recommendations": recommendation.content
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")

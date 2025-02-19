@@ -92,6 +92,19 @@ const page = () => {
                 return false; // Failure
             }
     };
+    const fetchRecommendations = async (scriptId: string) => {
+        try {
+            const token = Cookies.get("access_token");
+            const response = await axios.get(`http://localhost:8000/recommendations/?id=${scriptId}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            return response.data;
+        } catch (error) {
+            console.error("Error fetching recommendations:", error);
+        }
+    }
     const handleRegenerate = async () => {
         setText2('Regenrating . . .')
         try {
