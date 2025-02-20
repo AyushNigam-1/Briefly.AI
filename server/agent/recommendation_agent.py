@@ -19,7 +19,7 @@ def create_recommendation_agent():
             "Find similar websites by searching the web using the summary as a query.",
             "Find relevant YouTube videos by searching YouTube using the summary as a query.",
             "Return the results in **strict JSON format** like this:",    
-"{",
+            "{",
             '  "youtube": [',
             '    {"title": "Video Title 1", "channel_name": "Channel Name 1", "link": "https://youtube.com/video1"},',
             '    {"title": "Video Title 2", "channel_name": "Channel Name 2", "link": "https://youtube.com/video2"},',

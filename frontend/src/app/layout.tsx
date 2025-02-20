@@ -22,10 +22,10 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
       <body
-        className="font-mulish antialiased bg-fixed bg-cover bg-center h-screen"
+        className="font-mulish antialiased bg-fixed bg-cover bg-center h-screen "
         style={{ backgroundImage: "url('/1092758.jpg')" }}
       >
-        <div className="relative max-h-screen max-w-screen">
+        <div className="relative max-h-screen max-w-screen ">
           <div className="relative z-10">{children}</div>
         </div>
       </body>

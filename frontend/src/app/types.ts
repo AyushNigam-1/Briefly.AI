@@ -76,6 +76,8 @@ export interface QueryInputProps {
     url: string;
     setState: React.Dispatch<React.SetStateAction<string | undefined>>;
     id?: string
+    ytRecommendations?: string[]
+    webRecommendations?: string[]
 }
 
 export interface SummaryCardProps {

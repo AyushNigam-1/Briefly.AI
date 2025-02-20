@@ -73,6 +73,8 @@ const page = () => {
     const icon = searchParams.get('icon') as string;
     const [text, setText] = useState('Copy')
     const [text2, setText2] = useState('Regenrate')
+    const [ytRecommendations, setytRecommendations] = useState<string | undefined>(undefined);
+    const [ytRecommendations, setytRecommendations] = useState<string | undefined>(undefined);
 
     const queriesContainerRef = useRef<HTMLDivElement | null>(null);
     const [state, setState] = useState<string | undefined>(undefined);
@@ -95,16 +97,22 @@ const page = () => {
     const fetchRecommendations = async (scriptId: string) => {
         try {
             const token = Cookies.get("access_token");
-            const response = await axios.get(`http://localhost:8000/recommendations/?id=${scriptId}`, {
+            let response = await axios.get(`http://localhost:8000/summary/recommendations/?summary_id=${scriptId}`, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
             });
-            return response.data;
+            console.log(response.data)
+            let recommendations = response.data.recommendations.replace(/```json|```/g, "").trim();
+            console.log(recommendations)
+            const data = JSON.parse(recommendations);
+            setytRecommendations(data.youtube)
+            setytRecommendations(data.web)
         } catch (error) {
             console.error("Error fetching recommendations:", error);
         }
     }
+
     const handleRegenerate = async () => {
         setText2('Regenrating . . .')
         try {
@@ -117,6 +125,7 @@ const page = () => {
             setText2("Regenrate");
         }
     };
+
     const getSummary = async (url?: string, lang?: string, format?: string, title?: string, icon?: string) => {
         console.log("called getSummary")
         setLoading(true);
@@ -168,8 +177,10 @@ const page = () => {
             console.log(preview_url)
             setMetadata({ icon: preview_url, title: data.summary.title, type: data.summary.type })
             setSummaryId(data.summary.id)
+
             setSummary(data.summary);
             setQueries(data.summary.queries);
+            fetchRecommendations(data.summary.id)
         } catch (error) {
             if (axios.isAxiosError(error)) {
                 throw new Error(error.response?.data?.message || error.message);
@@ -204,6 +215,8 @@ const page = () => {
                 setMetadata({ icon: thumbnail, title: data.summary.title, type: data.summary.type })
                 setSummary(data.summary);
                 setQueries(data.summary.queries)
+                fetchRecommendations(data.summary.id)
+
             } catch (error) {
                 console.error("Failed to fetch summary:", error);
             } finally {
@@ -368,10 +381,11 @@ const page = () => {
                                     </div> : null
                             }
                         </div>
+
                     </div>
                 </div>
                 <div className="flex flex-col gap-3 p-2 w-full fixed bottom-0 left-0 right-0">
-                    <QueryInput setQueries={setQueries} url={url} setState={setState} id={summaryId} />
+                    <QueryInput setQueries={setQueries} url={url} setState={setState} id={summaryId} ytRecommendations={ytRecommendations} , ytRecommendations={ytRecommendations} />
                 </div>
             </>
         )

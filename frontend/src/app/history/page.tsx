@@ -135,7 +135,7 @@ const Page = () => {
     return (
         <>
             <ToastContainer />
-            <div className='container mx-auto flex flex-col gap-4 '>
+            <div className='container mx-auto flex flex-col gap-4 ' >
                 <Navbar />
                 <div className='flex justify-between items-center' >
                     <h6 className='text-2xl font-bold text-gray-200'>History</h6>
@@ -182,7 +182,7 @@ const Page = () => {
                     <div className='w-full flex justify-center items-center' >
                         <Loader />
                     </div>
-                ) : <div className='grid grid-cols-4 gap-4  h-full' >{filteredSummaries.length > 0 ? (
+                ) : <div className='grid grid-cols-4 gap-4  h-full scrollbar-thin' >{filteredSummaries.length > 0 ? (
                     filteredSummaries.map((summary) => (
                         <SummaryCard key={summary.id} summary={summary} previewUrl={previewCache[summary.id] || null}
                             setIsDialogOpen={setIsDialogOpen} setSummaryId={setSummaryId} />
