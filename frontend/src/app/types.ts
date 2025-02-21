@@ -76,8 +76,9 @@ export interface QueryInputProps {
     url: string;
     setState: React.Dispatch<React.SetStateAction<string | undefined>>;
     id?: string
-    ytRecommendations?: string[]
-    webRecommendations?: string[]
+    ytRecommendations?: ytRecommendations[]
+    webRecommendations?: webRecommendations[]
+    isloading: boolean
 }
 
 export interface SummaryCardProps {
@@ -85,4 +86,15 @@ export interface SummaryCardProps {
     handleDeleteSummary: (id: string) => void;
     setIsDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
     setSummaryId: React.Dispatch<React.SetStateAction<string | undefined>>;
+}
+
+export type ytRecommendations = {
+    title: string,
+    link: string,
+    channel_name: string,
+}
+export type webRecommendations = {
+    title: string,
+    link: string,
+    website_name: string,
 }

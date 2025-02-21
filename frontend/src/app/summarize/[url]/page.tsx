@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useParams, useSearchParams } from "next/navigation";
 import axios from 'axios';
 import Cookies from 'js-cookie';
-import { Metadata, ProgressResponse, SummaryResponse, query } from '@/app/types';
+import { Metadata, ProgressResponse, SummaryResponse, query, webRecommendations, ytRecommendations } from '@/app/types';
 import { setupWebSocketListeners } from '@/websocket/webEvent';
 import { connectWebSocket } from "@/websocket/websocket";
 import BarLoader from "react-spinners/BarLoader";
@@ -55,6 +55,7 @@ export const previewFile = async (file_url: string) => {
     return ""
 }
 
+
 const page = () => {
 
     const [queries, setQueries] = useState<query[]>([]);
@@ -73,9 +74,9 @@ const page = () => {
     const icon = searchParams.get('icon') as string;
     const [text, setText] = useState('Copy')
     const [text2, setText2] = useState('Regenrate')
-    const [ytRecommendations, setytRecommendations] = useState<string | undefined>(undefined);
-    const [ytRecommendations, setytRecommendations] = useState<string | undefined>(undefined);
-
+    const [ytRecommendations, setytRecommendations] = useState<ytRecommendations[] | undefined>(undefined);
+    const [webRecommendations, setWebRecommendations] = useState<webRecommendations[] | undefined>(undefined);
+    const [recommendationLoader, setRecommendationLoader] = useState<boolean>(false);
     const queriesContainerRef = useRef<HTMLDivElement | null>(null);
     const [state, setState] = useState<string | undefined>(undefined);
 
@@ -95,6 +96,7 @@ const page = () => {
             }
     };
     const fetchRecommendations = async (scriptId: string) => {
+        setRecommendationLoader(true)
         try {
             const token = Cookies.get("access_token");
             let response = await axios.get(`http://localhost:8000/summary/recommendations/?summary_id=${scriptId}`, {
@@ -107,9 +109,12 @@ const page = () => {
             console.log(recommendations)
             const data = JSON.parse(recommendations);
             setytRecommendations(data.youtube)
-            setytRecommendations(data.web)
+            setWebRecommendations(data.website)
         } catch (error) {
             console.error("Error fetching recommendations:", error);
+        }
+        finally {
+            setRecommendationLoader(false)
         }
     }
 
@@ -265,7 +270,7 @@ const page = () => {
             <>
                 <Navbar component={<Sidebar setId={setSummaryId} />} />
                 <div className='gap-1 flex items-center justify-center flex-col max-h-[100vh] max-w-[100vw] '>
-                    <div className="flex flex-col gap-3 rounded-lg shadow container overflow-y-scroll mb-40 scrollbar-thumb-gray-500 scrollbar-track-transparent scrollbar-thin" ref={queriesContainerRef}>
+                    <div className="flex flex-col gap-3 rounded-lg shadow container overflow-y-scroll mb-40 scrollbar-thumb-gray-500 scrollbar-track-transparent scrollbar-thin scrollbar-track-rounded-full scrollbar-thumb-rounded-full" ref={queriesContainerRef}>
                         <div className='bg-gray-900 w-max rounded-lg flex p-2 gap-2 mt-2 border-2 border-gray-500'>
                             {metadata?.icon ? (
                                 <img
@@ -303,7 +308,7 @@ const page = () => {
                                 {summary?.thought}
                             </DisclosurePanel>
                         </Disclosure>
-                        <div className="bg-gray-900 font-mono border-gray-700 scrollbar-thumb-gray-500  w-100 p-4 rounded-lg prose-gray prose-lg w-full max-w-none">
+                        <div className="bg-gray-900 font-mono border-gray-700  w-100 p-4 rounded-lg prose-gray prose-lg w-full max-w-none">
                             <ReactMarkdown
                                 remarkPlugins={[remarkGfm]}
                                 components={{
@@ -385,7 +390,7 @@ const page = () => {
                     </div>
                 </div>
                 <div className="flex flex-col gap-3 p-2 w-full fixed bottom-0 left-0 right-0">
-                    <QueryInput setQueries={setQueries} url={url} setState={setState} id={summaryId} ytRecommendations={ytRecommendations} , ytRecommendations={ytRecommendations} />
+                    <QueryInput setQueries={setQueries} url={url} setState={setState} id={summaryId} ytRecommendations={ytRecommendations} webRecommendations={webRecommendations} isloading={recommendationLoader} />
                 </div>
             </>
         )
