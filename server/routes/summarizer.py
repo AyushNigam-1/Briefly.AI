@@ -9,7 +9,7 @@ from fastapi.responses import StreamingResponse
 from bson import ObjectId
 from io import BytesIO
 from controllers.db.conn import summary_collection
-from controllers.db.summary import get_summaries_by_user , get_summary_by_id , delete_summary_by_id
+from controllers.db.summary import get_summaries_by_user , get_summary_by_id , delete_summary_by_id , mark_summary_as_favorite
 import validators
 from urllib.parse import unquote
 from controllers.db.conn import fs
@@ -188,3 +188,7 @@ async def get_summary_with_recommendations(summary_id: str):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    
+@router.post("/summary/favorite/")
+async def favorite_summary( summary_id: str,user_id: dict = Depends(get_current_user)):
+    return await mark_summary_as_favorite(user_id, summary_id)

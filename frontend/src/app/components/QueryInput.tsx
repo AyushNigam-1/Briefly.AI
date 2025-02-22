@@ -62,10 +62,9 @@ const QueryInput = ({ setQueries, url, setState, id, ytRecommendations, webRecom
                             Recommendations
                         </DisclosureButton>
                         <button onClick={() => setShowDisclosure(false)} className="text-gray-400 hover:text-red-500">
-                            ✖
+                            Remove
                         </button>
                     </div>
-                    <span className="bg-gray-600 h-0.5 w-full" ></span>
 
                     {isloading ? (
                         <div className="flex justify-center items-center h-60">
@@ -73,6 +72,7 @@ const QueryInput = ({ setQueries, url, setState, id, ytRecommendations, webRecom
                         </div>
                     ) : (
                         <DisclosurePanel className="text-gray-500 flex flex-col gap-2">
+                            <span className="bg-gray-600 h-0.5 w-full" ></span>
                             <h5 className="text-lg text-gray-400">Youtube Videos</h5>
                             <div className="flex gap-2">
                                 {ytRecommendations?.map((recommendation, index) => (
@@ -80,8 +80,8 @@ const QueryInput = ({ setQueries, url, setState, id, ytRecommendations, webRecom
                                         <div className="bg-gray-900 w-max rounded-lg flex p-2 py-2 gap-2 border-2 border-gray-500 items-center">
                                             <img width="50" height="50" src="https://img.icons8.com/ios/50/EBEBEB/youtube-play--v1.png" alt="youtube-play--v1" />
                                             <span>
-                                                <h4 className=" truncate text-lg font-bold text-gray-200">
-                                                    {recommendation?.title.split(" ").slice(0, 4).join(" ")}...
+                                                <h4 className=" truncate text-lg font-bold text-gray-200 line-clamp-1 w-52">
+                                                    {recommendation?.title}
                                                 </h4>
                                                 <h6 className="text-gray-300 font-bold rounded-xl flex items-center gap-1">
                                                     {recommendation?.channel_name}
@@ -98,8 +98,8 @@ const QueryInput = ({ setQueries, url, setState, id, ytRecommendations, webRecom
                                         <div className="bg-gray-900 w-max rounded-lg flex p-2 gap-2 border-2 border-gray-500 items-center">
                                             <img width="50" height="50" src="https://img.icons8.com/forma-thin/50/EBEBEB/globe.png" alt="globe" />
                                             <span>
-                                                <h4 className="m-0 truncate text-lg font-bold text-gray-200">
-                                                    {recommendation?.title.split(" ").slice(0, 4).join(" ")}...
+                                                <h4 className="m-0 truncate text-lg font-bold text-gray-200 line-clamp-1 w-52">
+                                                    {recommendation?.title}
                                                 </h4>
                                                 <h6 className="text-gray-300 font-bold  rounded-xl flex items-center gap-1">
                                                     {recommendation?.website_name}

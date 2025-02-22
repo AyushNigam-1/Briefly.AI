@@ -178,19 +178,16 @@ const Page = () => {
                             <SummaryCard key={summary.id} summary={summary} handleDeleteSummary={handleDeleteSummary} setIsDialogOpen={setIsDialogOpen} setSummaryId={setSummaryId} />
                         ))}
                     </div>} */}
-                {loading ? (
-                    <div className='w-full flex justify-center items-center' >
-                        <Loader />
-                    </div>
-                ) : <div className='grid grid-cols-4 gap-4  h-full scrollbar-thin' >{filteredSummaries.length > 0 ? (
-                    filteredSummaries.map((summary) => (
+                {loading ? <div className='w-full flex justify-center items-center' >
+                    <Loader />
+                </div> : filteredSummaries.length > 0 ? <div className='grid grid-cols-4 gap-4  h-full scrollbar-thin' >
+                    {filteredSummaries.map((summary) => (
                         <SummaryCard key={summary.id} summary={summary} previewUrl={previewCache[summary.id] || null}
-                            setIsDialogOpen={setIsDialogOpen} setSummaryId={setSummaryId} />
-                    ))
-                ) :
-                    <p>No matching results found.</p>}</div>
-
+                            setIsDialogOpen={setIsDialogOpen} setSummaryId={setSummaryId} />))}
+                </div> :
+                    <p className='font-semibold text-xl text-center text-gray-400'>No history available.</p>
                 }
+
                 <Dialog open={isDialogOpen} onClose={() => setIsDialogOpen(false)} className="fixed inset-0 z-10 flex items-center justify-center bg-black bg-opacity-50">
                     <DialogPanel
                         transition

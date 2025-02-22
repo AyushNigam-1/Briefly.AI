@@ -1,4 +1,4 @@
-from .conn import summary_collection 
+from .conn import summary_collection , users_collection
 from datetime import datetime , timezone
 from bson.objectid import ObjectId
 from langchain.prompts import PromptTemplate
@@ -7,6 +7,7 @@ from langchain.chains.summarize import load_summarize_chain
 from utils.llm import llm
 from utils.websocket_manager import manager
 from utils.common import split_content
+from fastapi import HTTPException
 
 def is_valid_object_id(id: str) -> bool:
     """
@@ -196,3 +197,24 @@ def delete_summary_by_id(id: str):
         return "Summary not found or could not be deleted."
     else:
         return "Summary deleted successfully."
+
+async def mark_summary_as_favorite(user_id: str, summary_id: str):
+    try:
+        user = users_collection.find_one({"_id": ObjectId(user_id)})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        if "favorites" not in user:
+            user["favorites"] = []
+
+        if summary_id in user["favorites"]:
+            raise HTTPException(status_code=400, detail="Summary already marked as favorite")
+
+        users_collection.update_one(
+            {"_id": ObjectId(user_id)},
+            {"$push": {"favorites": summary_id}}
+        )
+
+        return {"message": "Summary marked as favorite successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")

@@ -5,7 +5,7 @@ from phi.model.groq import Groq
 from phi.tools.duckduckgo import DuckDuckGo
 
 # Set up Groq API key
-GROQ_API_KEY = os.getenv('GROQ_API_KEY')
+GROQ_API_KEY = os.getenv('groq_api_key')
 
 # Define the Recommendation Agent
 def create_recommendation_agent():

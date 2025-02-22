@@ -10,7 +10,7 @@ def get_prompt_by_user(user_id: str) -> dict:
         
         prompts = user.get("prompt", None)
         if not prompts:
-            return {"error": f"No prompts found for user with ID {user_id}."}
+            return ""
         
         return {"prompt": prompts}
         
