@@ -4,7 +4,7 @@ import { Disclosure, DisclosureButton, DisclosurePanel } from "@headlessui/react
 import Link from "next/link";
 import Loader from "./Loader";
 
-const QueryInput = ({ setQueries, url, setState, id, ytRecommendations, webRecommendations, isloading }: QueryInputProps) => {
+const QueryInput = ({ setQueries, url, setState, id, ytRecommendations, webRecommendations, isloading, cancelRecommendations, fetchRecommendations }: QueryInputProps) => {
     const inputRef = useRef<HTMLInputElement>(null);
     const [showDisclosure, setShowDisclosure] = useState(true);
 
@@ -67,50 +67,61 @@ const QueryInput = ({ setQueries, url, setState, id, ytRecommendations, webRecom
                     </div>
 
                     {isloading ? (
-                        <div className="flex justify-center items-center h-60">
+                        <div className="flex justify-center items-center h-60 flex-col gap-4">
                             <Loader />
+                            <button onClick={cancelRecommendations} className="text-gray-400 bg-gray-600 p-2 rounded border border-gray-700">Cancel</button>
                         </div>
-                    ) : (
-                        <DisclosurePanel className="text-gray-500 flex flex-col gap-2">
-                            <span className="bg-gray-600 h-0.5 w-full" ></span>
-                            <h5 className="text-lg text-gray-400">Youtube Videos</h5>
-                            <div className="flex gap-2">
-                                {ytRecommendations?.map((recommendation, index) => (
-                                    <Link key={index} href={recommendation.link}>
-                                        <div className="bg-gray-900 w-max rounded-lg flex p-2 py-2 gap-2 border-2 border-gray-500 items-center">
-                                            <img width="50" height="50" src="https://img.icons8.com/ios/50/EBEBEB/youtube-play--v1.png" alt="youtube-play--v1" />
-                                            <span>
-                                                <h4 className=" truncate text-lg font-bold text-gray-200 line-clamp-1 w-52">
-                                                    {recommendation?.title}
-                                                </h4>
-                                                <h6 className="text-gray-300 font-bold rounded-xl flex items-center gap-1">
-                                                    {recommendation?.channel_name}
-                                                </h6>
-                                            </span>
-                                        </div>
-                                    </Link>
-                                ))}
+                    ) :
+                        (!(Array.isArray(ytRecommendations) && ytRecommendations.length > 0 && Array.isArray(webRecommendations) && webRecommendations.length > 0) ? (
+                            <div className="flex justify-center items-center h-60 flex-col gap-4 flex-wrap">
+                                <span className="text-gray-400 text-lg">No recommendations found </span>
+                                <button onClick={() => id && fetchRecommendations(id)} className="text-gray-400  p-2 rounded-lg flex items-center gap-2 border border-gray-700" > <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                                </svg>
+                                    Retry</button>
                             </div>
-                            <h5 className="text-lg text-gray-400">Websites</h5>
-                            <div className="flex gap-2">
-                                {webRecommendations?.map((recommendation, index) => (
-                                    <Link key={index} href={recommendation.link} passHref>
-                                        <div className="bg-gray-900 w-max rounded-lg flex p-2 gap-2 border-2 border-gray-500 items-center">
-                                            <img width="50" height="50" src="https://img.icons8.com/forma-thin/50/EBEBEB/globe.png" alt="globe" />
-                                            <span>
-                                                <h4 className="m-0 truncate text-lg font-bold text-gray-200 line-clamp-1 w-52">
-                                                    {recommendation?.title}
-                                                </h4>
-                                                <h6 className="text-gray-300 font-bold  rounded-xl flex items-center gap-1">
-                                                    {recommendation?.website_name}
-                                                </h6>
-                                            </span>
-                                        </div>
-                                    </Link>
-                                ))}
-                            </div>
-                        </DisclosurePanel>
-                    )}
+                        ) :
+                            <DisclosurePanel className="text-gray-500 flex flex-col gap-2 ">
+                                <span className="bg-gray-600 h-0.5 w-full" ></span>
+                                <h5 className="text-lg text-gray-400">Youtube Videos {Array.isArray(ytRecommendations)}</h5>
+                                <div className="flex gap-2 flex-wrap">
+                                    {ytRecommendations?.map((recommendation, index) => (
+                                        <Link key={index} href={recommendation.link}>
+                                            <div className="bg-gray-900 w-max rounded-lg flex p-2 py-2 gap-2 border-2 border-gray-500 items-center">
+                                                <img width="50" height="50" src="https://img.icons8.com/ios/50/EBEBEB/youtube-play--v1.png" alt="youtube-play--v1" />
+                                                <span>
+                                                    <h4 className=" truncate text-lg font-bold text-gray-200 line-clamp-1 w-52">
+                                                        {recommendation?.title}
+                                                    </h4>
+                                                    <h6 className="text-gray-300 font-bold rounded-xl flex items-center gap-1">
+                                                        {recommendation?.channel_name}
+                                                    </h6>
+                                                </span>
+                                            </div>
+                                        </Link>
+                                    ))}
+                                </div>
+                                <h5 className="text-lg text-gray-400">Websites</h5>
+                                <div className="flex gap-2 flex-wrap ">
+                                    {webRecommendations?.map((recommendation, index) => (
+                                        <Link key={index} href={recommendation.link} passHref>
+                                            <div className="bg-gray-900 w-max rounded-lg flex p-2 gap-2 border-2 border-gray-500 items-center">
+                                                <img width="50" height="50" src="https://img.icons8.com/forma-thin/50/EBEBEB/globe.png" alt="globe" />
+                                                <span>
+                                                    <h4 className="m-0 truncate text-lg font-bold text-gray-200 line-clamp-1 w-52">
+                                                        {recommendation?.title}
+                                                    </h4>
+                                                    <h6 className="text-gray-300 font-bold  rounded-xl flex items-center gap-1">
+                                                        {recommendation?.website_name}
+                                                    </h6>
+                                                </span>
+                                            </div>
+                                        </Link>
+                                    ))}
+                                </div>
+                            </DisclosurePanel>
+                        )
+                    }
                 </Disclosure>
             )}
             {/* </div> */}

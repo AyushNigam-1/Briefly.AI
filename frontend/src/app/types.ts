@@ -79,6 +79,8 @@ export interface QueryInputProps {
     ytRecommendations?: ytRecommendations[]
     webRecommendations?: webRecommendations[]
     isloading: boolean
+    cancelRecommendations: () => void;
+    fetchRecommendations: (query: string) => void;
 }
 
 export interface SummaryCardProps {

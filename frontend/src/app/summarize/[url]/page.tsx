@@ -55,6 +55,7 @@ export const previewFile = async (file_url: string) => {
     return ""
 }
 
+let cancelTokenSource: AbortController | null = null;
 
 const page = () => {
 
@@ -95,26 +96,36 @@ const page = () => {
                 return false; // Failure
             }
     };
-    const fetchRecommendations = async (scriptId: string) => {
+    const fetchRecommendations = async (scriptId?: string) => {
         setRecommendationLoader(true)
+        if (cancelTokenSource) {
+            cancelTokenSource.abort(); // Cancel previous request if exists
+        }
+
+        cancelTokenSource = new AbortController(); // Create new instance
+        setRecommendationLoader(true);
         try {
             const token = Cookies.get("access_token");
             let response = await axios.get(`http://localhost:8000/summary/recommendations/?summary_id=${scriptId}`, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
+                signal: cancelTokenSource.signal, // Attach signal
+
             });
-            console.log(response.data)
             let recommendations = response.data.recommendations.replace(/```json|```/g, "").trim();
-            console.log(recommendations)
+            console.log(recommendations);
             const data = JSON.parse(recommendations);
-            setytRecommendations(data.youtube)
-            setWebRecommendations(data.website)
+            setytRecommendations(data.youtube);
+            setWebRecommendations(data.website);
         } catch (error) {
-            console.error("Error fetching recommendations:", error);
-        }
-        finally {
-            setRecommendationLoader(false)
+            if (axios.isCancel(error)) {
+                console.log("Request canceled by user:", error.message);
+            } else {
+                console.error("Error fetching recommendations:", error);
+            }
+        } finally {
+            setRecommendationLoader(false);
         }
     }
 
@@ -210,7 +221,12 @@ const page = () => {
         }
     }
 
-
+    const cancelRecommendations = () => {
+        if (cancelTokenSource) {
+            cancelTokenSource.abort();
+            console.log("Fetch request canceled.");
+        }
+    };
     useEffect(() => {
         if (summary) return
         connectWebSocket("ws://127.0.0.1:8000/ws")
@@ -409,7 +425,7 @@ const page = () => {
                     </div>
                 </div >
                 <div className="flex flex-col gap-3 p-2 w-full fixed bottom-0 left-0 right-0">
-                    <QueryInput setQueries={setQueries} url={url} setState={setState} id={summaryId} ytRecommendations={ytRecommendations} webRecommendations={webRecommendations} isloading={recommendationLoader} />
+                    <QueryInput setQueries={setQueries} cancelRecommendations={cancelRecommendations} url={url} setState={setState} id={summaryId} ytRecommendations={ytRecommendations} webRecommendations={webRecommendations} isloading={recommendationLoader} fetchRecommendations={fetchRecommendations} />
                 </div>
             </>
         )
