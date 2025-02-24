@@ -65,6 +65,7 @@ const page = () => {
     const [summaryId, setSummaryId] = useState<string | undefined>(undefined);
     const [progress, setProgress] = useState<ProgressResponse>();
     const [metadata, setMetadata] = useState<Metadata | undefined>(undefined)
+    // const []
     const searchParams = useSearchParams();
     const params = useParams();
     const id = searchParams.get('id') as string;
@@ -210,8 +211,16 @@ const page = () => {
 
     async function markSummaryAsFavorite(summaryId?: string) {
         try {
-            const response = await axios.post('http://localhost:8000/summary/favorite/', {
+            // console.log(summaryId)
+            const token = Cookies.get("access_token");
+
+            const response = await axios.post(`http://localhost:8000/summary/favorite?summary_id=${summaryId}`, {
                 summary_id: summaryId
+            }, {
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                },
+                withCredentials: true,
             });
 
             return response.data;

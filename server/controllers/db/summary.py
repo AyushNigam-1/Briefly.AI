@@ -218,3 +218,8 @@ async def mark_summary_as_favorite(user_id: str, summary_id: str):
         return {"message": "Summary marked as favorite successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    
+
+async def get_favorite_summaries_by_user(user_id: str):
+    favorites = summary_collection.find({"favorites": user_id})  # Assuming 'favorites' stores user_ids who favorited
+    return list(favorites)
