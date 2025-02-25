@@ -221,5 +221,32 @@ async def mark_summary_as_favorite(user_id: str, summary_id: str):
     
 
 async def get_favorite_summaries_by_user(user_id: str):
-    favorites = summary_collection.find({"favorites": user_id})  # Assuming 'favorites' stores user_ids who favorited
-    return list(favorites)
+    user = users_collection.find_one({"_id": ObjectId(user_id)})
+
+    if not user or "favorites" not in user or not user["favorites"]:
+        return []  # Return empty list if no favorites
+
+    pipeline = [
+        {
+            "$match": {"_id": ObjectId(user_id)}  # Find the user by ID
+        },
+        {
+            "$lookup": {
+                "from": "summary_collection",  # Collection name
+                "localField": "favorites",  # User's favorite summary IDs
+                "foreignField": "_id",  # Match with _id in summary_collection
+                "as": "favorite_summaries"  # Output field name
+            }
+        },
+        {
+            "$project": {
+                "_id": 0,  # Exclude user _id from output
+                "favorite_summaries": 1  # Only include populated summaries
+            }
+        }
+    ]
+
+    result = list(users_collection.aggregate(pipeline))
+    
+    return result[0]["favorite_summaries"] if result else []
+

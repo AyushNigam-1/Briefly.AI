@@ -28,6 +28,7 @@ const page: React.FC = () => {
                 withCredentials: true,
             });
             if (response.status === 200) {
+                localStorage.setItem('favourites', JSON.stringify(response.data.favourites));
                 router.push("/")
             } else {
                 setError(response.data.detail || 'Something went wrong');

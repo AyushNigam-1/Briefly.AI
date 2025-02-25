@@ -1,3 +1,4 @@
+"use client"
 import axios from 'axios';
 import Cookies from 'js-cookie'
 import { useEffect } from 'react';
@@ -12,7 +13,7 @@ const page = () => {
                 },
                 withCredentials: true,
             });
-
+            console.log(response)
             return response.data.favorites;
         } catch (error: any) {
             console.error('Error:', error.response?.data?.detail || error.message);

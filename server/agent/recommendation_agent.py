@@ -1,8 +1,9 @@
 import os
 from phi.agent import Agent
 from phi.model.groq import Groq
-# from googlesearch import search
-from phi.tools.duckduckgo import DuckDuckGo
+from phi.tools.duckduckgo import DuckDuckGo 
+from phi.tools.youtube_tools import YouTubeTools
+from phi.tools.website import WebsiteTools
 
 # Set up Groq API key
 GROQ_API_KEY = os.getenv('groq_api_key')
@@ -13,33 +14,43 @@ def create_recommendation_agent():
         name="Recommendation Agent",
         role="Take a summary as input and find similar websites and YouTube videos.",
         model=Groq(id="deepseek-r1-distill-llama-70b", api_key=GROQ_API_KEY), 
-        tools=[DuckDuckGo()],
-        instructions=[
-    "Take a summary as input.",
-    "Find similar websites by searching the web using the summary as a query.",
-    "Find relevant YouTube videos by searching YouTube using the summary as a query.",
-    "Return ONLY valid JSON output without any extra text, explanations, comments, or formatting like '```json' or triple quotes.",
-    "Do NOT include any introduction, conclusion, or extra paragraphs—ONLY the raw JSON data.",
-    "Ensure the JSON output follows this exact structure:",    
-    "{",
-    '  "youtube": [',
-    '    {"title": "Video Title 1", "channel_name": "Channel Name 1", "link": "https://youtube.com/video1"},',
-    '    {"title": "Video Title 2", "channel_name": "Channel Name 2", "link": "https://youtube.com/video2"},',
-    '    {"title": "Video Title 3", "channel_name": "Channel Name 3", "link": "https://youtube.com/video3"},',
-    '    {"title": "Video Title 4", "channel_name": "Channel Name 4", "link": "https://youtube.com/video4"},',
-    '    {"title": "Video Title 5", "channel_name": "Channel Name 5", "link": "https://youtube.com/video5"}',
-    "  ],",
-    '  "website": [',
-    '    {"title": "Website Title 1", "website_name": "Website Name 1", "link": "https://website1.com"},',
-    '    {"title": "Website Title 2", "website_name": "Website Name 2", "link": "https://website2.com"},',
-    '    {"title": "Website Title 3", "website_name": "Website Name 3", "link": "https://website3.com"},',
-    '    {"title": "Website Title 4", "website_name": "Website Name 4", "link": "https://website4.com"},',
-    '    {"title": "Website Title 5", "website_name": "Website Name 5", "link": "https://website5.com"}',
-    "  ]",
-    "}",
-    "If there are no results, return an empty list for 'youtube' or 'website', but maintain the JSON structure.",
-    "Do NOT return any text other than the JSON object."
-    ],
+        tools=[DuckDuckGo(),WebsiteTools(),YouTubeTools()],
+        instructions=[ 
+                "You are an intelligent web search and extraction agent. Your task is to take a summary as input and find relevant YouTube videos and websites. Your response must be in valid JSON format with accurate data."
+
+        "Guidelines:"
+        "1. Find relevant YouTube videos by searching YouTube using the summary as a query."
+        "2. Extract the correct YouTube video ID from the URL:"
+        "   - If the URL follows 'https://www.youtube.com/watch?v=VIDEO_ID', extract 'VIDEO_ID' after 'v='."
+        "   - If the URL follows 'https://youtu.be/VIDEO_ID', extract 'VIDEO_ID' directly."
+        "   - Remove any extra parameters such as '&t=30s'."
+        "   - Validate that 'VIDEO_ID' contains only alphanumeric characters, hyphens (-), and underscores (_)."
+        "   - Construct the thumbnail URL using:"
+        '     "thumbnail": "https://i.ytimg.com/vi/VIDEO_ID/maxresdefault.jpg"'
+        "   - If the 'maxresdefault.jpg' version does not exist, use:"
+        '     "thumbnail": "https://i.ytimg.com/vi/VIDEO_ID/hqdefault.jpg"'
+        "3. Find relevant websites using the summary as a query."
+        "4. Extract the best possible website icon:"
+        "   - First, check if the website has an Open Graph ('og:image') tag. If available, use it as the 'icon'."
+        "   - If 'og:image' is not available, check for the default favicon at 'https://website.com/favicon.ico'."
+        "   - If neither is available, set 'icon': null."
+        "   - Ensure the extracted 'icon' is a valid image URL ending with .jpg, .png, .ico, or .webp."
+        "5. The final JSON output must follow this exact structure, with no additional text, formatting, or explanations:"
+
+        "{"
+        '  "youtube": ['
+        '    {"title": "Video Title 1", "channel_name": "Channel Name 1", "link": "https://www.youtube.com/watch?v=VIDEO_ID_1", "thumbnail": "https://i.ytimg.com/vi/VIDEO_ID_1/maxresdefault.jpg"},'
+        '    {"title": "Video Title 2", "channel_name": "Channel Name 2", "link": "https://www.youtube.com/watch?v=VIDEO_ID_2", "thumbnail": "https://i.ytimg.com/vi/VIDEO_ID_2/maxresdefault.jpg"}'
+        "  ],"
+        '  "website": ['
+        '    {"title": "Website Title 1", "website_name": "Website Name 1", "link": "https://website1.com", "icon": "https://website1.com/favicon.ico"},'
+        '    {"title": "Website Title 2", "website_name": "Website Name 2", "link": "https://website2.com", "icon": "https://website2.com/favicon.ico"}'
+        "  ]"
+        "}"
+
+        "6. If no results are found, return an empty list for 'youtube' or 'website', but maintain the JSON structure."
+        "7. Do NOT return any text other than the JSON object."
+        ],
         markdown=False,
     )
     return recommendation_agent

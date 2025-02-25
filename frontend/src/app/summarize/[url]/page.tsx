@@ -241,6 +241,7 @@ const page = () => {
         connectWebSocket("ws://127.0.0.1:8000/ws")
         if (id) {
             setSummaryId(id)
+            fetchRecommendations(id)
         }
         else {
             getSummary(url, language, format, title, icon);
@@ -258,7 +259,7 @@ const page = () => {
                 setMetadata({ icon: thumbnail, title: data.summary.title, type: data.summary.type })
                 setSummary(data.summary);
                 setQueries(data.summary.queries)
-                fetchRecommendations(data.summary.id)
+                // fetchRecommendations(data.summary.id)
 
             } catch (error) {
                 console.error("Failed to fetch summary:", error);

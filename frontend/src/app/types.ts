@@ -94,9 +94,11 @@ export type ytRecommendations = {
     title: string,
     link: string,
     channel_name: string,
+    thumbnail: string
 }
 export type webRecommendations = {
     title: string,
     link: string,
     website_name: string,
+    icon: string,
 }

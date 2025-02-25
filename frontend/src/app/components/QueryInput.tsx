@@ -98,10 +98,10 @@ const QueryInput = ({ setQueries, url, setState, id, ytRecommendations, webRecom
                                         {ytRecommendations?.map((recommendation, index) => (
                                             <Link key={index} href={recommendation.link}>
                                                 <div className="bg-gray-900 w-max rounded-lg flex p-2 py-2 gap-2 border-2 border-gray-500 items-center">
-                                                    <img width="50" height="50" src="https://img.icons8.com/ios/50/EBEBEB/youtube-play--v1.png" alt="youtube-play--v1" />
+                                                    <img width="50" height="50" src={recommendation.thumbnail} alt="youtube-play--v1" />
                                                     <span>
                                                         <h4 className="truncate text-lg font-bold text-gray-200 line-clamp-1 w-52">{recommendation?.title}</h4>
-                                                        <h6 className="text-gray-300 font-bold rounded-xl flex items-center gap-1">{recommendation?.channel_name}</h6>
+                                                        <h6 className="text-gray-400 font-semibold rounded-xl flex items-center gap-1">{recommendation?.channel_name}</h6>
                                                     </span>
                                                 </div>
                                             </Link>
@@ -112,10 +112,10 @@ const QueryInput = ({ setQueries, url, setState, id, ytRecommendations, webRecom
                                         {webRecommendations?.map((recommendation, index) => (
                                             <Link key={index} href={recommendation.link} passHref>
                                                 <div className="bg-gray-900 w-max rounded-lg flex p-2 gap-2 border-2 border-gray-500 items-center">
-                                                    <img width="50" height="50" src="https://img.icons8.com/forma-thin/50/EBEBEB/globe.png" alt="globe" />
+                                                    <img width="50" height="50" src={recommendation?.icon} className="rounded-md" alt="globe" />
                                                     <span>
                                                         <h4 className="m-0 truncate text-lg font-bold text-gray-200 line-clamp-1 w-52">{recommendation?.title}</h4>
-                                                        <h6 className="text-gray-300 font-bold rounded-xl flex items-center gap-1">{recommendation?.website_name}</h6>
+                                                        <h6 className="text-gray-400 font-semibold rounded-xl flex items-center gap-1">{recommendation?.website_name}</h6>
                                                     </span>
                                                 </div>
                                             </Link>

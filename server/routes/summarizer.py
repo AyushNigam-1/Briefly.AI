@@ -107,7 +107,7 @@ async def get_favorite_summaries(current_user: dict = Depends(get_current_user))
     try:
         user_id = current_user["user_id"]
         favorite_summaries = await get_favorite_summaries_by_user(user_id)
-
+        print(favorite_summaries)
         return {"favorites": favorite_summaries}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
