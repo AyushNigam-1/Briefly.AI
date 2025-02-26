@@ -220,33 +220,35 @@ async def mark_summary_as_favorite(user_id: str, summary_id: str):
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
     
 
+def convert_objectid_to_str(doc):
+    if isinstance(doc, dict):
+        return {k: convert_objectid_to_str(v) for k, v in doc.items()}
+    elif isinstance(doc, list):
+        return [convert_objectid_to_str(item) for item in doc]
+    elif isinstance(doc, ObjectId):
+        return str(doc)
+    else:
+        return doc
+
 async def get_favorite_summaries_by_user(user_id: str):
     user = users_collection.find_one({"_id": ObjectId(user_id)})
-
-    if not user or "favorites" not in user or not user["favorites"]:
-        return []  # Return empty list if no favorites
-
-    pipeline = [
-        {
-            "$match": {"_id": ObjectId(user_id)}  # Find the user by ID
-        },
-        {
-            "$lookup": {
-                "from": "summary_collection",  # Collection name
-                "localField": "favorites",  # User's favorite summary IDs
-                "foreignField": "_id",  # Match with _id in summary_collection
-                "as": "favorite_summaries"  # Output field name
-            }
-        },
-        {
-            "$project": {
-                "_id": 0,  # Exclude user _id from output
-                "favorite_summaries": 1  # Only include populated summaries
-            }
-        }
-    ]
-
-    result = list(users_collection.aggregate(pipeline))
     
-    return result[0]["favorite_summaries"] if result else []
+    print("User Data:", user)  # Debugging
+    
+    if not user or "favorites" not in user or not user["favorites"]:
+        return []
+
+    try:
+        favorite_ids = [ObjectId(fav) for fav in user["favorites"]]
+    except Exception as e:
+        print("Error converting favorite IDs:", e)
+        return []
+
+    summaries = list(summary_collection.find({"_id": {"$in": favorite_ids}}))
+
+    print("Fetched Summaries:", summaries)  # Debugging
+
+    return convert_objectid_to_str(summaries)
+
+
 

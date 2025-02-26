@@ -97,38 +97,70 @@ const page = () => {
                 return false; // Failure
             }
     };
+
     const fetchRecommendations = async (scriptId?: string) => {
-        setRecommendationLoader(true)
+        setRecommendationLoader(true);
+
         if (cancelTokenSource) {
-            cancelTokenSource.abort(); // Cancel previous request if exists
+            cancelTokenSource.abort();
         }
 
-        cancelTokenSource = new AbortController(); // Create new instance
-        setRecommendationLoader(true);
+        cancelTokenSource = new AbortController();
+
         try {
             const token = Cookies.get("access_token");
-            let response = await axios.get(`http://localhost:8000/summary/recommendations/?summary_id=${scriptId}`, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-                signal: cancelTokenSource.signal, // Attach signal
+            if (!token) {
+                throw new Error("Unauthorized: No access token found");
+            }
 
-            });
+            const response = await axios.get(
+                `http://localhost:8000/summary/recommendations/?summary_id=${scriptId}`,
+                {
+                    headers: { Authorization: `Bearer ${token}` },
+                    signal: cancelTokenSource.signal,
+                }
+            );
+
+            console.log("Full API Response:", response.data);
+
+            if (!response.data || typeof response.data !== "object") {
+                throw new Error("Invalid response format: response data is not an object");
+            }
+
+            if (!response.data.recommendations || typeof response.data.recommendations !== "string") {
+                throw new Error("Invalid response format: recommendations field missing or not a string");
+            }
+
             let recommendations = response.data.recommendations.replace(/```json|```/g, "").trim();
-            console.log(recommendations);
-            const data = JSON.parse(recommendations);
-            setytRecommendations(data.youtube);
-            setWebRecommendations(data.website);
-        } catch (error) {
+
+            try {
+                const data = JSON.parse(recommendations);
+                console.log("Parsed Data:", data);
+
+                if (!data.youtube || !data.website) {
+                    throw new Error("Missing expected recommendation data");
+                }
+
+                setytRecommendations(data.youtube);
+                setWebRecommendations(data.website);
+            } catch (jsonError) {
+                console.error("Error parsing recommendations JSON:", jsonError);
+                throw new Error("Failed to parse recommendations JSON");
+            }
+        } catch (error: any) {
             if (axios.isCancel(error)) {
-                console.log("Request canceled by user:", error.message);
+                console.log("Request canceled:", error.message);
+            } else if (error.response) {
+                console.error("Server error:", error.response.status, error.response.data);
             } else {
-                console.error("Error fetching recommendations:", error);
+                console.error("Unexpected error fetching recommendations:", error.message || error);
             }
         } finally {
             setRecommendationLoader(false);
         }
-    }
+    };
+
+
 
     const handleRegenerate = async () => {
         setText2('Regenrating . . .')
@@ -197,7 +229,7 @@ const page = () => {
 
             setSummary(data.summary);
             setQueries(data.summary.queries);
-            fetchRecommendations(data.summary.id)
+            // fetchRecommendations(data.summary.id)
         } catch (error) {
             if (axios.isAxiosError(error)) {
                 throw new Error(error.response?.data?.message || error.message);
@@ -211,7 +243,7 @@ const page = () => {
 
     async function markSummaryAsFavorite(summaryId?: string) {
         try {
-            // console.log(summaryId)
+            console.log(summaryId)
             const token = Cookies.get("access_token");
 
             const response = await axios.post(`http://localhost:8000/summary/favorite?summary_id=${summaryId}`, {
