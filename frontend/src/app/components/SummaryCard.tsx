@@ -29,21 +29,26 @@ const SummaryCard = ({ summary, setIsDialogOpen, setSummaryId, previewUrl }: any
 
     return (
         <div className='bg-gray-900 w-full rounded-lg flex justify-between items-center  gap-2 m-1 border-2 border-gray-500 transition-all delay-100 hover:border-gray-300 hover:shadow-[0_0_10px_rgba(255,255,255,0.8)] cursor-pointer  '>
-            <Link href={`/summarize/${encodeURIComponent(summary.url)}?id=${summary.id}`} className='flex flex-col gap-2' >
-                {previewUrl ? (
-                    <img
-                        src={previewUrl}
-                        alt="Preview"
-                        className='object-cover m-0 rounded-lg'
-                    />
-                ) : (
-                    <div className='m-0 h-64 rounded-lg bg-gray-700' />
-                )}
-                <span className='p-2'>
-                    <h4 className='m-0 truncate line-clamp-2 text-lg font-bold text-gray-100 text-wrap'>
-                        {summary.title}
+            <div className='flex flex-col gap-2 w-full' >
+                <div className="w-full" >
+
+                    {previewUrl ? (
+                        <img
+                            src={previewUrl}
+                            alt="Preview"
+                            className='m-0 object-cover h-48 w-full'
+                        />
+                    ) : (
+                        <div className='m-0 h-48 rounded-lg bg-gray-700' />
+                    )}
+                </div>
+                <span className='flex flex-col h-full justify-between p-2 gap-2'>
+                    <h4 className='m-0 text-lg font-bold text-gray-100 line-clamp-2 min-h-14'>
+                        <Link href={`/summarize/${encodeURIComponent(summary.url)}?id=${summary.id}`} className="hover:underline" >
+                            {summary.title}
+                        </Link>
                     </h4>
-                    <div className='flex justify-between'>
+                    <div className='flex justify-between items-center mt-auto'>
                         <div className="flex gap-3">
                             <h6 className='text-gray-300 font-bold w-min py-1 p-1 rounded-xl flex items-center gap-1'>
                                 {
@@ -80,7 +85,7 @@ const SummaryCard = ({ summary, setIsDialogOpen, setSummaryId, previewUrl }: any
                         </button>
                     </div>
                 </span>
-            </Link>
+            </div>
             {/* <div className='flex gap-2' >
                     <button onClick={() => { setSummaryId(summary.id); setIsDialogOpen(true) }} className='bg-gradient-to-t from-red-500 to-gray-900 p-1 rounded-full'  >
                         <span className='bg-gray-900 p-2 text-xl rounded-full  flex items-center justify-center' >

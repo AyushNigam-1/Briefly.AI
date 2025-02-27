@@ -245,10 +245,22 @@ async def get_favorite_summaries_by_user(user_id: str):
         return []
 
     summaries = list(summary_collection.find({"_id": {"$in": favorite_ids}}))
+    result = []
+    for summary in summaries:
+        result.append({
+            "id": str(summary["_id"]),
+            "title": summary["title"],
+            "thumbnail": summary.get("thumbnail", ""),
+            "timestamp": summary["timestamp"],
+            "queries":len(summary["queries"]),
+            "url":summary["url"],
+            "type":summary["type"]
+        })
+        
 
-    print("Fetched Summaries:", summaries)  # Debugging
+    print("Fetched Summaries:", result)  # Debugging
 
-    return convert_objectid_to_str(summaries)
+    return result
 
 
 

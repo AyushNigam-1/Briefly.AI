@@ -7,6 +7,7 @@ import { Metadata, ProgressResponse, SummaryResponse, query, webRecommendations,
 import { setupWebSocketListeners } from '@/websocket/webEvent';
 import { connectWebSocket } from "@/websocket/websocket";
 import BarLoader from "react-spinners/BarLoader";
+import HashLoader from "react-spinners/HashLoader"
 import Navbar from '@/app/components/Navbar';
 import Sidebar from '@/app/components/Sidebar';
 import ReactMarkdown from 'react-markdown';
@@ -273,7 +274,7 @@ const page = () => {
         connectWebSocket("ws://127.0.0.1:8000/ws")
         if (id) {
             setSummaryId(id)
-            fetchRecommendations(id)
+            // fetchRecommendations(id)
         }
         else {
             getSummary(url, language, format, title, icon);
@@ -322,17 +323,16 @@ const page = () => {
     return isLoading ?
         <div className='h-screen w-screen flex flex-col items-center justify-center' >
             <div className='flex flex-col gap-3'>
-                <div className='flex justify-between ' >
+                {/* <div className='flex justify-between ' >
                     <h3 className='text-xl font-bold text-gray-200' > {progress?.message} </h3>
                     <h3 className='text-xl font-bold text-gray-200' >
                         {progress?.progress}%
                     </h3>
-                </div>
-                <BarLoader
+                </div> */}
+                <HashLoader
                     color={"#ffffff"}
                     loading={isLoading}
-                    height={10}
-                    width={600}
+                    size="100"
                     aria-label="Loading Spinner"
                     data-testid="loader" />
             </div>
@@ -342,12 +342,12 @@ const page = () => {
                 <Navbar component={<Sidebar setId={setSummaryId} />} />
                 <div className='gap-1 flex items-center justify-center flex-col max-h-[100vh] max-w-[100vw] '>
                     <div className="flex flex-col gap-3 rounded-lg shadow container overflow-y-scroll mb-40 scrollbar-thumb-gray-500 scrollbar-track-transparent scrollbar-thin scrollbar-track-rounded-full scrollbar-thumb-rounded-full" ref={queriesContainerRef}>
-                        <div className='flex justify-between mt-2 items-center' >
-                            <div className='bg-gray-900 w-max rounded-lg flex p-2 gap-2 border-2 border-gray-500 items-center'>
-                                <img src="https://img.icons8.com/ios/50/EBEBEB/youtube-play--v1.png" alt="youtube-play--v1" />
+                        {/* <div className='flex justify-between mt-2 items-center bg-gray-900' >
+                            <div className=' w-max rounded-lg flex p-2 gap-2 items-center '>
+                                <img src={metadata?.icon} alt="youtube-play--v1" className='w-16 ' />
                                 <span>
-                                    <h4 className='m-0 truncate text-lg font-bold text-gray-200' >{metadata?.title.split(" ").slice(0, 5).join(" ")}. . .</h4>
-                                    <h6 className='text-gray-400 font-bold w-min py-1 p-1 rounded-xl flex items-center gap-1'>
+                                    <h4 className='m-0 truncate text-lg font-bold text-gray-200' >{metadata?.title}</h4>
+                                    <h6 className='text-gray-400 font-bold w-min   rounded-xl flex items-center gap-1'>
                                         {
                                             metadata?.type == 'Video' ? <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5">
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" />
@@ -363,18 +363,18 @@ const page = () => {
                                 </span>
                             </div>
                             <div className='flex gap-3' >
-                                <button className='bg-gray-900 p-2 rounded-full' onClick={() => markSummaryAsFavorite(summary?.id)} >
+                                <button className=' p-2 rounded-full' onClick={() => markSummaryAsFavorite(summary?.id)} >
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-8">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
                                     </svg>
                                 </button>
-                                <button className='bg-gray-900 p-3 rounded-full' >
+                                <button className=' p-3 rounded-full' >
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
                                     </svg>
                                 </button>
                             </div>
-                        </div>
+                        </div> */}
                         <Disclosure>
                             <DisclosureButton className="flex items-center gap-2 text-gray-400">
                                 Thought <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-4">
@@ -385,7 +385,19 @@ const page = () => {
                                 {summary?.thought}
                             </DisclosurePanel>
                         </Disclosure>
-                        <div className="bg-gray-900 font-mono border-gray-700  w-100 p-4 rounded-lg prose-gray prose-lg w-full max-w-none">
+                        <div className="bg-gray-900 relative font-mono border-gray-700  w-100 p-4 rounded-lg prose-gray prose-lg w-full max-w-none">
+                            {/* <div className='flex gap-3 absolute right-0' >
+                                <button className='bg-gray-900 p-2 rounded-full' onClick={() => markSummaryAsFavorite(summary?.id)} >
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-8">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
+                                    </svg>
+                                </button>
+                                <button className='bg-gray-900 p-3 rounded-full' >
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                    </svg>
+                                </button>
+                            </div> */}
                             <ReactMarkdown
                                 remarkPlugins={[remarkGfm]}
                                 components={{
@@ -395,7 +407,7 @@ const page = () => {
                                 {summary?.summarized_summary}
                             </ReactMarkdown>
                         </div>
-                        <div className='flex justify-center gap-3' >
+                        <div className='flex justify-center gap-3 ' >
                             <button onClick={() => copyToClipboard(summary?.summarized_summary)} className='bg-gradient-to-t from-blue-500 to-gray-900 p-1 rounded-full'  >
                                 <span className='bg-gray-900 py-3 px-4 rounded-full flex gap-2 items-center text-lg justify-center' >
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
