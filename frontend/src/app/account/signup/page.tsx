@@ -18,8 +18,7 @@ const Page = () => {
             }, {
                 withCredentials: true,
             });
-            const token = response.data.access_token;
-            localStorage.setItem('access_token', token);
+            localStorage.setItem('favourites', JSON.stringify(response.data.favourites));
             router.push("/")
 
         } catch (err: any) {

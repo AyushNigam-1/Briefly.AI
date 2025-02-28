@@ -52,7 +52,7 @@ const QueryInput = ({ setQueries, url, setState, id, ytRecommendations, webRecom
     return (
         <div>
             {/* <div className="container my-2 mx-auto w-full" > */}
-            {showDisclosure && (
+            {/* {showDisclosure && (
                 <Disclosure as="div" className="container p-2 mx-auto w-full bg-gray-900 rounded-md border-2 border-gray-700 flex flex-col gap-2">
                     <div className="flex justify-between items-center">
                         <DisclosureButton className="text-gray-300 text-left text-lg font-semibold flex gap-2 items-center">
@@ -126,7 +126,7 @@ const QueryInput = ({ setQueries, url, setState, id, ytRecommendations, webRecom
                         </DisclosurePanel>
                     )}
                 </Disclosure>
-            )}
+            )} */}
             {/* </div> */}
             <div className="flex container my-2 mx-auto rounded-md border-2 border-gray-700">
                 <span className="bg-gray-900 pl-3 rounded-s-md py-4">

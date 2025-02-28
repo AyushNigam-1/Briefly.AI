@@ -14,6 +14,7 @@ from PIL import Image
 from controllers.db.conn import fs
 from utils.llm import llm
 from utils.common import split_content
+from agent.recommendation_agent import create_summary_agent
 WebSocket_uri = "ws://localhost:8080" 
 session = requests.Session()
 
@@ -174,7 +175,13 @@ async def get_youtube_summary(
     think_part, main_part = split_content(summary)
     await manager.send_message({"progress": 100, "message": "Summary generation completed."})
     save_result = save_summary_to_mongo(user_id,file_url,url,main_part,think_part, transcript,title , type='Video')
-
+    prompt = (
+            f"Summarize the YouTube video at {url} in {lang} language. "
+            f"Provide the summary in {format} format."
+        )
+    summary_agent = create_summary_agent()
+    res = summary_agent.run(prompt)
+    print(res.content)
     return save_result
     # return ""
 

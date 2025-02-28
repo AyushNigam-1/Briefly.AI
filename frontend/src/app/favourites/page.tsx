@@ -10,44 +10,8 @@ import Loader from "../components/Loader";
 import { SortOptions, SummaryHistoryResponse } from "../types";
 import SummaryCard from "../components/SummaryCard";
 
-// interface Summary {
-//     id: string;
-//     title: string;
-//     content: string;
-// }
-
 const Page = () => {
-    //     const [summaries, setSummaries] = useState<Summary[]>([]);
-    // const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
-
-    //     async function fetchFavoriteSummaries(): Promise<Summary[]> {
-    //         try {
-    //             const token = Cookies.get("access_token");
-    //             const response = await axios.get<{ favorites: Summary[] }>(
-    //                 "http://localhost:8000/summary/favorites/",
-    //                 {
-    //                     headers: {
-    //                         Authorization: `Bearer ${token}`,
-    //                     },
-    //                     withCredentials: true,
-    //                 }
-    //             );
-    //             return response.data.favorites;
-    //         } catch (error: any) {
-    //             setError(error.response?.data?.detail || error.message);
-    //             return [];
-    //         } finally {
-    //             setLoading(false);
-    //         }
-    //     }
-
-    //     useEffect(() => {
-    //         fetchFavoriteSummaries().then((data) => setSummaries(data));
-    //     }, []);
-
-    //     if (loading) return <p>Loading...</p>;
-    //     if (error) return <p>Error: {error}</p>;
     const [summaries, setSummaries] = useState<SummaryHistoryResponse[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [sortOrder, setSortOrder] = useState<string>('desc');
@@ -71,7 +35,43 @@ const Page = () => {
 
         )
     }], [])
+    // async function markSummaryAsFavorite(summaryId?: string) {
+    //     if (!summaryId) return { error: "Summary ID is required" };
 
+    //     try {
+    //         console.log("Toggling favorite for summary ID:", summaryId);
+    //         const token = Cookies.get("access_token");
+
+    //         const response = await axios.post(
+    //             `http://localhost:8000/summary/favorite?summary_id=${summaryId}`,
+    //             {},
+    //             {
+    //                 headers: {
+    //                     "Authorization": `Bearer ${token}`,
+    //                 },
+    //                 withCredentials: true,
+    //             }
+    //         );
+
+    //         const { status } = response.data;
+
+    //         setSummaries((prev) => {
+    //             let updatedFavourites;
+    //             if (status) {
+    //                 updatedFavourites = [...prev, summaryId];
+    //             } else {
+    //                 updatedFavourites = prev.filter(id => id !== summaryId);
+    //             }
+    //             localStorage.setItem("favourites", JSON.stringify(updatedFavourites));
+    //             return updatedFavourites;
+    //         });
+
+    //         return response.data;
+    //     } catch (error: any) {
+    //         console.error("Error toggling favorite:", error.response?.data?.detail || error.message);
+    //         return { error: error.response?.data?.detail || "Failed to toggle favorite" };
+    //     }
+    // }
     const handleDeleteSummary = async (summaryId?: string) => {
 
         try {

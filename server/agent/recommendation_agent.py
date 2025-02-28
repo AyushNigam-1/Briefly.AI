@@ -8,7 +8,21 @@ from phi.tools.website import WebsiteTools
 # Set up Groq API key
 GROQ_API_KEY = os.getenv('groq_api_key')
 
-# Define the Recommendation Agent
+def create_summary_agent():
+    summary_agent = Agent(
+    name="YouTube Summary Agent",
+    model=Groq(id="deepseek-r1-distill-llama-70b", api_key=GROQ_API_KEY), 
+    tools=[YouTubeTools()],
+    instructions=[
+        "You are an AI assistant that summarizes YouTube videos.",
+        "Extract the transcript of the given YouTube video and generate a summary.",
+        "Ensure the summary is in the specified format and language.",
+        "If the transcript is unavailable, inform the user.",
+    ],
+    )
+    return summary_agent
+
+
 def create_recommendation_agent():
     recommendation_agent = Agent(
         name="Recommendation Agent",

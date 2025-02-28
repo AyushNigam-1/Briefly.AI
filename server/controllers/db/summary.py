@@ -204,18 +204,21 @@ async def mark_summary_as_favorite(user_id: str, summary_id: str):
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
-        if "favorites" not in user:
-            user["favorites"] = []
+        favorites = user.get("favorites", [])
 
-        if summary_id in user["favorites"]:
-            raise HTTPException(status_code=400, detail="Summary already marked as favorite")
+        if summary_id in favorites:
+            users_collection.update_one(
+                {"_id": ObjectId(user_id)},
+                {"$pull": {"favorites": summary_id}}
+            )
+            return {"status": False, "summary_id": summary_id}  # Removed from favorites
 
         users_collection.update_one(
             {"_id": ObjectId(user_id)},
             {"$push": {"favorites": summary_id}}
         )
+        return {"status": True, "summary_id": summary_id}  # Added to favorites
 
-        return {"message": "Summary marked as favorite successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
     

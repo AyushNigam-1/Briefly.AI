@@ -32,9 +32,7 @@ async def auth(request: Request, response: Response):
 
     return {
         "message": "Authentication successful",
-        "access_token": result["access_token"],
-        "token_type": result["token_type"],
-        "favorites": result["favorites"]
+        "favourites": result["favorites"]
     }
 
 @router.post("/logout")

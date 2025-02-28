@@ -6,7 +6,6 @@ import Cookies from 'js-cookie';
 import { Metadata, ProgressResponse, SummaryResponse, query, webRecommendations, ytRecommendations } from '@/app/types';
 import { setupWebSocketListeners } from '@/websocket/webEvent';
 import { connectWebSocket } from "@/websocket/websocket";
-import BarLoader from "react-spinners/BarLoader";
 import HashLoader from "react-spinners/HashLoader"
 import Navbar from '@/app/components/Navbar';
 import Sidebar from '@/app/components/Sidebar';
@@ -340,8 +339,8 @@ const page = () => {
         : (
             <>
                 <Navbar component={<Sidebar setId={setSummaryId} />} />
-                <div className='gap-1 flex items-center justify-center flex-col max-h-[100vh] max-w-[100vw] '>
-                    <div className="flex flex-col gap-3 rounded-lg shadow container overflow-y-scroll mb-40 scrollbar-thumb-gray-500 scrollbar-track-transparent scrollbar-thin scrollbar-track-rounded-full scrollbar-thumb-rounded-full" ref={queriesContainerRef}>
+                <div className='gap-1 flex items-center justify-center flex-col  '>
+                    <div className="flex flex-col gap-3 rounded-lg shadow container overflow-y-scroll  scrollbar-thumb-gray-500 scrollbar-track-transparent scrollbar-thin scrollbar-track-rounded-full scrollbar-thumb-rounded-full" ref={queriesContainerRef}>
                         {/* <div className='flex justify-between mt-2 items-center bg-gray-900' >
                             <div className=' w-max rounded-lg flex p-2 gap-2 items-center '>
                                 <img src={metadata?.icon} alt="youtube-play--v1" className='w-16 ' />
@@ -386,18 +385,6 @@ const page = () => {
                             </DisclosurePanel>
                         </Disclosure>
                         <div className="bg-gray-900 relative font-mono border-gray-700  w-100 p-4 rounded-lg prose-gray prose-lg w-full max-w-none">
-                            {/* <div className='flex gap-3 absolute right-0' >
-                                <button className='bg-gray-900 p-2 rounded-full' onClick={() => markSummaryAsFavorite(summary?.id)} >
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-8">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
-                                    </svg>
-                                </button>
-                                <button className='bg-gray-900 p-3 rounded-full' >
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                                    </svg>
-                                </button>
-                            </div> */}
                             <ReactMarkdown
                                 remarkPlugins={[remarkGfm]}
                                 components={{

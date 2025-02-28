@@ -1,34 +1,34 @@
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { SummaryCardProps } from "../types";
+import { useEffect, useState } from "react";
+const SummaryCard = ({ summary, setIsDialogOpen, setSummaryId, previewUrl, markSummaryAsFavorite }: any) => {
+    const [favourites, setFavourites] = useState<string[]>([]);
 
-const SummaryCard = ({ summary, setIsDialogOpen, setSummaryId, previewUrl }: any) => {
-    const deleteSummary = () => {
+    useEffect(() => {
+        const storedFavourites: string[] = JSON.parse(localStorage.getItem("favourites") || "[]");
+        setFavourites(storedFavourites);
+    }, []);
 
-    }
     function formatRelativeDate(timestamp: string): string {
         const date = new Date(timestamp);
         const now = new Date();
 
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const yesterday = new Date(today);
-        yesterday.setDate(today.getDate() - 1);
+        const differenceInMilliseconds = now.getTime() - date.getTime();
+        const differenceInDays = Math.floor(differenceInMilliseconds / (1000 * 60 * 60 * 24));
+        const differenceInMonths = Math.floor(differenceInDays / 30);
+        const differenceInYears = Math.floor(differenceInDays / 365);
 
-        const differenceInDays = Math.floor((today.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-
-        if (date >= today) {
-            return "Today";
-        } else if (date >= yesterday) {
-            return "Yesterday";
-        } else if (differenceInDays <= 7) {
-            return "Previous 7 Days";
+        if (differenceInDays < 30) {
+            return `${differenceInDays} day${differenceInDays !== 1 ? 's' : ''} ago`;
+        } else if (differenceInDays < 365) {
+            return `${differenceInMonths} month${differenceInMonths !== 1 ? 's' : ''} ago`;
         } else {
-            return date.toLocaleDateString();
+            return `${differenceInYears} year${differenceInYears !== 1 ? 's' : ''} ago`;
         }
     }
 
+
     return (
-        <div className='bg-gray-900 w-full rounded-lg flex justify-between items-center  gap-2 m-1 border-2 border-gray-500 transition-all delay-100 hover:border-gray-300 hover:shadow-[0_0_10px_rgba(255,255,255,0.8)] cursor-pointer  '>
+        <div className='bg-gray-900 w-full rounded-lg flex justify-between items-center  gap-2 m-1 transition-all delay-100 '>
             <div className='flex flex-col gap-2 w-full' >
                 <div className="w-full" >
 
@@ -36,10 +36,10 @@ const SummaryCard = ({ summary, setIsDialogOpen, setSummaryId, previewUrl }: any
                         <img
                             src={previewUrl}
                             alt="Preview"
-                            className='m-0 object-cover h-48 w-full'
+                            className='m-0 object-cover h-48 w-full rounded-t-lg'
                         />
                     ) : (
-                        <div className='m-0 h-48 rounded-lg bg-gray-700' />
+                        <div className='m-0 h-48 rounded-t-lg bg-gray-700' />
                     )}
                 </div>
                 <span className='flex flex-col h-full justify-between p-2 gap-2'>
@@ -77,12 +77,20 @@ const SummaryCard = ({ summary, setIsDialogOpen, setSummaryId, previewUrl }: any
                                 {formatRelativeDate(summary.timestamp)}
                             </span>
                         </div>
-                        <button onClick={(event) => {
-                            event.stopPropagation(); setIsDialogOpen(true); setSummaryId(summary.id)
-                        }} ><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5 hover:text-red-500">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                            </svg>
-                        </button>
+                        <div className="flex gap-2" >
+                            <button onClick={() => markSummaryAsFavorite(summary.id)}>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill={favourites.includes(summary.id) ? "red" : "none"} viewBox="0 0 24 24" className={`size-5 hover:text-white stroke-white stroke-2  ${favourites.includes(summary.id) && 'fill-red-500 stroke-0'}`}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
+                                </svg>
+
+                            </button>
+                            <button onClick={(event) => {
+                                event.stopPropagation(); setIsDialogOpen(true); setSummaryId(summary.id)
+                            }} ><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5 hover:text-red-500">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                 </span>
             </div>
