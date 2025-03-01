@@ -134,13 +134,14 @@ def get_summary(id: str):
 
 
 @router.delete("/summary/")
-async def delete_summary(id: str):
+async def delete_summary(id: str,current_user: dict = Depends(get_current_user)):
     """
     Deletes a summary by its ID for the current user.
     """
     print(id)
+    user_id = current_user["user_id"]
     try:
-        result = delete_summary_by_id(id)
+        result = delete_summary_by_id(id,user_id)
         if "Invalid" in result:
             raise HTTPException(status_code=400, detail=result)
         elif "not found" in result:

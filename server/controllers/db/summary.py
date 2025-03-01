@@ -183,9 +183,9 @@ def get_summaries_by_user(user_id: str):
     except Exception as e:
         return f"An error occurred: {str(e)}"
 
-def delete_summary_by_id(id: str):
+def delete_summary_by_id(id: str, user_id: str):
     """
-    Deletes a summary from the MongoDB collection by its ID.
+    Deletes a summary from the MongoDB collection by its ID and removes it from the user's favorites if present.
     """
     print(id)
     if not is_valid_object_id(id):
@@ -195,8 +195,13 @@ def delete_summary_by_id(id: str):
 
     if result.deleted_count == 0:
         return "Summary not found or could not be deleted."
-    else:
-        return "Summary deleted successfully."
+
+    users_collection.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$pull": {"favorites": id}}
+    )
+
+    return "Summary deleted successfully."
 
 async def mark_summary_as_favorite(user_id: str, summary_id: str):
     try:

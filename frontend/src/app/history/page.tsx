@@ -19,6 +19,12 @@ const Page = () => {
     const [summaryId, setSummaryId] = useState<string | undefined>(undefined);
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [previewCache, setPreviewCache] = useState<{ [key: string]: string }>({});
+    const [favourites, setFavourites] = useState<string[]>([]);
+
+    useEffect(() => {
+        const storedFavourites: string[] = JSON.parse(localStorage.getItem("favourites") || "[]");
+        setFavourites(storedFavourites);
+    }, []);
 
     const confirmDelete = () => {
         setIsDialogOpen(false);
@@ -35,7 +41,39 @@ const Page = () => {
 
         )
     }], [])
+    async function markSummaryAsFavorite(summaryId?: string) {
+        console.log(summaryId)
+        if (!summaryId) return { error: "Summary ID is required" };
 
+        try {
+            console.log("Toggling favorite for summary ID:", summaryId);
+            const token = Cookies.get("access_token");
+
+            const response = await axios.post(
+                `http://localhost:8000/summary/favorite?summary_id=${summaryId}`,
+                {},
+                {
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                    },
+                    withCredentials: true,
+                }
+            );
+
+            const { status } = response.data;
+
+            setFavourites((e) => {
+                if (status) return [...e, summaryId]
+                else return [...e.filter(fav => fav != summaryId)]
+            })
+            localStorage.setItem("favourites", JSON.stringify(status ? [...favourites, summaryId] : [...favourites.filter(fav => fav != summaryId)]))
+
+            return response.data;
+        } catch (error: any) {
+            console.error("Error toggling favorite:", error.response?.data?.detail || error.message);
+            return { error: error.response?.data?.detail || "Failed to toggle favorite" };
+        }
+    }
     const handleDeleteSummary = async (summaryId?: string) => {
 
         try {
@@ -183,7 +221,7 @@ const Page = () => {
                 </div> : filteredSummaries.length > 0 ? <div className='grid grid-cols-4 gap-4  h-full scrollbar-thin' >
                     {filteredSummaries.map((summary) => (
                         <SummaryCard key={summary.id} summary={summary} previewUrl={previewCache[summary.id] || null}
-                            setIsDialogOpen={setIsDialogOpen} setSummaryId={setSummaryId} />))}
+                            setIsDialogOpen={setIsDialogOpen} setSummaryId={setSummaryId} markSummaryAsFavorite={markSummaryAsFavorite} favourites={favourites} />))}
                 </div> :
                     <p className='font-semibold text-xl text-center text-gray-400'>No history available.</p>
                 }

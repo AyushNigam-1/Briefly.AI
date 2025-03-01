@@ -35,43 +35,33 @@ const Page = () => {
 
         )
     }], [])
-    // async function markSummaryAsFavorite(summaryId?: string) {
-    //     if (!summaryId) return { error: "Summary ID is required" };
+    async function markSummaryAsFavorite(summaryId?: string) {
+        console.log(summaryId)
+        if (!summaryId) return { error: "Summary ID is required" };
 
-    //     try {
-    //         console.log("Toggling favorite for summary ID:", summaryId);
-    //         const token = Cookies.get("access_token");
+        try {
+            console.log("Toggling favorite for summary ID:", summaryId);
+            const token = Cookies.get("access_token");
 
-    //         const response = await axios.post(
-    //             `http://localhost:8000/summary/favorite?summary_id=${summaryId}`,
-    //             {},
-    //             {
-    //                 headers: {
-    //                     "Authorization": `Bearer ${token}`,
-    //                 },
-    //                 withCredentials: true,
-    //             }
-    //         );
+            const response = await axios.post(
+                `http://localhost:8000/summary/favorite?summary_id=${summaryId}`,
+                {},
+                {
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                    },
+                    withCredentials: true,
+                }
+            );
 
-    //         const { status } = response.data;
+            await fetchFavoriteSummaries()
 
-    //         setSummaries((prev) => {
-    //             let updatedFavourites;
-    //             if (status) {
-    //                 updatedFavourites = [...prev, summaryId];
-    //             } else {
-    //                 updatedFavourites = prev.filter(id => id !== summaryId);
-    //             }
-    //             localStorage.setItem("favourites", JSON.stringify(updatedFavourites));
-    //             return updatedFavourites;
-    //         });
-
-    //         return response.data;
-    //     } catch (error: any) {
-    //         console.error("Error toggling favorite:", error.response?.data?.detail || error.message);
-    //         return { error: error.response?.data?.detail || "Failed to toggle favorite" };
-    //     }
-    // }
+            return response.data;
+        } catch (error: any) {
+            console.error("Error toggling favorite:", error.response?.data?.detail || error.message);
+            return { error: error.response?.data?.detail || "Failed to toggle favorite" };
+        }
+    }
     const handleDeleteSummary = async (summaryId?: string) => {
 
         try {
@@ -97,9 +87,7 @@ const Page = () => {
             // setError("Failed to delete summary. Please try again."); // Set a user-friendly error message
         }
     };
-    useEffect(() => {
-        fetchFavoriteSummaries();
-    }, []);
+
 
     const handleSortChange = (order: string) => {
         setSortOrder(order);
@@ -124,6 +112,7 @@ const Page = () => {
             );
             console.log(response.data.favorites)
             setSummaries(response.data.favorites);
+            localStorage.setItem("favourites", JSON.stringify(response.data.favorites))
         } catch (error: any) {
             setError(error.response?.data?.detail || error.message);
             return [];
@@ -217,7 +206,7 @@ const Page = () => {
                 </div> : filteredSummaries.length > 0 ? <div className='grid grid-cols-4 gap-4  h-full scrollbar-thin' >
                     {filteredSummaries.map((summary) => (
                         <SummaryCard key={summary.id} summary={summary} previewUrl={previewCache[summary.id] || null}
-                            setIsDialogOpen={setIsDialogOpen} setSummaryId={setSummaryId} />))}
+                            setIsDialogOpen={setIsDialogOpen} setSummaryId={setSummaryId} markSummaryAsFavorite={markSummaryAsFavorite} />))}
                 </div> :
                     <p className='font-semibold text-xl text-center text-gray-400'>No history available.</p>
                 }

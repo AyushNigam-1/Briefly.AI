@@ -1,12 +1,6 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
-const SummaryCard = ({ summary, setIsDialogOpen, setSummaryId, previewUrl, markSummaryAsFavorite }: any) => {
-    const [favourites, setFavourites] = useState<string[]>([]);
-
-    useEffect(() => {
-        const storedFavourites: string[] = JSON.parse(localStorage.getItem("favourites") || "[]");
-        setFavourites(storedFavourites);
-    }, []);
+const SummaryCard = ({ summary, setIsDialogOpen, setSummaryId, previewUrl, markSummaryAsFavorite, favourites }: any) => {
 
     function formatRelativeDate(timestamp: string): string {
         const date = new Date(timestamp);
@@ -28,6 +22,7 @@ const SummaryCard = ({ summary, setIsDialogOpen, setSummaryId, previewUrl, markS
 
 
     return (
+
         <div className='bg-gray-900 w-full rounded-lg flex justify-between items-center  gap-2 m-1 transition-all delay-100 '>
             <div className='flex flex-col gap-2 w-full' >
                 <div className="w-full" >
