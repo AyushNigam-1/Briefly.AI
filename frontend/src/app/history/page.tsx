@@ -42,9 +42,8 @@ const Page = () => {
         )
     }], [])
     async function markSummaryAsFavorite(summaryId?: string) {
-        console.log(summaryId)
         if (!summaryId) return { error: "Summary ID is required" };
-
+        setFavourites((e) => !favourites.includes(summaryId) ? [...e, summaryId] : e.filter(fav => fav != summaryId))
         try {
             console.log("Toggling favorite for summary ID:", summaryId);
             const token = Cookies.get("access_token");
@@ -209,13 +208,7 @@ const Page = () => {
                         </Menu>
                     </div>
                 </div>
-                {/* {loading ? <div className='w-full flex justify-center items-center' >
-                        <Loader />
-                    </div> : <div className='grid grid-cols-4 gap-4  h-full' >
-                        {summaries.map((summary) => (
-                            <SummaryCard key={summary.id} summary={summary} handleDeleteSummary={handleDeleteSummary} setIsDialogOpen={setIsDialogOpen} setSummaryId={setSummaryId} />
-                        ))}
-                    </div>} */}
+
                 {loading ? <div className='w-full flex justify-center items-center' >
                     <Loader />
                 </div> : filteredSummaries.length > 0 ? <div className='grid grid-cols-4 gap-4  h-full scrollbar-thin' >

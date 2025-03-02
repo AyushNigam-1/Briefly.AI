@@ -179,9 +179,9 @@ async def get_youtube_summary(
             f"Summarize the YouTube video at {url} in {lang} language. "
             f"Provide the summary in {format} format."
         )
-    # summary_agent = create_summary_agent()
-    # res = summary_agent.run(prompt)
-    # print(res.content)
+    summary_agent = create_summary_agent()
+    res = summary_agent.run(prompt)
+    print(res.content)
     return save_result
     # return ""
 

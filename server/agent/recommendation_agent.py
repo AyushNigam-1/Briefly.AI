@@ -10,17 +10,20 @@ GROQ_API_KEY = os.getenv('groq_api_key')
 
 def create_summary_agent():
     summary_agent = Agent(
-    name="YouTube Summary Agent",
-    model=Groq(id="deepseek-r1-distill-llama-70b", api_key=GROQ_API_KEY), 
-    tools=[YouTubeTools()],
-    instructions=[
-        "You are an AI assistant that summarizes YouTube videos.",
-        "Extract the transcript of the given YouTube video and generate a summary.",
-        "Ensure the summary is in the specified format and language.",
-        "If the transcript is unavailable, inform the user.",
-    ],
+        name="YouTube Summary Agent",
+        model=Groq(id="deepseek-r1-distill-llama-70b", api_key=GROQ_API_KEY), 
+        tools=[YouTubeTools()],
+        instructions=[
+            "You are an AI assistant that summarizes YouTube videos.",
+            "Extract the transcript of the given YouTube video, whether manually added or auto-generated.",
+            "If a manually added transcript is available, use that. Otherwise, extract the auto-generated transcript.",
+            "Generate a summary in the specified format and language.",
+            "If no transcript (manual or auto-generated) is available, inform the user.",
+        ],
+        debug_mode=True,
     )
     return summary_agent
+
 
 
 def create_recommendation_agent():
@@ -65,6 +68,7 @@ def create_recommendation_agent():
         "6. If no results are found, return an empty list for 'youtube' or 'website', but maintain the JSON structure."
         "7. Do NOT return any text other than the JSON object."
         ],
+        debug_mode=True,
         markdown=False,
     )
     return recommendation_agent

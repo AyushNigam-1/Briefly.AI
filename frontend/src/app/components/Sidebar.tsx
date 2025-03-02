@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import Cookies from "js-cookie";
 import axios from "axios";
 import { SummaryHistoryResponse, SidebarProps } from "../types";
-import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
+import { Description, Dialog, DialogPanel, DialogTitle, Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
 
 const groupSummariesByDate = (summaries: SummaryHistoryResponse[]) => {
     const groupedSummaries: Record<string, SummaryHistoryResponse[]> = {
@@ -46,9 +46,10 @@ const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
     const [summaries, setSummaries] = useState<SummaryHistoryResponse[]>([]);
     const [filteredSummaries, setFilteredSummaries] = useState<SummaryHistoryResponse[]>([]);
     const [searchQuery, setSearchQuery] = useState<string>("");
-
+    const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false)
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
+    const [summaryId, setSummaryId] = useState<string | undefined>(undefined);
 
     const toggleSidebar = () => {
         setIsOpen(!isOpen);
@@ -80,10 +81,7 @@ const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
             return { error: error.response?.data?.detail || "Failed to toggle favorite" };
         }
     }
-    const handleDeleteSummary = async (summaryId: string) => {
-        if (!window.confirm("Are you sure you want to delete this summary?")) {
-            return;
-        }
+    const handleDeleteSummary = async () => {
 
         try {
             const token = Cookies.get("access_token");
@@ -98,6 +96,7 @@ const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
             if (response.status === 200) {
                 const updatedSummaries = summaries?.filter((summary) => summary.id !== summaryId);
                 setSummaries(updatedSummaries);
+                setId(updatedSummaries[-1].id)
             } else {
                 console.error("Error deleting summary:", response.data);
                 setError("Failed to delete summary. Please try again."); // Set a user-friendly error message
@@ -216,54 +215,24 @@ const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
                                             {groupedSummaries[date].map((summary) => (
                                                 <li
                                                     key={summary.id}
-                                                    className="text-gray-100 text-lg hover:text-gray-400  rounded-md mb-2 cursor-pointer flex items-center justify-between gap-4 "
+                                                    className="text-gray-100 text-lg   rounded-md mb-2 cursor-pointer flex items-center justify-between gap-4 "
                                                     onClick={() => setId(summary.id)}
                                                 >
-                                                    <p className="text-ellipsis overflow-hidden whitespace-nowrap">
+                                                    <p className="text-ellipsis overflow-hidden whitespace-nowrap hover:text-gray-400">
                                                         {summary.title}
                                                     </p>
-                                                    <Menu>
-                                                        <MenuButton className="inline-flex items-center gap-2 rounded-full bg-gray-800 p-1.5 text-sm/6 font-semibold text-white shadow-inner shadow-white/10 focus:outline-none data-[hover]:bg-gray-700 data-[open]:bg-gray-700 data-[focus]:outline-1 data-[focus]:outline-white" onClick={(e) => { e.stopPropagation(); console.log("clicked") }}>
-                                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 12.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 18.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Z" />
-                                                            </svg>
-                                                        </MenuButton>
-
-                                                        <MenuItems
-                                                            transition
-                                                            anchor="bottom end"
-                                                            className="w-52 origin-top-right rounded-xl border border-white/5 bg-white p-1 text-sm/6 text-white transition duration-100 ease-out [--anchor-gap:var(--spacing-1)] focus:outline-none data-[closed]:scale-95 data-[closed]:opacity-0"
-                                                        >
-                                                            <MenuItem>
-                                                                <button className="group flex w-full items-center gap-2 rounded-lg py-1.5 px-3 data-[focus]:bg-white/10" onClick={() => markSummaryAsFavorite(summary.id)}>
-                                                                    Mark As Favourite
-                                                                </button>
-                                                            </MenuItem>
-                                                            <MenuItem>
-                                                                <button className="group flex w-full items-center gap-2 rounded-lg py-1.5 px-3 data-[focus]:bg-white/10" onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleDeleteSummary(summary.id);
-                                                                }}>
-                                                                    Delete
-                                                                </button>
-                                                            </MenuItem>
-                                                            <div className="my-1 h-px bg-white/5" />
-
-                                                        </MenuItems>
-                                                    </Menu>
-                                                    {/* <button
-                                                        className="text-gray-500  hover:bg-white/30 rounded-full hover:text-white"
+                                                    <button
+                                                        className="text-gray-500   rounded-full hover:text-red-400"
                                                         onClick={(e) => {
-                                                            // e.stopPropagation();
-                                                            // handleDeleteSummary(summary.id);
+                                                            e.stopPropagation();
+                                                            setIsDialogOpen(true)
+                                                            setSummaryId(summary.id)
                                                         }}
                                                     >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 12.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 18.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Z" />
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
                                                         </svg>
-
-
-                                                    </button> */}
+                                                    </button>
                                                 </li>
                                             ))}
                                         </ul>
@@ -272,6 +241,36 @@ const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
                             </ul>
                         )}
                     </div>
+                    <Dialog open={isDialogOpen} onClose={() => setIsDialogOpen(false)} className="fixed inset-0 z-10 flex items-center justify-center bg-black bg-opacity-50">
+                        <DialogPanel
+                            transition
+                            className="w-full max-w-md rounded-xl flex flex-col gap-3 bg-[#1b283b] shadow-md  p-6 backdrop-blur-2xl duration-300 ease-out data-[closed]:transform-[scale(95%)] data-[closed]:opacity-0"
+                        >
+                            <DialogTitle className="text-2xl font-bold">Confirm Delete</DialogTitle >
+                            <Description className="text-gray-200 text-lg">
+                                Are you sure you want to delete this summary? This action cannot be undone.
+                            </Description>
+                            <div className="mt-4 flex justify-between gap-2">
+                                <button onClick={() => { handleDeleteSummary(); setIsDialogOpen(false) }} className='bg-gradient-to-t from-red-500 to-gray-900 p-1 rounded-full'  >
+                                    <span className='bg-gray-900 py-3 px-4 rounded-full flex gap-2 items-center text-lg justify-center' >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                        </svg>
+                                        Confirm
+                                    </span>
+                                </button>
+                                <button onClick={() => { setSummaryId(undefined); setIsDialogOpen(false) }} className='bg-gradient-to-t from-blue-500 to-gray-900 p-1 rounded-full'  >
+                                    <span className='bg-gray-900 py-3 px-4 rounded-full flex gap-2 items-center text-lg justify-center' >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                                        </svg>
+                                        Cancel
+                                    </span>
+                                </button>
+
+                            </div>
+                        </DialogPanel>
+                    </Dialog>
                 </div>
             </div>
         </div>
