@@ -18,3 +18,5 @@ uvicorn
 phidata
 duckduckgo-search
 uvicorn[standard]
+google-generativeai
+

@@ -110,16 +110,21 @@ const page = () => {
       const uploadedFile = e.target.files[0];
       setFile(uploadedFile)
       const metadata = uploadedFile.size >= 1048576 ? (uploadedFile.size / 1048576).toFixed(2) + ' MB' : (uploadedFile.size / 1024).toFixed(2) + ' KB';
-      const fileType = uploadedFile.type.startsWith('image/') ? 'image' : 'document';
+      let fileType;
       let icon;
-      if (fileType === 'image') {
-        icon = URL.createObjectURL(uploadedFile);
-      }
-      else if (uploadedFile.type === 'application/pdf') {
-        icon = 'https://img.icons8.com/color/50/google-docs.png'
-      }
-      else {
-        icon = 'https://img.icons8.com/color/50/google-docs.png'; // Default for other document types
+      let previewUrl = URL.createObjectURL(uploadedFile)
+      if (uploadedFile.type.startsWith('image/')) {
+        fileType = 'image';
+        icon = previewUrl;
+      } else if (uploadedFile.type.startsWith('video/')) {
+        fileType = 'video';
+        icon = 'https://img.icons8.com/color/50/video-file.png';
+      } else if (uploadedFile.type === 'application/pdf') {
+        fileType = 'document';
+        icon = 'https://img.icons8.com/color/50/google-docs.png';
+      } else {
+        fileType = 'document';
+        icon = 'https://img.icons8.com/color/50/file.png'; // Default for other document types
       }
       const fileMetaData = { title: uploadedFile.name, metadata, icon, preview: false, type: 'file' };
       setUrl(fileMetaData.title)
@@ -342,7 +347,7 @@ const page = () => {
                           </span>
                         </button>
                       </Link>
-                      <button className='bg-gradient-to-t from-red-500 to-gray-900 p-1 rounded-full' onClick={() => setMetadata(null)} >
+                      <button className='bg-gradient-to-t from-red-500 to-gray-900 p-1 rounded-full' onClick={() => { setUrl(null); setMetadata(null) }} >
                         <span className='bg-gray-900 p-2 text-xl rounded-full  flex items-center justify-center' >
                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />

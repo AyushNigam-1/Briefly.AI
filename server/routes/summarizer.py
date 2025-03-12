@@ -28,10 +28,12 @@ async def summarize_content(
     icon:str = Form(None),
     current_user: dict = Depends(get_current_user)
 ):
-    print("this is the url",url)
+    print("this is the url",url , file)
 
     if not url and not file:
         raise HTTPException(status_code=400, detail="Either 'url' or 'file' must be provided.")
+    
+    
 
     try:
         if url and not file:
