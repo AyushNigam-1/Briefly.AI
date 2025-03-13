@@ -33,7 +33,6 @@ async def summarize_content(
     if not url and not file:
         raise HTTPException(status_code=400, detail="Either 'url' or 'file' must be provided.")
     
-    
 
     try:
         if url and not file:
@@ -46,6 +45,7 @@ async def summarize_content(
                 summary = await get_web_summary(url, lang, format, title, current_user)
 
         elif file:
+            print("file -->" , file)
             summary = await get_file_summary(url ,file, lang, format, title, current_user) 
         return {"summary": summary }
 

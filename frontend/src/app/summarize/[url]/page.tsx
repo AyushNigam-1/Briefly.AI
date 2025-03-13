@@ -201,6 +201,7 @@ const page = () => {
                     }
                     const blob = await response.blob();
                     file = new File([blob], title || "uploaded_file", { type: blob.type });
+                    console.log(file)
                 } else {
                     const urlRegex = /^(https?:\/\/[^\s/$.?#].[^\s]*)$/i;
                     if (!urlRegex.test(decodedUrl)) {
@@ -235,7 +236,7 @@ const page = () => {
 
             setSummary(data.summary);
             setQueries(data.summary.queries);
-            // fetchRecommendations(data.summary.id)
+            fetchRecommendations(data.summary.id)
         } catch (error) {
             if (axios.isAxiosError(error)) {
                 throw new Error(error.response?.data?.message || error.message);

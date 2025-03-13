@@ -118,7 +118,7 @@ const page = () => {
         icon = previewUrl;
       } else if (uploadedFile.type.startsWith('video/')) {
         fileType = 'video';
-        icon = 'https://img.icons8.com/color/50/video-file.png';
+        icon = previewUrl
       } else if (uploadedFile.type === 'application/pdf') {
         fileType = 'document';
         icon = 'https://img.icons8.com/color/50/google-docs.png';
