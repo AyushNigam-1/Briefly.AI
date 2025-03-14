@@ -16,8 +16,11 @@ import os
 from utils.common import split_content
 import tempfile
 from dotenv import load_dotenv
-import google.generativeai as genai
-from google.generativeai import upload_file,get_file
+# import google.generativeai as genai
+# from google.generativeai import upload_file,get_file
+from google import genai
+
+import time
 
 load_dotenv()
 
@@ -25,7 +28,7 @@ ocrspace_api_key = os.getenv("ocrspace_api_key")
 
 API_KEY=os.getenv("GOOGLE_API_KEY")
 if API_KEY:
-    genai.configure(api_key=API_KEY)
+    client = genai.Client(api_key=API_KEY)
 
 def extract_text_with_ocrspace(image_path: str) -> str:
     """Extract text from an image using OCR.space API."""
@@ -77,10 +80,6 @@ async def get_file_summary(url ,file, lang: str, format: str, title: str, curren
             raise ValueError("File must have a valid filename.")
 
         mime_type = mimetypes.guess_type(file.filename)[0]
-        print(mime_type[0] , file.filename)
-        print(mime_type.startswith("video"))
-        # if not mime_type:
-        #     raise ValueError("Unsupported file type. Only images and PDFs are allowed.")
 
         result = await fetch_existing_summary(user_id, file.filename, manager)
         if result:
@@ -90,26 +89,35 @@ async def get_file_summary(url ,file, lang: str, format: str, title: str, curren
         extracted_text = ""
         if mime_type.startswith("video"):
             type = "Video"
+
             with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as temp_video:
-                video_path = temp_video.name
-                uploaded_video = upload_file(video_path)
+                temp_video.write(file_stream.read())  # Write the uploaded file to disk
+                video_path = temp_video.name  # Get the path of the saved file
 
-                # Wait until processing is complete
-                while uploaded_video.state.name == "PROCESSING":
-                    uploaded_video = get_file(uploaded_video.name)
+            video_file = client.files.upload(file=video_path)
 
-                # Generate the summary using Gemini model
-                model = genai.GenerativeModel("gemini-1.5-pro")  # Use the latest available Gemini model
+            while True:
+                video_file = client.files.get(name=video_file.name)
+                if video_file.state.name == "ACTIVE":
+                    break
+                elif video_file.state.name == "FAILED":
+                    raise ValueError("File processing failed.")
+                time.sleep(2)  # Avoid spamming API requests
 
-                # Generate summary
-                response = model.generate_content([
+            system_prompt = "You should provide a quick 2 or 3 sentence summary of what is happening in the video."
+            model = genai.GenerativeModel("gemini-1.5-pro")
+            response = client.models.generate_content(
+                model=f"models/{model}",
+                contents=[
                     "Summarize the key events and main points from this video.",
-                    uploaded_video  # Directly pass the uploaded video object
-                ])
-
-
-                # Print the summary
-                print(response.text)
+                    video_file
+                    ],
+                # config=types.GenerateContentConfig(
+                #     system_instruction=system_prompt,
+                #     ),
+                )
+            print(response.text)
+            return response.text
 
                     
         elif mime_type.startswith("image"):
