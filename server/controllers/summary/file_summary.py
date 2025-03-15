@@ -102,19 +102,16 @@ async def get_file_summary(url ,file, lang: str, format: str, title: str, curren
                     break
                 elif video_file.state.name == "FAILED":
                     raise ValueError("File processing failed.")
-                time.sleep(2)  # Avoid spamming API requests
+                time.sleep(2)  
 
-            system_prompt = "You should provide a quick 2 or 3 sentence summary of what is happening in the video."
-            model = genai.GenerativeModel("gemini-1.5-pro")
+            model = "gemini-1.5-pro"
             response = client.models.generate_content(
                 model=f"models/{model}",
                 contents=[
                     "Summarize the key events and main points from this video.",
                     video_file
                     ],
-                # config=types.GenerateContentConfig(
-                #     system_instruction=system_prompt,
-                #     ),
+
                 )
             print(response.text)
             return response.text
@@ -128,15 +125,24 @@ async def get_file_summary(url ,file, lang: str, format: str, title: str, curren
                 image = image.convert("RGB")
             max_size = (1024, 1024)
             image = ImageOps.contain(image, max_size)
-            image.save("temp_image.jpg")
-            extracted_text = extract_text_with_ocrspace("temp_image.jpg")
+            # extracted_text = extract_text_with_ocrspace("temp_image.jpg")
+            # img_byte_arr = BytesIO()
+            # image.save(img_byte_arr, format="JPEG")
+            # im = Image.open(BytesIO(open("temp_image.jpg", "rb").read()))
+            # im.thumbnail([1024,1024], Image.Resampling.LANCZOS)
 
-            img_byte_arr = BytesIO()
-            image.save(img_byte_arr, format="JPEG")
-            img_byte_arr.seek(0)  # Rewind the file pointer to the beginning
-            gridfs_file = fs.put(img_byte_arr, filename=file.filename, content_type="image/jpeg")
+            response = client.models.generate_content(
+                model="gemini-2.0-flash",
+                contents=["What is this image?", image])
 
-            file_url = f'files/?id={gridfs_file}'
+            print(response.text)
+
+            # Check output
+            # print(response.text)
+            # img_byte_arr.seek(0)  # Rewind the file pointer to the beginning
+            # gridfs_file = fs.put(img_byte_arr, filename=file.filename, content_type="image/jpeg")
+
+            # file_url = f'files/?id={gridfs_file}'
 
         # Handle PDF
         elif mime_type == "application/pdf":
