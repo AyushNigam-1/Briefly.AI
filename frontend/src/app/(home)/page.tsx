@@ -121,7 +121,7 @@ const page = () => {
         icon = previewUrl
       } else if (uploadedFile.type === 'application/pdf') {
         fileType = 'document';
-        icon = 'https://img.icons8.com/color/50/google-docs.png';
+        icon = previewUrl;
       } else {
         fileType = 'document';
         icon = 'https://img.icons8.com/color/50/file.png'; // Default for other document types
