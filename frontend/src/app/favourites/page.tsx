@@ -88,15 +88,25 @@ const Page = () => {
     };
 
     function formatRelativeDate(timestamp: string): string {
-        const date = new Date(timestamp);
+        const cleanedTimestamp = timestamp.split('.')[0] + 'Z';
+        const date = new Date(cleanedTimestamp);
         const now = new Date();
 
         const differenceInMilliseconds = now.getTime() - date.getTime();
-        const differenceInDays = Math.floor(differenceInMilliseconds / (1000 * 60 * 60 * 24));
+        const differenceInSeconds = Math.floor(differenceInMilliseconds / 1000);
+        const differenceInMinutes = Math.floor(differenceInSeconds / 60);
+        const differenceInHours = Math.floor(differenceInMinutes / 60);
+        const differenceInDays = Math.floor(differenceInHours / 24);
         const differenceInMonths = Math.floor(differenceInDays / 30);
         const differenceInYears = Math.floor(differenceInDays / 365);
 
-        if (differenceInDays < 30) {
+        if (differenceInMinutes < 1) {
+            return "just now";
+        } else if (differenceInMinutes < 60) {
+            return `${differenceInMinutes} minute${differenceInMinutes !== 1 ? 's' : ''} ago`;
+        } else if (differenceInHours < 24) {
+            return `${differenceInHours} hour${differenceInHours !== 1 ? 's' : ''} ago`;
+        } else if (differenceInDays < 30) {
             return `${differenceInDays} day${differenceInDays !== 1 ? 's' : ''} ago`;
         } else if (differenceInDays < 365) {
             return `${differenceInMonths} month${differenceInMonths !== 1 ? 's' : ''} ago`;

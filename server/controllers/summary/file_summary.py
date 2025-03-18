@@ -16,8 +16,10 @@ import os
 from utils.common import split_content
 import tempfile
 from dotenv import load_dotenv
-# import google.generativeai as genai
-# from google.generativeai import upload_file,get_file
+from google.genai import types
+import cv2
+import fitz  # PyMuPDF
+
 from google import genai
 
 import time
@@ -91,18 +93,30 @@ async def get_file_summary(url ,file, lang: str, format: str, title: str, curren
             type = "Video"
 
             with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as temp_video:
-                temp_video.write(file_stream.read())  # Write the uploaded file to disk
-                video_path = temp_video.name  # Get the path of the saved file
+                temp_video.write(file_stream.read())  
+                video_path = temp_video.name  
 
-            video_file = client.files.upload(file=video_path)
+            cap = cv2.VideoCapture(video_path)
+            success, frame = cap.read()
+            cap.release()
+
+            if success:
+                thumbnail_path = video_path.replace('.mp4', '.jpg')
+                cv2.imwrite(thumbnail_path, frame)  
+                os.remove(video_path)  
+
+                thumbnail_file = client.files.upload(file=thumbnail_path)
+                video_file = client.files.upload(file=video_path)
+            else:
+                raise ValueError("Failed to extract thumbnail.")
 
             while True:
-                video_file = client.files.get(name=video_file.name)
-                if video_file.state.name == "ACTIVE":
+                thumbnail_file = client.files.get(name=video_file.name)
+                if thumbnail_file.state.name == "ACTIVE":
                     break
-                elif video_file.state.name == "FAILED":
+                elif thumbnail_file.state.name == "FAILED":
                     raise ValueError("File processing failed.")
-                time.sleep(2)  
+                time.sleep(2)
 
             model = "gemini-1.5-pro"
             response = client.models.generate_content(
@@ -110,11 +124,13 @@ async def get_file_summary(url ,file, lang: str, format: str, title: str, curren
                 contents=[
                     "Summarize the key events and main points from this video.",
                     video_file
-                    ],
-
-                )
-            print(response.text)
-            return response.text
+                ],
+            )
+            main_part = response.text
+            with open(thumbnail_path, "rb") as f:
+                file_id = fs.put(f, filename=thumbnail_file.name)
+                
+            file_url = f"files/?id={file_id}" 
 
                     
         elif mime_type.startswith("image"):
@@ -125,83 +141,62 @@ async def get_file_summary(url ,file, lang: str, format: str, title: str, curren
                 image = image.convert("RGB")
             max_size = (1024, 1024)
             image = ImageOps.contain(image, max_size)
-            # extracted_text = extract_text_with_ocrspace("temp_image.jpg")
-            # img_byte_arr = BytesIO()
-            # image.save(img_byte_arr, format="JPEG")
-            # im = Image.open(BytesIO(open("temp_image.jpg", "rb").read()))
-            # im.thumbnail([1024,1024], Image.Resampling.LANCZOS)
+            img_byte_arr = BytesIO()
+            image.save(img_byte_arr, format="JPEG")
 
             response = client.models.generate_content(
                 model="gemini-2.0-flash",
                 contents=["What is this image?", image])
 
-            print(response.text)
+            main_part = response.text
 
-            # Check output
-            # print(response.text)
-            # img_byte_arr.seek(0)  # Rewind the file pointer to the beginning
-            # gridfs_file = fs.put(img_byte_arr, filename=file.filename, content_type="image/jpeg")
+            img_byte_arr.seek(0)  
+            gridfs_file = fs.put(img_byte_arr, filename=file.filename, content_type="image/jpeg")
 
-            # file_url = f'files/?id={gridfs_file}'
+            file_url = f'files/?id={gridfs_file}'
 
-        # Handle PDF
         elif mime_type == "application/pdf":
-            page_summaries = []  # Array to store summaries for each page
-            page_titles = []  # Array to store titles for each page
-            type = "File"
-            file_stream.seek(0)
-            pdf_reader = PdfReader(file_stream)
-            total_pages = len(pdf_reader.pages)
-            for page_num, page in enumerate(pdf_reader.pages):
-                # Extract text for the current page
-                page_text = page.extract_text() or ""
-                page_summaries.append(page_text)
-                page_titles.append(f"Reading page {page_num + 1} and summarizing page {page_num + 1}")
-                await manager.send_message({"progress": (10 + (80 / total_pages) * (page_num + 1)), 
-                                            "message": page_titles[-1]})  # Progress and page title
-                
-                # Summarize the page text
-                corrected_text = correct_summary(page_text, lang)
-                document = Document(page_content=corrected_text)
-                prompt = PromptTemplate(template="Summarize the following text succinctly and clearly.", input_variables=["text"])
-                chain = load_summarize_chain(llm, chain_type="stuff", prompt=prompt)
-                page_summary = chain.run({"input_documents": [document], "language": lang, "format": format})
-                page_summaries[page_num] = page_summary
+            type = "PDF"
+            prompt = "Summarize this document"
+            doc_data = await file.read()
+
+            temp_pdf_fd, temp_pdf_path = tempfile.mkstemp(suffix=".pdf")
+            os.close(temp_pdf_fd)  
+
+            with open(temp_pdf_path, "wb") as temp_pdf:
+                temp_pdf.write(doc_data)  
+
+            doc = fitz.open(temp_pdf_path)
+            pix = doc[0].get_pixmap()
+
+            temp_img_path = temp_pdf_path.replace(".pdf", ".jpg")
+            pix.save(temp_img_path)
+
+            with open(temp_img_path, "rb") as f:
+                thumbnail_id = fs.put(f, filename=file.filename.replace(".pdf", ".jpg"))
+
+            file_url = f'files/?id={thumbnail_id}'
+
+            response = client.models.generate_content(
+                model="gemini-1.5-flash",
+                contents=[
+                    types.Part.from_bytes(
+                        data=doc_data,
+                        mime_type="application/pdf",
+                    ),
+                    prompt
+                ]
+            )
+
+            main_part = response.text
 
         else:
             raise ValueError("Unsupported file type.")
 
-        if not extracted_text.strip():
+        if not main_part:
             raise ValueError("No text extracted from the file.")
 
-        await manager.send_message({"progress": 50, "message": "Text extracted. Refining..."})
-        corrected_text = correct_summary(extracted_text, lang)
-
-        await manager.send_message({"progress": 75, "message": "Generating summary..."})
-        prompt_template = (
-            "Convert the following YouTube transcript into a refined and human-friendly output based on the specified action."
-            "1. Action: Perform the task specified below:{format}"
-            "If shorten, reduce the transcript to its most essential points while maintaining clarity and meaning. Ensure brevity without losing important details."
-            "If extend, expand the transcript by adding more details, explanations, and examples to make the content richer and more engaging."
-            "    If summarize, condense the transcript into a concise overview by capturing only the main ideas and key points."
-            "    If key points, extract the most important and actionable points from the transcript in bullet form, without additional explanations."
-            "2. Language: Write the output in {language}."
-            "3. Style: Write in a natural, polished, and human-friendly tone."
-            "4. Enhancements: Ensure the content is clear, free of redundancy, and flows smoothly. Add transitions or structure (e.g., headings or bullet points) where necessary."
-            "Transcript: {text}"
-            )
-        if format == 'Custom':
-            user_prompt_data = get_prompt_by_user(user_id)
-            user_prompt = None if "error" in user_prompt_data else user_prompt_data.get("prompt")
-            if user_prompt:
-                prompt_template = user_prompt + "\n\nThe subtitle is - {text} and the language should strictly be - {language}."
-            
-        prompt = PromptTemplate(template=prompt_template, input_variables=["text", "language", "format"])
-        chain = load_summarize_chain(llm, chain_type="stuff", prompt=prompt)
-        document = Document(page_content=corrected_text)
-        summary = chain.run({"input_documents": [document], "language": lang, "format": format})
-        think_part, main_part = split_content(summary)
-        await manager.send_message({"progress": 100, "message": "Summary generation completed."})
+        think_part = ""
         save_result = save_summary_to_mongo(user_id,file_url,url,main_part,think_part, extracted_text,title , type)
         return save_result
 

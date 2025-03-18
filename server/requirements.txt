@@ -19,4 +19,5 @@ phidata
 duckduckgo-search
 uvicorn[standard]
 google-generativeai
+opencv-python
 

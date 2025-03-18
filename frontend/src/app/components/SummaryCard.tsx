@@ -3,15 +3,25 @@ import { useEffect, useState } from "react";
 const SummaryCard = ({ summary, setIsDialogOpen, setSummaryId, previewUrl, markSummaryAsFavorite, favourites }: any) => {
 
     function formatRelativeDate(timestamp: string): string {
-        const date = new Date(timestamp);
+        const cleanedTimestamp = timestamp.split('.')[0] + 'Z';
+        const date = new Date(cleanedTimestamp);
         const now = new Date();
 
         const differenceInMilliseconds = now.getTime() - date.getTime();
-        const differenceInDays = Math.floor(differenceInMilliseconds / (1000 * 60 * 60 * 24));
+        const differenceInSeconds = Math.floor(differenceInMilliseconds / 1000);
+        const differenceInMinutes = Math.floor(differenceInSeconds / 60);
+        const differenceInHours = Math.floor(differenceInMinutes / 60);
+        const differenceInDays = Math.floor(differenceInHours / 24);
         const differenceInMonths = Math.floor(differenceInDays / 30);
         const differenceInYears = Math.floor(differenceInDays / 365);
 
-        if (differenceInDays < 30) {
+        if (differenceInMinutes < 1) {
+            return "just now";
+        } else if (differenceInMinutes < 60) {
+            return `${differenceInMinutes} minute${differenceInMinutes !== 1 ? 's' : ''} ago`;
+        } else if (differenceInHours < 24) {
+            return `${differenceInHours} hour${differenceInHours !== 1 ? 's' : ''} ago`;
+        } else if (differenceInDays < 30) {
             return `${differenceInDays} day${differenceInDays !== 1 ? 's' : ''} ago`;
         } else if (differenceInDays < 365) {
             return `${differenceInMonths} month${differenceInMonths !== 1 ? 's' : ''} ago`;
@@ -52,7 +62,7 @@ const SummaryCard = ({ summary, setIsDialogOpen, setSummaryId, previewUrl, markS
                                     </svg> : summary.type == 'Image' ? <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
                                     </svg>
-                                        : <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                                        : <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5">
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
                                         </svg>
                                 }

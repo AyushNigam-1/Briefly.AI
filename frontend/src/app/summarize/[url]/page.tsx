@@ -353,8 +353,8 @@ const page = () => {
                 <div className='gap-1 flex items-center justify-center flex-col'>
                     <div className="flex flex-col gap-3 rounded-lg shadow container overflow-y-hidden scrollbar-none " >
                         <div className='flex justify-between p-2 items-center bg-gray-900 rounded-e-lg' >
-                            <div className=' w-max rounded-lg flex p-2 gap-3 items-center '>
-                                <img src={metadata?.icon} alt="youtube-play--v1 " className='w-16 h-14 rounded-lg' />
+                            <div className=' w-max rounded-lg flex gap-3 items-center '>
+                                <img src={metadata?.icon} alt="youtube-play--v1 " className=' h-14 rounded-lg' />
                                 <span className='flex flex-col'>
                                     <h6 className='text-gray-400 text-sm font-bold w-min rounded-xl flex items-center gap-1'>
                                         {metadata?.type}

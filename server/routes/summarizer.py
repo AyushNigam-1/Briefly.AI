@@ -33,7 +33,6 @@ async def summarize_content(
     if not url and not file:
         raise HTTPException(status_code=400, detail="Either 'url' or 'file' must be provided.")
     
-
     try:
         if url and not file:
             url = unquote(url)
