@@ -8,7 +8,6 @@ import Navbar from "../components/Navbar";
 import { Description, Dialog, DialogPanel, DialogTitle, Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import Loader from "../components/Loader";
 import { SortOptions, SummaryHistoryResponse } from "../types";
-import SummaryCard from "../components/SummaryCard";
 import Link from "next/link";
 
 const Page = () => {

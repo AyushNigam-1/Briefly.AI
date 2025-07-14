@@ -9,7 +9,7 @@ load_dotenv()
 CONNECTION_STRING = os.getenv("mongo_db_uri")
 
 # Set up MongoDB connection and client
-client = MongoClient(CONNECTION_STRING)
+client = MongoClient("mongodb+srv://AyushNigam:Ayush@cluster0.zg5uxhv.mongodb.net/admin")
 db = client['briefly']  # Database name
 fs = gridfs.GridFS(db)
 users_collection = db['users']  # Users collection

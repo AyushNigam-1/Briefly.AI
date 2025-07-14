@@ -9,6 +9,7 @@ from fastapi import  HTTPException
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from typing import Any
+
 load_dotenv()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")

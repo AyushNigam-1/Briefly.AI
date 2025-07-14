@@ -22,8 +22,8 @@ const Page = () => {
     const [favourites, setFavourites] = useState<string[]>([]);
 
     useEffect(() => {
-        const storedFavourites: string[] = JSON.parse(localStorage.getItem("favourites") || "[]");
-        setFavourites(storedFavourites);
+        const storedFavourites: any[] = JSON.parse(localStorage.getItem("favourites") || "[]");
+        setFavourites(storedFavourites.map(fav => fav.id));
     }, []);
 
     const confirmDelete = () => {

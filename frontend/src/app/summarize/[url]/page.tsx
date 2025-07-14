@@ -85,8 +85,9 @@ const page = () => {
     const [favourites, setFavourites] = useState<string[]>([]);
 
     useEffect(() => {
-        const storedFavourites: string[] = JSON.parse(localStorage.getItem("favourites") || "[]");
-        setFavourites(storedFavourites);
+        const storedFavourites: any[] = JSON.parse(localStorage.getItem("favourites") || "[]");
+        setFavourites(storedFavourites.map(fav => fav?.id));
+        console.log(storedFavourites)
     }, []);
     const copyToClipboard = async (text?: string) => {
         if (text)
@@ -235,6 +236,7 @@ const page = () => {
             setSummaryId(data.summary.id)
 
             setSummary(data.summary);
+            console.log(data.summary)
             setQueries(data.summary.queries);
             fetchRecommendations(data.summary.id)
         } catch (error) {
@@ -333,12 +335,7 @@ const page = () => {
     return isLoading ?
         <div className='h-screen w-screen flex flex-col items-center justify-center' >
             <div className='flex flex-col gap-3'>
-                {/* <div className='flex justify-between ' >
-                    <h3 className='text-xl font-bold text-gray-200' > {progress?.message} </h3>
-                    <h3 className='text-xl font-bold text-gray-200' >
-                        {progress?.progress}%
-                    </h3>
-                </div> */}
+
                 <HashLoader
                     color={"#ffffff"}
                     loading={isLoading}
@@ -365,7 +362,7 @@ const page = () => {
                             <div className='flex gap-3' >
                                 <button className=' p-2 rounded-full bg-[#16263d]' onClick={() => markSummaryAsFavorite()} >
 
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={`size-8 ${summaryId && favourites.includes(summaryId) ? "fill-red-600 stroke-none" : "none"}`}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={`size-8 ${summaryId && favourites.includes(summaryId) ? "fill-red-600 stroke-none" : "fill-transparent"}`}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
                                     </svg>
                                 </button>
@@ -376,10 +373,10 @@ const page = () => {
                                 </button> */}
                             </div>
                         </div>
-                        <div ref={queriesContainerRef} className='flex flex-col gap-3 rounded-lg shadow container overflow-y-scroll  scrollbar-thumb-gray-500 scrollbar-track-transparent scrollbar-thin scrollbar-track-rounded-full scrollbar-thumb-rounded-full h-[72vh]' >
+                        <div ref={queriesContainerRef} className='flex flex-col gap-3 rounded-lg shadow container overflow-y-scroll  scrollbar-thumb-gray-500 scrollbar-track-transparent scrollbar-thin scrollbar-track-rounded-full scrollbar-thumb-rounded-full h-[70vh]' >
 
 
-                            {summary?.thought && <Disclosure>
+                            {summary?.thought[0] != '' && <Disclosure>
                                 <DisclosureButton className="flex items-center gap-2 text-gray-400">
                                     Thought <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-4">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />

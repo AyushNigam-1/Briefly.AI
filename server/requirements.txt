@@ -20,4 +20,5 @@ duckduckgo-search
 uvicorn[standard]
 google-generativeai
 opencv-python
-
+google.genai
+PyMuPDF

@@ -1,19 +1,20 @@
 "use client"
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
+import { ToastContainer, toast } from 'react-toastify';
+
 const page: React.FC = () => {
+
     const [username, setUsername] = useState<string>('');
     const [password, setPassword] = useState<string>('');
-    const [error, setError] = useState<string>('');
     const [loading, setLoading] = useState<boolean>(false);
     const router = useRouter()
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        setError('');
         setLoading(true);
         const formData = new FormData(event.currentTarget);
         const username = formData.get("name") as string;
@@ -31,18 +32,14 @@ const page: React.FC = () => {
                 localStorage.setItem('favourites', JSON.stringify(response.data.favourites));
                 router.push("/")
             } else {
-                setError(response.data.detail || 'Something went wrong');
+                toast.error("Something went wrong")
             }
         } catch (err) {
-            setError('An error occurred while connecting to the server');
-            console.error('Error:', err);
+            toast.error("Something went wrong")
         } finally {
             setLoading(false);
         }
     };
-    // useEffect(() => {
-    //     redirect('/');
-    // }, [])
 
     return (
         <div className="w-screen h-screen flex justify-center items-center font-mono">
@@ -73,8 +70,7 @@ const page: React.FC = () => {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                         />
-                        {error && <div className="text-red-500 text-sm">{error}</div>}
-                        <a href="#" className="text-sm font-thin text-gray-400 underline hover:text-indigo-600">Forget Password?</a>
+
                         <button
                             type="submit"
                             className='bg-gradient-to-t from-red-500 to-gray-700 p-1 rounded'
@@ -82,22 +78,25 @@ const page: React.FC = () => {
                             disabled={loading}
                         >
                             <span className="cursor-pointer py-2 px-4 flex justify-center bg-gray-700 text-white font-bold w-full rounded" >
-                                {loading ? <Image src="/805.svg" alt="loader" width="20" height="20" />
+                                {loading ? <Image src="/805.svg" alt="loader" width="24" height="24" />
                                     : 'Login'}
                             </span>
                         </button>
                         <Link
-                            className='bg-gradient-to-t from-blue-500 to-gray-700 p-1 rounded'
                             href='/account/signup'
+                            type="submit"
+                            className='bg-gradient-to-t from-blue-500 to-gray-700 p-1 rounded'
+
                         >
-                            <span className="cursor-pointer py-2 px-4 flex justify-center bg-gray-700 text-white font-bold w-full rounded"
-                            >
+                            <span className="cursor-pointer py-2 px-4 flex justify-center bg-gray-700 text-white font-bold w-full rounded" >
                                 Create New Account
                             </span>
                         </Link>
+                        <a href="#" className=" text-gray-400 underline text-center  hover:text-indigo-600">Forget Password?</a>
                     </form>
                 </div>
             </div>
+            <ToastContainer />
         </div>
     );
 };
