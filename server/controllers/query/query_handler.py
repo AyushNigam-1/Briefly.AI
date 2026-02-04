@@ -1,28 +1,39 @@
-from langchain.prompts import PromptTemplate
 from bson.objectid import ObjectId
 from controllers.db.conn import summary_collection
-from langchain.memory import ConversationBufferMemory
-from langchain.prompts import PromptTemplate
+
+from langchain_core.prompts import PromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+
 from utils.llm import llm
 from utils.common import split_content
-memory = ConversationBufferMemory()
+
+
+# ------------------------------------------------------------------
+# Prompt
+# ------------------------------------------------------------------
 
 prompt_template = PromptTemplate(
     input_variables=["summary", "history", "user_query"],
     template="""
-    Video Summary:
-    {summary}
+You are chatting with a summarized video.
 
-    Chat History:
-    {history}
+Video Summary:
+{summary}
 
-    User Query:
-    {user_query}
+Previous Conversation:
+{history}
 
-    
-    Response:
-    """
+User Question:
+{user_query}
+
+Answer clearly, directly, and helpfully.
+"""
 )
+
+
+# ------------------------------------------------------------------
+# Main chat handler
+# ------------------------------------------------------------------
 
 def chat_with_summary(user_input: str, id: str):
     try:
@@ -32,44 +43,60 @@ def chat_with_summary(user_input: str, id: str):
 
         summarized_summary = summary_data.get("summarized_summary", "")
         if not summarized_summary:
-            return "The summary is empty or not available."
+            return "The summary is empty or unavailable."
 
-        static_chat_history = summary_data.get("queries", [])
-        static_history = "\n".join(
-            [f"{q['sender']}: {q['content']}" for q in static_chat_history]
-        ) if static_chat_history else ""
+        # --------------------------------------------
+        # Build chat history from DB only
+        # --------------------------------------------
 
-        dynamic_chat_history = memory.load_memory_variables({})
-        dynamic_history = dynamic_chat_history.get("history", "")
+        chat_history = summary_data.get("queries", [])
 
-        combined_history = f"{static_history}\n{dynamic_history}".strip()
+        history_text = "\n".join(
+            f"{q.get('sender', 'unknown')}: {q.get('content', '')}"
+            for q in chat_history
+        ) if chat_history else ""
+
+        # --------------------------------------------
+        # Build prompt
+        # --------------------------------------------
 
         prompt = prompt_template.format(
             summary=summarized_summary,
-            history=combined_history,
-            user_query=user_input
+            history=history_text,
+            user_query=user_input,
         )
 
-        response = llm.invoke(prompt)
-        thought, res = split_content(response.content)
+        # --------------------------------------------
+        # LLM call (LCEL-safe)
+        # --------------------------------------------
 
-        memory.save_context({"input": user_input}, {"output": res})
+        response_text = llm.invoke(prompt)
+        thought, final_response = split_content(response_text)
 
-        user_query_entry = {"sender": "user", "content": user_input}
-        llm_response_entry = {"sender": "llm", "content": res , "thought":thought}
+        # --------------------------------------------
+        # Persist conversation
+        # --------------------------------------------
 
-        update_result = summary_collection.update_one(
+        user_entry = {
+            "sender": "user",
+            "content": user_input,
+        }
+
+        llm_entry = {
+            "sender": "llm",
+            "content": final_response,
+            "thought": thought,
+        }
+
+        summary_collection.update_one(
             {"_id": ObjectId(id)},
-            {"$push": {"queries": {"$each": [user_query_entry, llm_response_entry]}}}
+            {"$push": {"queries": {"$each": [user_entry, llm_entry]}}},
         )
 
-        if update_result.modified_count == 1:
-            return {"res":res,"thought":thought}
-        else:
-            return "Response generated, but failed to save query to the database."
+        return {
+            "res": final_response,
+            "thought": thought,
+        }
 
     except Exception as e:
         return f"An error occurred: {str(e)}"
-
-
-

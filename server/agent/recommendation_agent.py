@@ -11,7 +11,7 @@ GROQ_API_KEY = os.getenv('groq_api_key')
 def create_summary_agent():
     summary_agent = Agent(
         name="YouTube Summary Agent",
-        model=Groq(id="deepseek-r1-distill-llama-70b", api_key=GROQ_API_KEY), 
+        model=Groq(id="openai/gpt-oss-120b", api_key=GROQ_API_KEY), 
         tools=[YouTubeTools()],
         instructions=[
             "You are an AI assistant that summarizes YouTube videos.",

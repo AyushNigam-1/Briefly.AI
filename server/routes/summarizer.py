@@ -39,6 +39,7 @@ async def summarize_content(
             if not ("youtu.be" in url or "youtube.com" in url or validators.url(url)):
                 raise HTTPException(status_code=400, detail="Invalid URL")
             if "youtu.be" in url or "youtube.com" in url:
+                print("youtube")
                 summary = await get_youtube_summary(url, lang, format, title,icon, current_user)
             else:
                 summary = await get_web_summary(url, lang, format, title, current_user)
