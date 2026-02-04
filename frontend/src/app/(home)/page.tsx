@@ -7,12 +7,12 @@ import axios, { AxiosError } from "axios";
 import { ComboboxOption, ComboboxOptions, Dialog, DialogBackdrop, DialogPanel, Textarea } from '@headlessui/react'
 import clsx from 'clsx'
 import { metadata, PromptResponse } from '../types';
-import Link from 'next/link';
 import { useEffect } from "react";
 import { Combobox, ComboboxInput } from '@headlessui/react'
 import { languagesList } from '@/app/languages';
-import pdfThumbnail from 'pdf-thumbnail';
-
+import { File, Paperclip, SendHorizontal } from "lucide-react"
+import Link from 'next/link';
+import Sidebar from '../components/Sidebar';
 const page = () => {
 
   const [selected, setSelected] = useState<string | null>("")
@@ -111,22 +111,22 @@ const page = () => {
       setFile(uploadedFile)
       const metadata = uploadedFile.size >= 1048576 ? (uploadedFile.size / 1048576).toFixed(2) + ' MB' : (uploadedFile.size / 1024).toFixed(2) + ' KB';
       let fileType;
-      let icon;
+      let thumbnail;
       let previewUrl = URL.createObjectURL(uploadedFile)
       if (uploadedFile.type.startsWith('image/')) {
         fileType = 'image';
-        icon = previewUrl;
+        thumbnail = previewUrl;
       } else if (uploadedFile.type.startsWith('video/')) {
         fileType = 'video';
-        icon = previewUrl
+        thumbnail = previewUrl
       } else if (uploadedFile.type === 'application/pdf') {
         fileType = 'document';
-        icon = previewUrl;
+        thumbnail = previewUrl;
       } else {
         fileType = 'document';
-        icon = 'https://img.icons8.com/color/50/file.png'; // Default for other document types
+        thumbnail = 'https://img.icons8.com/color/50/file.png'; // Default for other document types
       }
-      const fileMetaData = { title: uploadedFile.name, metadata, icon, preview: false, type: 'file' };
+      const fileMetaData = { title: uploadedFile.name, metadata, thumbnail, preview: false, type: 'file' };
       setUrl(fileMetaData.title)
       setMetadata(fileMetaData)
     }
@@ -136,7 +136,7 @@ const page = () => {
   const getMetadata = async () => {
     if (metadata?.type == 'file') {
       setMetadata((metadata) => metadata ? { ...metadata, preview: true } : null)
-      setUrl(metadata.icon)
+      setUrl(metadata.thumbnail)
       return
     }
     if (typeof url == 'string' && isValidUrl(url)) {
@@ -211,14 +211,14 @@ const page = () => {
   }, [])
   return (
     <>
-      <Navbar />
-      <div className='fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 font-mono'>
-        <div className='flex flex-col gap-7'>
+      <Navbar component={<Sidebar />} />
+      <div className='fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 font-mono text-white'>
+        <div className='flex flex-col gap-10'>
           <div className='flex flex-col gap-3'>
-            <h3 className='font-black  text-5xl text-[rgba(206, 203, 203, 1)]'>
+            <h3 className='font-bold text-gray-200 text-5xl text-center font-mono'>
               Summarize, Understand, Save Time!
             </h3>
-            <h6 className='font-medium text-[rgba(206, 203, 203, 1)'>
+            <h6 className='font-medium text-gray-300 text-center text-sm'>
               Summarize PDFs, text, images with text, YouTube videos, and website links. Save time and get concise insights instantly!
             </h6>
           </div>
@@ -226,8 +226,7 @@ const page = () => {
             <span className='bg-gray-700 rounded-full flex gap-3 w-full'>
               <button className='bg-gray-900 rounded-full p-3 px-4 flex items-center justify-center' onClick={() => doc.current?.click()}>
                 <input type="file" className="hidden" onChange={(e) => handleFileChange(e)} accept=".pdf,.txt,image/*" ref={doc as React.LegacyRef<HTMLInputElement>} />
-
-                <img width="20" height="20" src="https://img.icons8.com/forma-regular/50/FFFFFF/attach.png" alt="attach" />
+                <Paperclip size="20" />
               </button>
               <input type="text" onChange={({ target }) => setUrl(target.value)} value={url ?? ''} placeholder='e.g https://youtu.be/IHkGe92LG_A?si=cjovoaz-goQNn00Y or https://heroicons.com/' className='appearance-none border-none outline-none bg-transparent p-0 m-0 w-full h-14' />
               <span className="px-4  bg-gray-700/50 rounded-e-full flex gap-1.5 items-center justify-center text-gray-400">
@@ -244,18 +243,13 @@ const page = () => {
                 )}
               </span>
             </span>
-            <button onClick={() => getMetadata()} className="bg-gradient-to-t from-red-500  to-blue-500 rounded-full p-1 flex items-center justify-center">
+            <button onClick={() => getMetadata()} className=" rounded-full flex items-center justify-center">
               <div className="bg-gray-900 rounded-full p-4 flex items-center justify-center">
-                <img
-                  width="20"
-                  height="20"
-                  src="https://img.icons8.com/ios-filled/50/FFFFFF/sort-right.png"
-                  alt="sort-right"
-                />
+                <SendHorizontal size="20" />
               </div>
             </button>
           </div>
-          <h6 className='font-mulish font-bold' > WHAT TO DO ? </h6>
+          {/* <h6 className='font-mulish font-bold' > WHAT TO DO ? </h6>
           <div className='flex gap-3'>
             {
               actions.map(e => <button key={e} onClick={() => setAction(e)} className={` ${action == e ? 'bg-gradient-to-t from-blue-500 to-gray-900 p-1 rounded-full' : ''}`}>
@@ -310,8 +304,8 @@ const page = () => {
                 </div>
               </div>
             </Dialog>
-          </div>
-          <h6 className='font-mulish font-bold' > CHOOSE LANUAGE ? </h6>
+          </div> */}
+          {/* <h6 className='font-mulish font-bold' > CHOOSE LANUAGE ? </h6>
           <div className='flex gap-3'>
             {
               languages.map(e => <button key={e} onClick={() => setLanguage(e)} className={` ${language == e ? 'bg-gradient-to-t from-red-500 to-gray-900 p-1 rounded-full' : ''}`}> <span className='bg-gray-900 p-3 px-4 text-xl rounded-full  flex items-center justify-center' >
@@ -323,63 +317,63 @@ const page = () => {
             <button onClick={() => setOpenComboBox(true)} className='bg-gray-900 p-3 px-4 text-xl rounded-full flex items-center justify-center'>
               Other
             </button>
-          </div>
+          </div> */}
 
           <Dialog open={!!(metadata && metadata.preview)} as="div" className="relative z-10 focus:outline-none" onClose={() => { setMetadata(null); setUrl(null) }}>
-            <DialogBackdrop className="fixed inset-0 bg-black/50" />
+            <DialogBackdrop className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
             <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
-              <div className="flex min-h-full items-center justify-center p-4">
+              <div className="flex min-h-full items-center justify-center">
                 <DialogPanel
                   transition
-                  className="w-full max-w-lg rounded-xl flex flex-col gap-3 bg-[#1b283b] shadow-md  p-6 backdrop-blur-2xl duration-300 ease-out data-[closed]:transform-[scale(95%)] data-[closed]:opacity-0"
+                  className="w-full max-w-lg rounded-xl flex flex-col gap-3 bg-[#1b283b] shadow-md  p-4 backdrop-blur-2xl duration-300 ease-out data-[closed]:transform-[scale(95%)] data-[closed]:opacity-0 font-mono text-white"
                 >
                   <div className='flex justify-between items-center' >
-                    <h6 className='font-mulish text-2xl font-bold' > Content </h6>
+                    <h6 className='font-mulish text-2xl font-bold'> Content </h6>
                     <div className='flex gap-2' >
-                      <Link
-                        href={`/summarize/${encodeURIComponent(url ? url : "")}?title=${metadata?.title}&language=${language}&format=${action}&icon=${metadata?.icon}`}
-                      >
-                        <button className='bg-gradient-to-t from-blue-500 to-gray-900 p-1 rounded-full' >
-                          <span className='bg-gray-900 p-2 text-xl rounded-full  flex items-center justify-center' >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                            </svg>
-                          </span>
-                        </button>
-                      </Link>
-                      <button className='bg-gradient-to-t from-red-500 to-gray-900 p-1 rounded-full' onClick={() => { setUrl(null); setMetadata(null) }} >
-                        <span className='bg-gray-900 p-2 text-xl rounded-full  flex items-center justify-center' >
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-                          </svg>
-                        </span>
+
+                      <button className='p-2 text-xl rounded-full  flex items-center justify-center' onClick={() => { setUrl(null); setMetadata(null) }} >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                        </svg>
                       </button>
                     </div>
                   </div>
                   <div className="bg-gray-900 rounded-md flex p-2 gap-3 items-center">
                     <img
-                      src={metadata?.icon}
+                      src={metadata?.thumbnail}
                       alt="Video thumbnail"
                       className="rounded-md"
                       width="80"
                       height="80"
                     />
                     <div className="flex flex-col gap-1 truncate">
-                      <h4 className="font-extrabold font-mulish text-xl truncate">
+                      <h4 className="font-bold text-xl truncate">
                         {metadata?.title}
                       </h4>
-                      <p className="text-sm font-semibold truncate">{metadata?.metadata}</p>
+                      <p className="text-sm text-gray-300 truncate">{metadata?.metadata}</p>
                     </div>
                   </div>
+                  <Link
+                    href={`/summarize/${encodeURIComponent(url ? url : "")}?title=${metadata?.title}&language=${language}&format=${action}&icon=${metadata?.thumbnail}`}
+                  >
+                    <button className='bg-gradient-to-t from-blue-500 to-gray-900 p-1 rounded-full' >
+                      <span className='bg-gray-900 p-2 text-xl rounded-full  flex items-center justify-center' >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                        </svg>
+                      </span>
+                    </button>
+                  </Link>
                 </DialogPanel>
               </div>
             </div>
           </Dialog >
+
           <Dialog open={openComboBox} as="div" className="relative z-10 focus:outline-none" onClose={() => setOpenComboBox(false)}>
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
               <DialogPanel
                 transition
-                className="w-full max-w-lg h-96 rounded-xl flex flex-col gap-3 bg-[#1b283b] shadow-md p-6 backdrop-blur-2xl duration-300 ease-out data-[closed]:transform-[scale(95%)] data-[closed]:opacity-0"
+                className="w-full max-w-lg h-96 rounded-xl flex flex-col gap-3 bg-[#1b283b]  shadow-md p-6 backdrop-blur-2xl duration-300 ease-out data-[closed]:transform-[scale(95%)] data-[closed]:opacity-0"
               >
                 <div className="flex flex-col gap-3">
                   <div className="flex justify-between items-center">

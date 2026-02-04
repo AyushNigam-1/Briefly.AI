@@ -14,6 +14,7 @@ import remarkGfm from 'remark-gfm'
 import QueryInput from '@/app/components/QueryInput';
 import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/react'
 import Loader from '@/app/components/Loader';
+import { Heart } from 'lucide-react';
 
 const fetchExisitingSummary = async (summaryId: string) => {
     try {
@@ -238,7 +239,7 @@ const page = () => {
             setSummary(data.summary);
             console.log(data.summary)
             setQueries(data.summary.queries);
-            fetchRecommendations(data.summary.id)
+            // fetchRecommendations(data.summary.id)
         } catch (error) {
             if (axios.isAxiosError(error)) {
                 throw new Error(error.response?.data?.message || error.message);
@@ -347,36 +348,33 @@ const page = () => {
         : (
             <>
                 <Navbar component={<Sidebar setId={setSummaryId} />} />
-                <div className='gap-1 flex items-center justify-center flex-col'>
-                    <div className="flex flex-col gap-3 rounded-lg shadow container overflow-y-hidden scrollbar-none " >
-                        <div className='flex justify-between p-2 items-center bg-gray-900 rounded-e-lg' >
-                            <div className=' w-max rounded-lg flex gap-3 items-center '>
-                                <img src={metadata?.icon} alt="youtube-play--v1 " className=' h-14 rounded-lg' />
-                                <span className='flex flex-col'>
-                                    <h6 className='text-gray-400 text-sm font-bold w-min rounded-xl flex items-center gap-1'>
-                                        {metadata?.type}
-                                    </h6>
-                                    <h4 className='m-0 truncate text-2xl font-bold text-gray-200' >{metadata?.title?.split(" ").slice(0, 5).join(" ")} {metadata && metadata?.title?.split(" ")?.length > 5 ? '...' : ''}</h4>
-                                </span>
-                            </div>
-                            <div className='flex gap-3' >
-                                <button className=' p-2 rounded-full bg-[#16263d]' onClick={() => markSummaryAsFavorite()} >
-
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={`size-8 ${summaryId && favourites.includes(summaryId) ? "fill-red-600 stroke-none" : "fill-transparent"}`}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
-                                    </svg>
-                                </button>
-                                {/* <button className=' p-3 rounded-full' >
+                <div className='flex  flex-col justify-center items-center gap-4'>
+                    {/* <div className="flex flex-col gap-3 rounded-lg shadow container overflow-y-hidden scrollbar-none items-center justify-center" > */}
+                    <div className='flex justify-between p-2 items-center bg-gray-900 rounded-e-lg container '  >
+                        <div className=' w-max rounded-lg flex gap-3 items-center '>
+                            <img src={metadata?.icon} alt="youtube-play--v1 " className=' h-14 rounded-lg' />
+                            <span className='flex flex-col'>
+                                <h6 className='text-gray-400 text-sm font-bold w-min rounded-xl flex items-center gap-1'>
+                                    {metadata?.type}
+                                </h6>
+                                <h4 className='m-0 truncate text-2xl font-bold text-gray-200' >{metadata?.title?.split(" ").slice(0, 5).join(" ")} {metadata && metadata?.title?.split(" ")?.length > 5 ? '...' : ''}</h4>
+                            </span>
+                        </div>
+                        <div className='flex gap-3' >
+                            <button className=' p-2 rounded-full text-gray-200' onClick={() => markSummaryAsFavorite()} >
+                                <Heart className={`size-8 ${summaryId && favourites.includes(summaryId) ? "fill-red-600 stroke-none" : "fill-transparent"}`} />
+                            </button>
+                            {/* <button className=' p-3 rounded-full' >
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
                                     </svg>
                                 </button> */}
-                            </div>
                         </div>
-                        <div ref={queriesContainerRef} className='flex flex-col gap-3 rounded-lg shadow container overflow-y-scroll  scrollbar-thumb-gray-500 scrollbar-track-transparent scrollbar-thin scrollbar-track-rounded-full scrollbar-thumb-rounded-full h-[70vh]' >
+                    </div>
+                    <div ref={queriesContainerRef} className='flex flex-col items-center justify-center gap-3 rounded-lg shadow container  scrollbar-thumb-gray-500 scrollbar-track-transparent scrollbar-thin scrollbar-track-rounded-full scrollbar-thumb-rounded-full overflow-y-scroll h-[calc(100vh-240px)]' >
 
 
-                            {summary?.thought[0] != '' && <Disclosure>
+                        {/* {summary?.thought[0] != '' && <Disclosure>
                                 <DisclosureButton className="flex items-center gap-2 text-gray-400">
                                     Thought <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-4">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
@@ -385,93 +383,90 @@ const page = () => {
                                 <DisclosurePanel className="text-gray-400 text-lg">
                                     {summary?.thought}
                                 </DisclosurePanel>
-                            </Disclosure>}
-                            <div className="bg-gray-900 relative font-mono border-gray-700  w-100 p-4 rounded-lg prose-gray prose-lg w-full max-w-none">
-                                <ReactMarkdown
-                                    remarkPlugins={[remarkGfm]}
-                                    components={{
-                                        ul: ({ children }) => <ul className="list-disc ml-5">{children}</ul>
-                                    }}
-                                >
-                                    {summary?.summarized_summary}
-                                </ReactMarkdown>
-                            </div>
+                            </Disclosure>} */}
+                        <div className="bg-gray-900 relative font-mono border-gray-700 text-gray-200  w-100 p-4 rounded-lg prose-gray prose-lg w-full max-w-none">
+                            <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                components={{
+                                    ul: ({ children }) => <ul className="list-disc ml-5">{children}</ul>
+                                }}
+                            >
+                                {summary?.summarized_summary}
+                            </ReactMarkdown>
+                        </div>
 
-                            <div className='flex justify-center gap-3 ' >
-                                <button onClick={() => copyToClipboard(summary?.summarized_summary)} className='bg-gradient-to-t from-blue-500 to-gray-900 p-1 rounded-full'  >
-                                    <span className='bg-gray-900 py-3 px-4 rounded-full flex gap-2 items-center text-lg justify-center' >
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
-                                        </svg>
-                                        {text}
-                                    </span>
-                                </button>
-                                <button className='bg-gradient-to-t from-red-500 to-gray-900 p-1 rounded-full' onClick={handleRegenerate}>
-                                    <span className='bg-gray-900 py-3 px-4 rounded-full flex gap-2 items-center text-lg' >
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={`size-6 ${text2 == 'Regenrating . . .' ? 'animate-spin-slow' : ''} `}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-                                        </svg>
+                        <div className='flex justify-center gap-3 ' >
+                            <button className='text-gray-200 px-2 rounded-full flex gap-2 items-center text-lg justify-center' onClick={() => copyToClipboard(summary?.summarized_summary)} >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
+                                </svg>
+                                {text}
+                            </button>
+                            <button className='text-gray-200  p-2  rounded-full flex gap-2 items-center text-lg' onClick={handleRegenerate} >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={`size-6 ${text2 == 'Regenrating . . .' ? 'animate-spin-slow' : ''} `}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                                </svg>
 
-                                        {text2}
-                                    </span>
-                                </button>
-                            </div>
-                            <div className="flex flex-col gap-3">
-                                {queries?.map((query, index) =>
-                                    <div key={index} className='flex flex-col gap-2'>
-                                        {query.sender == 'llm' ? <Disclosure>
-                                            <DisclosureButton className="flex items-center gap-2 text-gray-400">
+                                {text2}
+                            </button>
+                        </div>
+                        <div className="flex flex-col gap-3">
+                            {queries?.map((query, index) =>
+                                <div key={index} className='flex flex-col gap-2'>
+                                    {query.sender == 'llm' ? <Disclosure>
+                                        {/* <DisclosureButton className="flex items-center gap-2 text-gray-400">
                                                 Thought <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-4">
                                                     <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                                                 </svg>
-                                            </DisclosureButton>
-                                            <DisclosurePanel className="text-gray-400 text-lg">
-                                                {query?.thought}
-                                            </DisclosurePanel>
-                                        </Disclosure> : ''}
-                                        <div className="bg-gray-900 p-4 rounded-lg font-mono flex gap-2">
-                                            <div>
-                                                {
-                                                    query.sender == 'user' ? <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6 w-max">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                                                    </svg> : <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6 w-max">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
-                                                    </svg>
-                                                }
-                                            </div>
-                                            <div>
-                                                <ReactMarkdown
-                                                    remarkPlugins={[remarkGfm]}
-                                                    components={{
-                                                        ul: ({ children }) => <ul className="list-disc ml-5">{children}</ul>
-                                                    }}
-                                                >
-                                                    {query.content}
-                                                </ReactMarkdown>
-                                            </div>
+                                            </DisclosureButton> */}
+                                        <DisclosurePanel className="text-gray-400 text-lg">
+                                            {query?.thought}
+                                        </DisclosurePanel>
+                                    </Disclosure> : ''}
+                                    <div className="bg-gray-900 p-4 rounded-lg font-mono flex gap-2">
+                                        <div>
+                                            {
+                                                query.sender == 'user' ? <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6 w-max">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                                </svg> : <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6 w-max">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
+                                                </svg>
+                                            }
+                                        </div>
+                                        <div>
+                                            <ReactMarkdown
+                                                remarkPlugins={[remarkGfm]}
+                                                components={{
+                                                    ul: ({ children }) => <ul className="list-disc ml-5">{children}</ul>
+                                                }}
+                                            >
+                                                {query.content}
+                                            </ReactMarkdown>
                                         </div>
                                     </div>
-                                )}
-                                {
-                                    state == 'pending' ?
-                                        <div className="bg-gray-900/70 p-4 rounded-lg font-mono flex gap-2 items-center">
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
-                                            </svg>
-                                            <svg fill="currentColor" height="30" width="30" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                                <circle cx="4" cy="12" r="1.5"><animate attributeName="r" dur="0.75s" values="1.5;3;1.5" repeatCount="indefinite" /></circle>
-                                                <circle cx="12" cy="12" r="3"><animate attributeName="r" dur="0.75s" values="3;1.5;3" repeatCount="indefinite" /></circle>
-                                                <circle cx="20" cy="12" r="1.5"><animate attributeName="r" dur="0.75s" values="1.5;3;1.5" repeatCount="indefinite" /></circle>
-                                            </svg>
-                                        </div> : null
-                                }
-                            </div>
+                                </div>
+                            )}
+                            {
+                                state == 'pending' ?
+                                    <div className="bg-gray-900/70 p-4 rounded-lg font-mono flex gap-2 items-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
+                                        </svg>
+                                        <svg fill="currentColor" height="30" width="30" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <circle cx="4" cy="12" r="1.5"><animate attributeName="r" dur="0.75s" values="1.5;3;1.5" repeatCount="indefinite" /></circle>
+                                            <circle cx="12" cy="12" r="3"><animate attributeName="r" dur="0.75s" values="3;1.5;3" repeatCount="indefinite" /></circle>
+                                            <circle cx="20" cy="12" r="1.5"><animate attributeName="r" dur="0.75s" values="1.5;3;1.5" repeatCount="indefinite" /></circle>
+                                        </svg>
+                                    </div> : null
+                            }
                         </div>
                     </div>
+                    {/* </div> */}
                 </div >
-                <div className="flex flex-col gap-3 p-2 w-full fixed bottom-0 left-0 right-0">
-                    <QueryInput setQueries={setQueries} cancelRecommendations={cancelRecommendations} url={url} setState={setState} id={summaryId} ytRecommendations={ytRecommendations} webRecommendations={webRecommendations} isloading={recommendationLoader} fetchRecommendations={fetchRecommendations} />
-                </div>
+                {/* <div className="flex flex-col gap-3 p-2 w-full fixed bottom-0 left-0 right-0"> */}
+                <QueryInput setQueries={setQueries} cancelRecommendations={cancelRecommendations} url={url} setState={setState} id={summaryId} ytRecommendations={ytRecommendations} webRecommendations={webRecommendations} isloading={recommendationLoader} fetchRecommendations={fetchRecommendations}
+                />
+                {/* </div> */}
             </>
         )
 }

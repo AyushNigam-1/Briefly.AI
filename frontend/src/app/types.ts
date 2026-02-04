@@ -2,7 +2,7 @@ import { JSX, ReactNode } from "react";
 
 export type metadata = {
     title: string;
-    icon: string;
+    thumbnail: string;
     metadata: string;
     preview: boolean;
     type: string
