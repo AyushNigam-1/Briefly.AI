@@ -10,7 +10,7 @@ import { metadata, PromptResponse } from '../types';
 import { useEffect } from "react";
 import { Combobox, ComboboxInput } from '@headlessui/react'
 import { languagesList } from '@/app/languages';
-import { File, Paperclip, SendHorizontal } from "lucide-react"
+import { Check, CircleCheck, File, Loader2, Paperclip, SendHorizontal } from "lucide-react"
 import Link from 'next/link';
 import Sidebar from '../components/Sidebar';
 const page = () => {
@@ -223,29 +223,16 @@ const page = () => {
             </h6>
           </div>
           <div className='flex gap-4 w-full' >
-            <span className='bg-gray-700 rounded-full flex gap-3 w-full'>
+            <span className='bg-white/5 rounded-full flex gap-3 w-full'>
               <button className='bg-gray-900 rounded-full p-3 px-4 flex items-center justify-center' onClick={() => doc.current?.click()}>
                 <input type="file" className="hidden" onChange={(e) => handleFileChange(e)} accept=".pdf,.txt,image/*" ref={doc as React.LegacyRef<HTMLInputElement>} />
                 <Paperclip size="20" />
               </button>
               <input type="text" onChange={({ target }) => setUrl(target.value)} value={url ?? ''} placeholder='e.g https://youtu.be/IHkGe92LG_A?si=cjovoaz-goQNn00Y or https://heroicons.com/' className='appearance-none border-none outline-none bg-transparent p-0 m-0 w-full h-14' />
-              <span className="px-4  bg-gray-700/50 rounded-e-full flex gap-1.5 items-center justify-center text-gray-400">
-                {loading ? (<>
-                  <Image src="/805.svg" alt="loader" width="20" height="20" />
-                </>) : (
-                  metadata && (
-                    <>
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                      </svg>
-                    </>
-                  )
-                )}
-              </span>
             </span>
             <button onClick={() => getMetadata()} className=" rounded-full flex items-center justify-center">
               <div className="bg-gray-900 rounded-full p-4 flex items-center justify-center">
-                <SendHorizontal size="20" />
+                {loading ? <Loader2 className='animate-spin' size={24} /> : <SendHorizontal size="24" />}
               </div>
             </button>
           </div>
@@ -305,19 +292,7 @@ const page = () => {
               </div>
             </Dialog>
           </div> */}
-          {/* <h6 className='font-mulish font-bold' > CHOOSE LANUAGE ? </h6>
-          <div className='flex gap-3'>
-            {
-              languages.map(e => <button key={e} onClick={() => setLanguage(e)} className={` ${language == e ? 'bg-gradient-to-t from-red-500 to-gray-900 p-1 rounded-full' : ''}`}> <span className='bg-gray-900 p-3 px-4 text-xl rounded-full  flex items-center justify-center' >
-                {e}
-              </span>
-              </button>
-              )
-            }
-            <button onClick={() => setOpenComboBox(true)} className='bg-gray-900 p-3 px-4 text-xl rounded-full flex items-center justify-center'>
-              Other
-            </button>
-          </div> */}
+
 
           <Dialog open={!!(metadata && metadata.preview)} as="div" className="relative z-10 focus:outline-none" onClose={() => { setMetadata(null); setUrl(null) }}>
             <DialogBackdrop className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
@@ -325,7 +300,7 @@ const page = () => {
               <div className="flex min-h-full items-center justify-center">
                 <DialogPanel
                   transition
-                  className="w-full max-w-lg rounded-xl flex flex-col gap-3 bg-[#1b283b] shadow-md  p-4 backdrop-blur-2xl duration-300 ease-out data-[closed]:transform-[scale(95%)] data-[closed]:opacity-0 font-mono text-white"
+                  className="w-full max-w-lg rounded-xl flex flex-col gap-3 bg-[#1b283b] shadow-md  p-4 backdrop-blur-2xl duration-300 ease-out data-[closed]:transform-[scale(95%)] data-[closed]:opacity-0 font-mono text-white space-y-2"
                 >
                   <div className='flex justify-between items-center' >
                     <h6 className='font-mulish text-2xl font-bold'> Content </h6>
@@ -338,7 +313,8 @@ const page = () => {
                       </button>
                     </div>
                   </div>
-                  <div className="bg-gray-900 rounded-md flex p-2 gap-3 items-center">
+                  {/* <hr className='border border-gray-700 ' /> */}
+                  <div className="bg-gray-900 rounded-lg flex p-2 gap-3 items-center">
                     <img
                       src={metadata?.thumbnail}
                       alt="Video thumbnail"
@@ -353,16 +329,35 @@ const page = () => {
                       <p className="text-sm text-gray-300 truncate">{metadata?.metadata}</p>
                     </div>
                   </div>
-                  <Link
-                    href={`/summarize/${encodeURIComponent(url ? url : "")}?title=${metadata?.title}&language=${language}&format=${action}&icon=${metadata?.thumbnail}`}
-                  >
-                    <button className='bg-gradient-to-t from-blue-500 to-gray-900 p-1 rounded-full' >
-                      <span className='bg-gray-900 p-2 text-xl rounded-full  flex items-center justify-center' >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                        </svg>
+                  <h6 className='font-mono font-bold' > Choose Style </h6>
+                  <div className='flex gap-3 flex-wrap'>
+                    {
+                      actions.map(e => <button key={e} onClick={() => setAction(e)} className={` ${action == e && 'border border-gray-300'} bg-gray-900 p-3 px-4 rounded-lg `}>
+                        {e}
+                      </button>
+                      )
+                    }
+                    {/* <button className={` ${action == 'Custom' ? 'bg-gradient-to-t from-blue-500 to-gray-900 p-1 rounded-full' : ''}`} onClick={() => { setOpen(true); setAction('Custom') }}>
+                      <span className='bg-gray-900 p-3 px-4 text-xl rounded-full  flex items-center justify-center' >
+                        Custom
                       </span>
-                    </button>
+                    </button> */}
+                  </div>
+                  <h6 className='font-mono font-bold' > Choose Language </h6>
+                  <div className='flex gap-3 flex-wrap'>
+                    {
+                      languages.map(e => <button key={e} onClick={() => setLanguage(e)} className={` ${language == e && 'border border-gray-300'} rounded-lg bg-gray-900 p-3 px-4  `}>
+                        {e}
+                      </button>
+                      )
+                    }
+                    {/* <button onClick={() => setOpenComboBox(true)} className='bg-gray-900 p-3 px-4 text-xl rounded-full flex items-center justify-center'>
+                      Other
+                    </button> */}
+                  </div>
+                  <hr className='border border-gray-700 ' />
+                  <Link className='flex items-center gap-2 p-3 font-semibold bg-gray-900 rounded-lg justify-center' href={`/summarize/${encodeURIComponent(url ? url : "")}?title=${metadata?.title}&language=${language}&format=${action}&icon=${metadata?.thumbnail}`}>
+                    <CircleCheck /> Confirm
                   </Link>
                 </DialogPanel>
               </div>

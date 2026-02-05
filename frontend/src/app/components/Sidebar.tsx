@@ -126,52 +126,57 @@ const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
 
             {/* Sidebar */}
             <div
-                className={`fixed top-0 left-0 h-full w-72 bg-gray-900 shadow-lg transform transition-transform duration-300 z-50 ${isOpen ? "translate-x-0" : "-translate-x-full"
+                className={`fixed top-0 left-0 h-full text-white w-72 bg-gray-900 shadow-lg transform transition-transform duration-300 z-50 ${isOpen ? "translate-x-0" : "-translate-x-full"
                     }`}
             >
                 <div className="p-4 flex flex-col gap-4 h-full">
 
-                    <h2 className="text-xl font-bold text-white">History</h2>
+                    <h2 className="text-xl font-bold ">History</h2>
 
                     <input
                         placeholder="Search..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="bg-gray-800 p-2 rounded outline-none"
+                        className="bg-white/5 p-2 rounded-lg outline-none"
                     />
 
                     <div className="flex-1 overflow-y-auto">
 
                         {loading && <p>Loading…</p>}
                         {error && <p className="text-red-400">{error}</p>}
+                        <div className="space-y-4">
 
-                        {Object.keys(grouped).map((k) =>
-                            grouped[k].length ? (
-                                <div key={k}>
-                                    <h3 className="font-semibold mt-3">{k}</h3>
 
-                                    {grouped[k].map((s) => (
-                                        <div
-                                            key={s.id}
-                                            onClick={() => setId(s.id)}
-                                            className="flex justify-between cursor-pointer hover:text-gray-400 py-1"
-                                        >
-                                            <span className="truncate">{s.title}</span>
+                            {Object.keys(grouped).map((k) =>
+                                grouped[k].length ? (
+                                    <div key={k} className=" space-y-2">
+                                        <h3 className="font-bold  text-gray-200">{k}</h3>
+                                        <div className="space-y-2">
 
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setSummaryId(s.id);
-                                                    setDialogOpen(true);
-                                                }}
-                                            >
-                                                🗑
-                                            </button>
+                                            {grouped[k].map((s) => (
+                                                <div
+                                                    key={s.id}
+                                                    onClick={() => setId(s.id)}
+                                                    className="flex justify-between cursor-pointer hover:text-gray-300"
+                                                >
+                                                    <span className="truncate text-lg">{s.title}</span>
+
+                                                    {/* <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setSummaryId(s.id);
+                                                            setDialogOpen(true);
+                                                        }}
+                                                    >
+                                                        🗑
+                                                    </button> */}
+                                                </div>
+                                            ))}
                                         </div>
-                                    ))}
-                                </div>
-                            ) : null
-                        )}
+                                    </div>
+                                ) : null
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

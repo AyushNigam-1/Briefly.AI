@@ -3,7 +3,7 @@ import { QueryInputProps } from "@/app/types";
 import { Disclosure, DisclosureButton, DisclosurePanel } from "@headlessui/react";
 import Link from "next/link";
 import Loader from "./Loader";
-import { Sparkles } from "lucide-react";
+import { Sparkle, Sparkles } from "lucide-react";
 
 const QueryInput = ({ setQueries, url, setState, id, ytRecommendations, webRecommendations, isloading, cancelRecommendations, fetchRecommendations }: QueryInputProps) => {
     const inputRef = useRef<HTMLInputElement>(null);
@@ -22,6 +22,7 @@ const QueryInput = ({ setQueries, url, setState, id, ytRecommendations, webRecom
 
             try {
                 const result = await fetchQueryResult(inputValue);
+                console.log(result)
                 setQueries((queries) => [
                     ...queries,
                     { sender: "llm", content: result.res, thought: result.thought },
@@ -129,9 +130,9 @@ const QueryInput = ({ setQueries, url, setState, id, ytRecommendations, webRecom
                 </Disclosure>
             )} */}
             {/* </div> */}
-            <div className="flex container my-2 mx-auto rounded-md border-2 border-gray-700 ">
+            <div className="flex max-w-6xl my-2 mx-auto rounded-md border-2 border-gray-700 ">
                 <span className="bg-gray-900 text-gray-200 pl-3 rounded-s-md py-4">
-                    <Sparkles />
+                    <Sparkle />
                 </span>
                 <input
                     type="text"

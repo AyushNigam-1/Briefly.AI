@@ -53,7 +53,7 @@ const Navbar: React.FC<NavbarProps> = ({ component }) => {
     ));
 
     return (
-        <div className='flex justify-between relative  items-center container mx-auto py-3 border-b-2 border-gray-600' >
+        <div className='flex justify-between relative items-center max-w-6xl mx-auto py-3 border-b-2 border-gray-600' >
             {component ?? null}
             <div>
                 <img src="/logo.png" alt="" className='w-40 h-auto ' />

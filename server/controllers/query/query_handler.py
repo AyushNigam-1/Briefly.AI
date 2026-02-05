@@ -70,8 +70,9 @@ def chat_with_summary(user_input: str, id: str):
         # LLM call (LCEL-safe)
         # --------------------------------------------
 
-        response_text = llm.invoke(prompt)
-        thought, final_response = split_content(response_text)
+        response_raw = llm.invoke(prompt)
+        response_text = response_raw.content
+        # thought, final_response = split_content(response_text)
 
         # --------------------------------------------
         # Persist conversation
@@ -84,8 +85,8 @@ def chat_with_summary(user_input: str, id: str):
 
         llm_entry = {
             "sender": "llm",
-            "content": final_response,
-            "thought": thought,
+            "content": response_text,
+            "thought": "",
         }
 
         summary_collection.update_one(
@@ -94,8 +95,8 @@ def chat_with_summary(user_input: str, id: str):
         )
 
         return {
-            "res": final_response,
-            "thought": thought,
+            "res": response_text,
+            "thought": "thought",
         }
 
     except Exception as e:
