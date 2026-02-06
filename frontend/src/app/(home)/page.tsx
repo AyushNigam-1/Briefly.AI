@@ -10,7 +10,7 @@ import { metadata, PromptResponse } from '../types';
 import { useEffect } from "react";
 import { Combobox, ComboboxInput } from '@headlessui/react'
 import { languagesList } from '@/app/languages';
-import { Check, CircleCheck, File, Loader2, Paperclip, SendHorizontal } from "lucide-react"
+import { CircleCheck, Loader2, Paperclip, SendHorizontal, X } from "lucide-react"
 import Link from 'next/link';
 import Sidebar from '../components/Sidebar';
 const page = () => {
@@ -307,9 +307,7 @@ const page = () => {
                     <div className='flex gap-2' >
 
                       <button className='p-2 text-xl rounded-full  flex items-center justify-center' onClick={() => { setUrl(null); setMetadata(null) }} >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-                        </svg>
+                        <X />
                       </button>
                     </div>
                   </div>
@@ -318,9 +316,8 @@ const page = () => {
                     <img
                       src={metadata?.thumbnail}
                       alt="Video thumbnail"
-                      className="rounded-md"
-                      width="80"
-                      height="80"
+                      className="rounded-md w-20"
+
                     />
                     <div className="flex flex-col gap-1 truncate">
                       <h4 className="font-bold text-xl truncate">

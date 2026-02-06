@@ -20,7 +20,7 @@ router = APIRouter()
 
 @router.post("/summarize/")
 async def summarize_content(
-   url: str = Form(None),
+    url: str = Form(None),
     lang: str = Form(None),
     format: str = Form(None),
     title: str = Form(None),

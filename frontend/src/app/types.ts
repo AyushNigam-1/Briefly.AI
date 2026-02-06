@@ -12,6 +12,7 @@ export type query = {
     sender?: string;
     content?: string;
     thought?: string;
+    sources?: []
 };
 export type SortOptions = {
     icon: JSX.Element;
@@ -79,8 +80,8 @@ export interface QueryInputProps {
     ytRecommendations?: ytRecommendations[]
     webRecommendations?: webRecommendations[]
     isloading: boolean
-    cancelRecommendations: () => void;
-    fetchRecommendations: (query: string) => void;
+    cancelRecommendations?: () => void;
+    fetchRecommendations?: (query: string) => void;
 }
 
 export interface SummaryCardProps {

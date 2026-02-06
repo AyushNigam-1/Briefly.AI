@@ -130,15 +130,15 @@ const QueryInput = ({ setQueries, url, setState, id, ytRecommendations, webRecom
                 </Disclosure>
             )} */}
             {/* </div> */}
-            <div className="flex max-w-6xl my-2 mx-auto rounded-md border-2 border-gray-700 ">
-                <span className="bg-gray-900 text-gray-200 pl-3 rounded-s-md py-4">
+            <div className="flex max-w-6xl my-2 mx-auto rounded-lg bg-white/5 py-5">
+                <span className=" text-gray-200 pl-3 rounded-s-lg ">
                     <Sparkle />
                 </span>
                 <input
                     type="text"
                     ref={inputRef}
                     onKeyDown={handleKeyDown}
-                    className="bg-gray-900 w-full  rounded-e-md pl-3 outline-none py-4 text-gray-200"
+                    className=" w-full bg-transparent  rounded-e-lg pl-3 outline-none  text-gray-200"
                     placeholder="Ask AI"
                 />
             </div>

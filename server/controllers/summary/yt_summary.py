@@ -4,19 +4,15 @@ import subprocess
 import uuid
 from youtube_transcript_api import (
     YouTubeTranscriptApi,
-    NoTranscriptFound,
     TranscriptsDisabled,
     _api,
 )
-
 from urllib.parse import urlparse, parse_qs
 from io import BytesIO
 from datetime import datetime
 import requests
 import os
-
 from PIL import Image
-
 from controllers.db.summary import save_summary_to_mongo, fetch_existing_summary
 from controllers.db.prompt import get_prompt_by_user
 from controllers.db.conn import fs
@@ -78,30 +74,6 @@ def download_youtube_audio(url: str) -> str:
     )
     return output
 
-
-# def _fetch_first_auto_generated_transcript(video_id: str) -> str:
-#     transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-#     auto = transcript_list.find_generated_transcript(
-#         [t.language_code for t in transcript_list._generated_transcripts]
-#     )
-#     return _get_transcript_text(video_id, [auto.language_code])
-
-
-# def get_auto_subtitles(video_id: str, lang: str = "en") -> str:
-#     try:
-#         return _get_transcript_text(video_id, [lang])
-#     except NoTranscriptFound:
-#         return _fetch_first_auto_generated_transcript(video_id)
-#     except TranscriptsDisabled:
-#         return "Transcripts are disabled for this video."
-#     except Exception:
-#         return "Subtitles not available."
-
-
-# ------------------------------------------------------------------
-# Subtitle correction (LCEL)
-# ------------------------------------------------------------------
-
 def correct_subtitles(raw_subtitles: str, language: str) -> str:
     prompt = PromptTemplate(
         template=(
@@ -154,10 +126,6 @@ def get_subtitles(video_id: str, video_url: str, lang="en") -> str:
     return text
 
 
-# ------------------------------------------------------------------
-# Main entry
-# ------------------------------------------------------------------
-
 async def get_youtube_summary(
     url: str,
     lang: str,
@@ -182,10 +150,6 @@ async def get_youtube_summary(
         print("cached")
         return cached
 
-    # --------------------------------------------------------------
-    # Transcript
-    # --------------------------------------------------------------
-
     await manager.send_message({"progress": 10, "message": "Extracting transcript..."})
     transcript = get_subtitles(video_id, url ,lang)
     print("transcript",transcript)
@@ -196,9 +160,6 @@ async def get_youtube_summary(
     ):
         return {"error": transcript}
     print("transcript",transcript)
-    # --------------------------------------------------------------
-    # Thumbnail
-    # --------------------------------------------------------------
 
     await manager.send_message({"progress": 20, "message": "Extracting thumbnail..."})
 
@@ -222,16 +183,9 @@ async def get_youtube_summary(
     except Exception as e:
         return {"error": f"Thumbnail extraction failed: {str(e)}"}
 
-    # --------------------------------------------------------------
-    # Clean transcript
-    # --------------------------------------------------------------
 
     await manager.send_message({"progress": 50, "message": "Correcting subtitles..."})
     cleaned_transcript = correct_subtitles(transcript, lang)
-
-    # --------------------------------------------------------------
-    # Prompt
-    # --------------------------------------------------------------
 
     prompt_template = (
         "Convert the following YouTube transcript into a refined output.\n\n"
@@ -259,10 +213,6 @@ async def get_youtube_summary(
     )
 
     chain = prompt | llm | StrOutputParser()
-
-    # --------------------------------------------------------------
-    # Generate summary
-    # --------------------------------------------------------------
 
     await manager.send_message({"progress": 90, "message": "Generating summary..."})
 

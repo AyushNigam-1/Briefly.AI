@@ -1,34 +1,7 @@
 from bson.objectid import ObjectId
 from controllers.db.conn import summary_collection
-
-from langchain_core.prompts import PromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-
-from utils.llm import llm
-from utils.common import split_content
-
-
-# ------------------------------------------------------------------
-# Prompt
-# ------------------------------------------------------------------
-
-prompt_template = PromptTemplate(
-    input_variables=["summary", "history", "user_query"],
-    template="""
-You are chatting with a summarized video.
-
-Video Summary:
-{summary}
-
-Previous Conversation:
-{history}
-
-User Question:
-{user_query}
-
-Answer clearly, directly, and helpfully.
-"""
-)
+import json
+from agent.search_agent import get_agent
 
 
 # ------------------------------------------------------------------
@@ -39,65 +12,81 @@ def chat_with_summary(user_input: str, id: str):
     try:
         summary_data = summary_collection.find_one({"_id": ObjectId(id)})
         if not summary_data:
-            return "Could not find a summary associated with the given ID."
+            return {"res": "Summary not found"}
 
         summarized_summary = summary_data.get("summarized_summary", "")
         if not summarized_summary:
-            return "The summary is empty or unavailable."
-
-        # --------------------------------------------
-        # Build chat history from DB only
-        # --------------------------------------------
+            return {"res": "Summary empty"}
 
         chat_history = summary_data.get("queries", [])
 
         history_text = "\n".join(
-            f"{q.get('sender', 'unknown')}: {q.get('content', '')}"
+            f"{q.get('sender')}: {q.get('content')}"
             for q in chat_history
-        ) if chat_history else ""
+        ) if chat_history else "None"
 
-        # --------------------------------------------
-        # Build prompt
-        # --------------------------------------------
+        system_prompt = f"""
+            You are chatting with a summarized video.
 
-        prompt = prompt_template.format(
-            summary=summarized_summary,
-            history=history_text,
-            user_query=user_input,
-        )
+            Video Summary:
+            {summarized_summary}
 
-        # --------------------------------------------
-        # LLM call (LCEL-safe)
-        # --------------------------------------------
+            Conversation History:
+            {history_text}
 
-        response_raw = llm.invoke(prompt)
-        response_text = response_raw.content
-        # thought, final_response = split_content(response_text)
+            Rules:
 
-        # --------------------------------------------
-        # Persist conversation
-        # --------------------------------------------
+            1. Always answer from the Video Summary first.
+            2. Only use search if user asks for:
+            - current events
+            - real world facts
+            - things missing from summary.
+            3. Never hallucinate.
+            4. Be direct and concise.
+            """
 
-        user_entry = {
-            "sender": "user",
-            "content": user_input,
-        }
+        agent = get_agent()
 
-        llm_entry = {
-            "sender": "llm",
-            "content": response_text,
-            "thought": "",
-        }
+        response = agent.invoke({
+            "messages": [
+                ("system", system_prompt),
+                ("human", user_input),
+            ]
+        })
+
+        response_text = response["messages"][-1].content
+        resources = []
+        for msg in response["messages"]:
+            if msg.type == "tool":
+                try:
+                    parsed = json.loads(msg.content)
+                    if isinstance(parsed, list):
+                        resources.extend(parsed)
+                except Exception:
+                    pass
 
         summary_collection.update_one(
             {"_id": ObjectId(id)},
-            {"$push": {"queries": {"$each": [user_entry, llm_entry]}}},
+            {
+                "$push": {
+                    "queries": {
+                        "$each": [
+                            {"sender": "user", "content": user_input},
+                            {
+                                "sender": "llm",
+                                "content": response_text,
+                                "sources": resources,
+                            },
+                        ]
+                    }
+                }
+            },
         )
 
         return {
             "res": response_text,
-            "thought": "thought",
+            "sources": resources,   # 🔥 HERE
         }
 
     except Exception as e:
-        return f"An error occurred: {str(e)}"
+        return {"res": str(e)}
