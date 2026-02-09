@@ -6,34 +6,9 @@ import Loader from "./Loader";
 import { Sparkle, Sparkles } from "lucide-react";
 
 const QueryInput = ({ setQueries, url, setState, id, ytRecommendations, webRecommendations, isloading, cancelRecommendations, fetchRecommendations }: QueryInputProps) => {
-    const inputRef = useRef<HTMLInputElement>(null);
     const [showDisclosure, setShowDisclosure] = useState(true);
 
-    console.log(webRecommendations)
-    const handleKeyDown = async (e: KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === "Enter" && e.currentTarget.value.trim()) {
-            setState("pending");
-            const inputValue = e.currentTarget.value;
-            setQueries((queries) => [...queries, { sender: "user", content: inputValue }]);
 
-            if (inputRef.current) {
-                inputRef.current.value = "";
-            }
-
-            try {
-                const result = await fetchQueryResult(inputValue);
-                console.log(result)
-                setQueries((queries) => [
-                    ...queries,
-                    { sender: "llm", content: result.res, thought: result.thought },
-                ]);
-            } catch (error) {
-                console.error("Error fetching query result:", error);
-            } finally {
-                setState("completed");
-            }
-        }
-    };
 
     const fetchQueryResult = async (query: string) => {
         const response = await fetch("http://localhost:8000/query", {
@@ -130,18 +105,7 @@ const QueryInput = ({ setQueries, url, setState, id, ytRecommendations, webRecom
                 </Disclosure>
             )} */}
             {/* </div> */}
-            <div className="flex max-w-6xl my-2 mx-auto rounded-lg bg-white/5 py-5">
-                <span className=" text-gray-200 pl-3 rounded-s-lg ">
-                    <Sparkle />
-                </span>
-                <input
-                    type="text"
-                    ref={inputRef}
-                    onKeyDown={handleKeyDown}
-                    className=" w-full bg-transparent  rounded-e-lg pl-3 outline-none  text-gray-200"
-                    placeholder="Ask AI"
-                />
-            </div>
+
         </div>
     );
 };

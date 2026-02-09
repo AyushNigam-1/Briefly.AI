@@ -1,12 +1,12 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from controllers.query.query_handler import chat_with_summary  
-
+from typing import Optional 
 router = APIRouter()
 
 class QueryRequest(BaseModel):
     query: str
-    id: str
+    id: Optional[str] = None
 
 @router.post("/query")
 async def query_handler(request: QueryRequest):

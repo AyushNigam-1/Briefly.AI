@@ -1,23 +1,45 @@
-from bson.objectid import ObjectId
-from controllers.db.conn import summary_collection
+from bson import ObjectId
+from datetime import datetime, timezone
 import json
-from agent.search_agent import get_agent
+from controllers.db.conn import summary_collection
+from agent.search_agent import get_agent 
 
-
-# ------------------------------------------------------------------
-# Main chat handler
-# ------------------------------------------------------------------
-
-def chat_with_summary(user_input: str, id: str):
+def chat_with_summary(user_input: str, id: str = None):
     try:
-        summary_data = summary_collection.find_one({"_id": ObjectId(id)})
+        summary_data = None
+        object_id = None
+
+        # Validate frontend id
+        if id and ObjectId.is_valid(id):
+            object_id = ObjectId(id)
+            summary_data = summary_collection.find_one({"_id": object_id})
+
+        # If not found -> create NEW using frontend id
         if not summary_data:
-            return {"res": "Summary not found"}
 
-        summarized_summary = summary_data.get("summarized_summary", "")
-        if not summarized_summary:
-            return {"res": "Summary empty"}
+            # If frontend didn't send id, generate one
+            if not object_id:
+                object_id = ObjectId()
 
+            summary_data = {
+                "_id": object_id,          # 👈 IMPORTANT
+                "user_id": "",
+                "thumbnail": "",
+                "url": "",
+                "type": "General Chat",
+                "thought": "",
+                "original_summary": "",
+                "summarized_summary": "",
+                "queries": [],
+                "timestamp": datetime.now(timezone.utc),
+                "title": "New Chat",
+            }
+
+            summary_collection.insert_one(summary_data)
+
+        id = str(object_id)
+
+        # History
         chat_history = summary_data.get("queries", [])
 
         history_text = "\n".join(
@@ -25,25 +47,21 @@ def chat_with_summary(user_input: str, id: str):
             for q in chat_history
         ) if chat_history else "None"
 
+        current_summary = summary_data.get("summarized_summary", "")
+
         system_prompt = f"""
-            You are chatting with a summarized video.
+You are chatting.
 
-            Video Summary:
-            {summarized_summary}
+Context:
+{current_summary or "No summary."}
 
-            Conversation History:
-            {history_text}
+History:
+{history_text}
 
-            Rules:
-
-            1. Always answer from the Video Summary first.
-            2. Only use search if user asks for:
-            - current events
-            - real world facts
-            - things missing from summary.
-            3. Never hallucinate.
-            4. Be direct and concise.
-            """
+Rules:
+- Be concise
+- Never hallucinate
+"""
 
         agent = get_agent()
 
@@ -55,28 +73,15 @@ def chat_with_summary(user_input: str, id: str):
         })
 
         response_text = response["messages"][-1].content
-        resources = []
-        for msg in response["messages"]:
-            if msg.type == "tool":
-                try:
-                    parsed = json.loads(msg.content)
-                    if isinstance(parsed, list):
-                        resources.extend(parsed)
-                except Exception:
-                    pass
 
         summary_collection.update_one(
-            {"_id": ObjectId(id)},
+            {"_id": object_id},
             {
                 "$push": {
                     "queries": {
                         "$each": [
                             {"sender": "user", "content": user_input},
-                            {
-                                "sender": "llm",
-                                "content": response_text,
-                                "sources": resources,
-                            },
+                            {"sender": "llm", "content": response_text},
                         ]
                     }
                 }
@@ -84,9 +89,10 @@ def chat_with_summary(user_input: str, id: str):
         )
 
         return {
+            "id": id,
             "res": response_text,
-            "sources": resources,   # 🔥 HERE
         }
 
     except Exception as e:
-        return {"res": str(e)}
+        print(e)
+        return {"res": "Error", "error": str(e)}

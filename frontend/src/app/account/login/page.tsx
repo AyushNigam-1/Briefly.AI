@@ -57,7 +57,7 @@ const LoginPage: React.FC = () => {
                         </div>
                         <div className="text-center">
                             <h3 className="text-3xl font-bold tracking-tight text-white">Welcome Back</h3>
-                            <p className="text-sm text-gray-400 mt-1">Enter your credentials to access your account</p>
+                            <p className="text-sm text-gray-400 mt-1">Enter credentials to access your account</p>
                         </div>
                     </div>
 
