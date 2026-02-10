@@ -3,19 +3,15 @@ import React, { Dispatch, KeyboardEvent, SetStateAction, useEffect, useRef, useS
 import { useParams, useSearchParams } from "next/navigation";
 import axios from 'axios';
 import Cookies from 'js-cookie';
-import { Metadata, ProgressResponse, SummaryResponse, query, webRecommendations, ytRecommendations } from '@/app/types';
+import { Metadata, ProgressResponse, query, webRecommendations, ytRecommendations } from '@/app/types';
 import { setupWebSocketListeners } from '@/websocket/webEvent';
-import { connectWebSocket } from "@/websocket/websocket";
 import HashLoader from "react-spinners/HashLoader"
-import Navbar from '@/app/components/Navbar';
-import Sidebar from '@/app/components/Sidebar';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm'
 import { useQuery } from "@tanstack/react-query";
-import QueryInput from '@/app/components/QueryInput';
-import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/react'
-import Loader from '@/app/components/Loader';
-import { Copy, Ellipsis, Heart, Loader2, RefreshCw, Sparkle, Sparkles, User } from 'lucide-react';
+import { Copy, Ellipsis, Loader2, Paperclip, RefreshCw, SendHorizontal } from 'lucide-react';
+// 1. Import Framer Motion
+import { motion, AnimatePresence } from "framer-motion";
 
 const getChats = async (summaryId: string) => {
     try {
@@ -57,12 +53,14 @@ export const previewFile = async (file_url: string) => {
     };
     return ""
 }
+
 interface ChatsProps {
     queries: query[];
     setQueries: Dispatch<SetStateAction<query[]>>;
     isPending: boolean;
     handleSend: (query: string) => Promise<void>;
 }
+
 const Chats = ({ queries, setQueries, isPending, handleSend }: ChatsProps) => {
 
     const [isLoading, setLoading] = useState<boolean>(false);
@@ -70,9 +68,6 @@ const Chats = ({ queries, setQueries, isPending, handleSend }: ChatsProps) => {
     const [progress, setProgress] = useState<ProgressResponse>();
     const [metadata, setMetadata] = useState<Metadata | undefined>(undefined)
     const searchParams = useSearchParams();
-    const params = useParams();
-    const id = searchParams.get('id') as string;
-    const url = params?.url as string;
     const title = searchParams.get('title') as string;
     const language = searchParams.get('language') as string
     const format = searchParams.get('format') as string;
@@ -86,12 +81,9 @@ const Chats = ({ queries, setQueries, isPending, handleSend }: ChatsProps) => {
     const [state, setState] = useState<string | undefined>(undefined);
     const [favourites, setFavourites] = useState<string[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
-    // const 
-    // useEffect(() => {
-    //     const storedFavourites: any[] = JSON.parse(localStorage.getItem("favourites") || "[]");
-    //     setFavourites(storedFavourites.map(fav => fav?.id));
-    //     console.log(storedFavourites)
-    // }, []);
+    const { id } = useParams();
+    const [messages, setMessages] = useState([]);
+    const [loadingHistory, setLoadingHistory] = useState(false);
 
     const copyToClipboard = async (text?: string) => {
         if (text)
@@ -102,233 +94,21 @@ const Chats = ({ queries, setQueries, isPending, handleSend }: ChatsProps) => {
                 setTimeout(() => {
                     setText('Copy')
                 }, 2000)
-                return true; // Success
+                return true;
             } catch (err) {
                 console.error('Failed to copy text: ', err);
-                return false; // Failure
+                return false;
             }
     };
 
-    // const fetchRecommendations = async (scriptId?: string) => {
-    //     setRecommendationLoader(true);
-
-    //     if (cancelTokenSource) {
-    //         cancelTokenSource.abort();
-    //     }
-
-    //     cancelTokenSource = new AbortController();
-
-    //     try {
-    //         const token = Cookies.get("access_token");
-    //         if (!token) {
-    //             throw new Error("Unauthorized: No access token found");
-    //         }
-
-    //         const response = await axios.get(
-    //             `http://localhost:8000/summary/recommendations/?summary_id=${scriptId}`,
-    //             {
-    //                 headers: { Authorization: `Bearer ${token}` },
-    //                 signal: cancelTokenSource.signal,
-    //             }
-    //         );
-
-    //         console.log("Full API Response:", response.data);
-
-    //         if (!response.data || typeof response.data !== "object") {
-    //             throw new Error("Invalid response format: response data is not an object");
-    //         }
-
-    //         if (!response.data.recommendations || typeof response.data.recommendations !== "string") {
-    //             throw new Error("Invalid response format: recommendations field missing or not a string");
-    //         }
-
-    //         let recommendations = response.data.recommendations.replace(/```json|```/g, "").trim();
-
-    //         try {
-    //             const data = JSON.parse(recommendations);
-    //             console.log("Parsed Data:", data);
-
-    //             if (!data.youtube || !data.website) {
-    //                 throw new Error("Missing expected recommendation data");
-    //             }
-
-    //             setytRecommendations(data.youtube);
-    //             setWebRecommendations(data.website);
-    //         } catch (jsonError) {
-    //             console.error("Error parsing recommendations JSON:", jsonError);
-    //             throw new Error("Failed to parse recommendations JSON");
-    //         }
-    //     } catch (error: any) {
-    //         if (axios.isCancel(error)) {
-    //             console.log("Request canceled:", error.message);
-    //         } else if (error.response) {
-    //             console.error("Server error:", error.response.status, error.response.data);
-    //         } else {
-    //             console.error("Unexpected error fetching recommendations:", error.message || error);
-    //         }
-    //     } finally {
-    //         setRecommendationLoader(false);
-    //     }
-    // };
-
-
-
-    // const handleRegenerate = async () => {
-    //     setText2('Regenrating . . .')
-    //     try {
-    //         const { data } = await axios.post(`http://localhost:8000/regenerate_summary?id=${summaryId}&language=${language}&format=${format}`)
-    //         console.log(data)
-    //         setSummary(data)
-    //     } catch (err) {
-    //         // setError(err.message);
-    //     } finally {
-    //         setText2("Regenrate");
-    //     }
-    // };
-
-    // const getSummary = async (url?: string, lang?: string, format?: string, title?: string, icon?: string) => {
-    //     console.log("called getSummary")
-    //     setLoading(true);
-    //     try {
-    //         const token = Cookies.get("access_token");
-
-    //         let file: File | null = null;
-
-    //         if (url) {
-    //             const decodedUrl = decodeURIComponent(url);
-
-    //             const isLocalFile = decodedUrl.startsWith("blob:") || decodedUrl.startsWith("file:");
-
-    //             if (isLocalFile) {
-    //                 const response = await fetch(decodedUrl);
-    //                 if (!response.ok) {
-    //                     throw new Error("Failed to fetch the file from the provided URL.");
-    //                 }
-    //                 const blob = await response.blob();
-    //                 file = new File([blob], title || "uploaded_file", { type: blob.type });
-    //                 console.log(file)
-    //             } else {
-    //                 const urlRegex = /^(https?:\/\/[^\s/$.?#].[^\s]*)$/i;
-    //                 if (!urlRegex.test(decodedUrl)) {
-    //                     throw new Error("Invalid URL provided.");
-    //                 }
-    //             }
-    //         }
-    //         const formData = new FormData();
-    //         if (url) formData.append("url", url);
-    //         if (file) formData.append("file", file);
-    //         if (lang) formData.append("lang", lang);
-    //         if (format) formData.append("format", format);
-    //         if (title) formData.append("title", title);
-    //         if (icon) formData.append('icon', icon)
-
-    //         const { data } = await axios.post(
-    //             "http://localhost:8000/summarize/",
-    //             formData,
-    //             {
-    //                 headers: {
-    //                     "Authorization": `Bearer ${token}`,
-    //                     "Content-Type": "multipart/form-data",
-    //                 },
-    //                 withCredentials: true,
-    //             }
-    //         );
-    //         console.log("data", data)
-    //         const preview_url = await previewFile(data.summary.thumbnail)
-    //         console.log(preview_url)
-    //         setMetadata({ icon: preview_url, title: data.summary.title, type: data.summary.type })
-    //         setSummaryId(data.summary.id)
-
-    //         // setSummary(data.summary);
-    //         console.log(data.summary)
-    //         setQueries(data.summary.queries);
-    //         // fetchRecommendations(data.summary.id)
-    //     } catch (error) {
-    //         if (axios.isAxiosError(error)) {
-    //             throw new Error(error.response?.data?.message || error.message);
-    //         } else {
-    //             throw new Error(String(error));
-    //         }
-    //     } finally {
-    //         setLoading(false);
-    //     }
-    // };
-
-    // async function markSummaryAsFavorite() {
-    //     if (!summaryId) return;
-    //     setFavourites((e) => !favourites.includes(summaryId) ? [...e, summaryId] : e.filter(fav => fav != summaryId))
-    //     try {
-
-    //         const token = Cookies.get("access_token");
-
-    //         const response = await axios.post(`http://localhost:8000/summary/favorite?summary_id=${summaryId}`, {
-    //             summary_id: summaryId
-    //         }, {
-    //             headers: {
-    //                 "Authorization": `Bearer ${token}`,
-    //             },
-    //             withCredentials: true,
-    //         });
-
-    //         setFavourites((e) => response.data.status ? [...e, summaryId] : e.filter(fav => fav != summaryId))
-
-    //         localStorage.setItem("favourites", JSON.stringify(response.data.status ? [...favourites, summaryId] : [...favourites.filter(fav => fav != summaryId)]))
-    //     } catch (error: any) {
-    //         console.error('Error:', error.response?.data?.detail || error.message);
-    //         return { error: error.response?.data?.detail || 'Failed to mark summary as favorite' };
-    //     }
-    // }
-
-    // const cancelRecommendations = () => {
-    //     if (cancelTokenSource) {
-    //         cancelTokenSource.abort();
-    //         console.log("Fetch request canceled.");
-    //     }
-    // };
-
-    // useEffect(() => {
-    //     if (summary) return
-    //     connectWebSocket("ws://127.0.0.1:8000/ws")
-    //     if (id) {
-    //         setSummaryId(id)e.key === "Enter" && e.currentTarget.value.trim(
-    //         // fetchRecommendations(id)
-    //     }
-    //     else {
-    //         // getSummary(url, language, format, title, icon);
-    //     }
-    // }, []);
-
     const {
         data: summary,
-        // isLoading,
         isError,
     } = useQuery({
         queryKey: ["summary", summaryId],
         queryFn: async () => await getChats(summaryId!),
-        enabled: !!summaryId, // prevents firing when undefined
+        enabled: !!summaryId,
     });
-
-    // useEffect(() => {
-    //     if (!summaryId) return;
-    //     const fetchData = async () => {
-    //         setLoading(true);
-    //         try {
-    //             const data = await fetchExisitingSummary(summaryId);
-    //             const thumbnail = await previewFile(data.summary.thumbnail)
-    //             console.log(data)
-    //             setMetadata({ icon: thumbnail, title: data.summary.title, type: data.summary.type })
-    //             setSummary(data.summary);
-    //             setQueries(data.summary.queries)
-    //             // fetchRecommendations(data.summary.id)
-    //         } catch (error) {
-    //             console.error("Failed to fetch summary:", error);
-    //         } finally {
-    //             setLoading(false);
-    //         }
-    //     };
-
-    //     fetchData();
-    // }, [summaryId]);
 
     useEffect(() => {
         if (queriesContainerRef.current) {
@@ -337,7 +117,7 @@ const Chats = ({ queries, setQueries, isPending, handleSend }: ChatsProps) => {
                 behavior: "smooth",
             });
         }
-    }, [queries]);
+    }, [queries, isPending]); // Added isPending to auto-scroll when loader appears
 
     useEffect(() => {
         setupWebSocketListeners({
@@ -360,7 +140,7 @@ const Chats = ({ queries, setQueries, isPending, handleSend }: ChatsProps) => {
     </div>
 
     return <>
-        {/* Main Container: Full width, centered content area */}
+        {/* Main Container */}
         <div className='flex flex-col items-center w-full h-[calc(100vh-160px)]'>
             {/* Scrollable Chat Area */}
             <div
@@ -368,86 +148,101 @@ const Chats = ({ queries, setQueries, isPending, handleSend }: ChatsProps) => {
                 className='w-full max-w-6xl overflow-y-auto scrollbar-none'
             >
                 <div className="flex flex-col gap-6 py-4">
-                    {queries?.map((query, index: number) => (
-                        <div
-                            key={index}
-                            className={`flex w-full ${query.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                        >
-                            <div className={`flex flex-col gap-2 max-w-[80%] ${query.sender === 'user' ? 'items-end' : 'items-start'}`}>
-                                <div className={`p-4 rounded-2xl text-white shadow-sm ${query.sender === 'user'
-                                    ? 'bg-white/10 rounded-br-none'
-                                    : 'bg-gray-900 rounded-bl-none'
-                                    }`}>
-                                    <ReactMarkdown
-                                        remarkPlugins={[remarkGfm]}
-                                        components={{
-                                            ul: ({ children }) => <ul className="list-disc ml-5">{children}</ul>,
-                                            ol: ({ children }) => <ul className="list-decimal ml-5">{children}</ul>
-                                        }}
-                                    >
-                                        {query.content}
-                                    </ReactMarkdown>
-                                </div>
-
-                                {/* Action Buttons (Copy/Regenerate) */}
-                                <div className="flex gap-2 opacity-50 hover:opacity-100 transition-opacity">
-                                    <button
-                                        onClick={() => copyToClipboard(query?.content)}
-                                        className="p-1 hover:text-white text-gray-400 transition-colors"
-                                        title="Copy"
-                                    >
-                                        <Copy size={16} />
-                                    </button>
-                                    {query.sender !== 'user' && (
-                                        <button
-                                            className="p-1 hover:text-white text-gray-400 transition-colors"
-                                            title="Regenerate"
+                    {/* 2. AnimatePresence enables exit animations and clean DOM updates */}
+                    <AnimatePresence mode='popLayout'>
+                        {queries?.map((query, index: number) => (
+                            // 3. Turn div into motion.div
+                            <motion.div
+                                key={index}
+                                initial={{ opacity: 0, y: 20, scale: 0.98 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                transition={{ duration: 0.4, ease: "easeOut" }}
+                                className={`flex w-full ${query.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                            >
+                                <div className={`flex flex-col gap-2 max-w-[80%] ${query.sender === 'user' ? 'items-end' : 'items-start'}`}>
+                                    <div className={`p-4 rounded-2xl text-white shadow-sm ${query.sender === 'user'
+                                        ? 'bg-white/10 rounded-br-none'
+                                        : 'bg-gray-900 rounded-bl-none'
+                                        }`}>
+                                        <ReactMarkdown
+                                            remarkPlugins={[remarkGfm]}
+                                            components={{
+                                                ul: ({ children }) => <ul className="list-disc ml-5">{children}</ul>,
+                                                ol: ({ children }) => <ul className="list-decimal ml-5">{children}</ul>
+                                            }}
                                         >
-                                            <RefreshCw size={16} />
+                                            {query.content}
+                                        </ReactMarkdown>
+                                    </div>
+
+                                    {/* Action Buttons */}
+                                    <div className="flex gap-2 opacity-50 hover:opacity-100 transition-opacity">
+                                        <button
+                                            onClick={() => copyToClipboard(query?.content)}
+                                            className="p-1 hover:text-white text-gray-400 transition-colors"
+                                            title="Copy"
+                                        >
+                                            <Copy size={16} />
                                         </button>
-                                    )}
+                                        {query.sender !== 'user' && (
+                                            <button
+                                                className="p-1 hover:text-white text-gray-400 transition-colors"
+                                                title="Regenerate"
+                                            >
+                                                <RefreshCw size={16} />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                    ))}
-                    {/* Loading Indicator */}
-                    {isPending && (
-                        <div className="flex justify-start w-full">
-                            <div className="bg-gray-900 p-4 rounded-2xl rounded-bl-none">
-                                <Ellipsis className='animate-bounce text-white' size={24} />
-                            </div>
-                        </div>
-                    )}
+                            </motion.div>
+                        ))}
+                    </AnimatePresence>
+
+                    {/* 4. Animate the Pending Loader */}
+                    <AnimatePresence>
+                        {isPending && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.9 }}
+                                className="flex justify-start w-full"
+                            >
+                                <div className="bg-gray-900 p-4 rounded-2xl rounded-bl-none">
+                                    <Ellipsis className='animate-bounce text-white' size={24} />
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </div>
         </div>
 
-        <div className="flex max-w-6xl my-2 mx-auto rounded-lg bg-white/5 py-5">
-            <span className=" text-gray-200 pl-3 rounded-s-lg ">
-                <Sparkle />
-            </span>
-            <input type="text" onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => (e.key === "Enter" && e.currentTarget.value.trim()) && handleSend(e.currentTarget.value)} placeholder='Ask AI' className='appearance-none border-none outline-none bg-transparent p-2 w-full h-14' />
-            {/* <input
-                type="text"
-                ref={inputRef}
-                onKeyDown={handleKeyDown}
-                className=" w-full bg-transparent  rounded-e-lg pl-3 outline-none  text-gray-200"
-                placeholder="Ask AI"
-            /> */}
-        </div>
         {/* Input Area */}
-        {/* <QueryInput
-            setQueries={setQueries}
-            url={url}
-            setState={setState}
-            id={summaryId}
-            ytRecommendations={ytRecommendations}
-            webRecommendations={webRecommendations}
-            isloading={recommendationLoader}
-        /> */}
+        <div className='flex gap-4 w-full items-end max-w-6xl mx-auto text-gray-100 pt-4'>
+            <span className=' w-full space-y-2 '>
+                <div className='flex gap-2 bg-white/5  rounded-full '>
+                    <button className='bg-gray-900 rounded-full p-4 flex items-center justify-center'>
+                        <input type="file" className="hidden"
+                            accept=".pdf,.txt,image/*,video/*"
+                            multiple />
+                        <Paperclip size="20" />
+                    </button>
+                    <input type="text"
+                        onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => { if (e.key === "Enter" && e.currentTarget.value.trim()) { handleSend(e.currentTarget.value); inputRef.current!.value = ""; } }}
+                        ref={inputRef}
+                        placeholder='Ask AI' className='appearance-none border-none outline-none bg-transparent p-2 w-full h-14' />
+                </div>
+            </span>
+            <button
+                onClick={() => { handleSend(inputRef.current?.value!); inputRef.current!.value = ""; }}
+                className=" rounded-full bg-gray-900 flex items-center justify-center hover:scale-105 transition-transform duration-200">
+                <div className=" rounded-full p-4 flex items-center justify-center">
+                    {isPending ? <Loader2 className='animate-spin' size="20" /> : <SendHorizontal size="20" />}
+                </div>
+            </button>
+        </div>
     </>
 
 }
 
 export default Chats
-

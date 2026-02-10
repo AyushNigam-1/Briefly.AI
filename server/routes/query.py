@@ -1,7 +1,10 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
-from controllers.query.query_handler import chat_with_summary  
-from typing import Optional 
+from utils.auth import get_current_user
+from controllers.query.query_handler import chat_with_summary
+from typing import Optional
+from controllers.db.query import get_last_50_chats
+
 router = APIRouter()
 
 class QueryRequest(BaseModel):
@@ -9,12 +12,12 @@ class QueryRequest(BaseModel):
     id: Optional[str] = None
 
 @router.post("/query")
-async def query_handler(request: QueryRequest):
-    query = request.query
-    id = request.id
+async def query_handler(req: QueryRequest, user=Depends(get_current_user)):
     try:
-        response = chat_with_summary(query,id)
-        return response
+        return chat_with_summary(req.query, user["user_id"], req.id)
     except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(500, str(e))
+
+@router.get("/history/{id}")
+async def history(id: str):
+    return {"id": id, "history": get_last_50_chats(id)}

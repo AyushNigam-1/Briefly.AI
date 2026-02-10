@@ -191,13 +191,14 @@ def get_summary_by_id(id: str):
 
 
 def get_summaries_by_user(user_id: str):
+    print(user_id)
     summaries = list(
         summary_collection.find(
             {"user_id": user_id},
             {"_id": 1, "title": 1, "timestamp": 1, "url": 1, "queries": 1, "type": 1, "thumbnail": 1},
         )
     )
-
+    print("summaries",summaries)
     result = []
     for summary in summaries:
         result.append({
@@ -209,6 +210,7 @@ def get_summaries_by_user(user_id: str):
             "url": summary["url"],
             "type": summary["type"],
         })
+    
 
     return result
 

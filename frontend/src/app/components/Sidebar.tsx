@@ -9,6 +9,7 @@ import {
     DialogTitle,
 } from "@headlessui/react";
 import { PanelLeft, PanelLeftDashed } from "lucide-react";
+import Link from "next/link";
 
 const groupSummariesByDate = (summaries: SummaryHistoryResponse[]) => {
     const grouped = {
@@ -39,7 +40,7 @@ const groupSummariesByDate = (summaries: SummaryHistoryResponse[]) => {
     return grouped;
 };
 
-const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
+const Sidebar: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [summaries, setSummaries] = useState<SummaryHistoryResponse[]>([]);
     const [filtered, setFiltered] = useState<SummaryHistoryResponse[]>([]);
@@ -98,8 +99,6 @@ const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
 
             const updated = summaries.filter((s) => s.id !== summaryId);
             setSummaries(updated);
-            setId(updated.at(-1)?.id);
-
         } catch {
             setError("Delete failed");
         }
@@ -139,14 +138,10 @@ const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
                         onChange={(e) => setSearch(e.target.value)}
                         className="bg-white/5 p-2 rounded-lg outline-none"
                     />
-
                     <div className="flex-1 overflow-y-auto">
-
                         {loading && <p>Loading…</p>}
                         {error && <p className="text-red-400">{error}</p>}
                         <div className="space-y-4">
-
-
                             {Object.keys(grouped).map((k) =>
                                 grouped[k].length ? (
                                     <div key={k} className=" space-y-2">
@@ -154,9 +149,12 @@ const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
                                         <div className="space-y-2">
 
                                             {grouped[k].map((s) => (
-                                                <div
+                                                <Link
+                                                    href={`/${s.id}`}
                                                     key={s.id}
-                                                    onClick={() => setId(s.id)}
+                                                    // onClick={() => setId(s.id)}
+                                                    // onClick={() => window.history.pushState({ path: `${window.location.pathname.replace(/\/$/, '')}/${s.id}` }, '', `${window.location.pathname.replace(/\/$/, '')}/${s.id}`)
+                                                    // }
                                                     className="flex justify-between cursor-pointer hover:text-gray-300"
                                                 >
                                                     <span className="truncate text-lg">{s.title}</span>
@@ -170,7 +168,7 @@ const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
                                                     >
                                                         🗑
                                                     </button> */}
-                                                </div>
+                                                </Link>
                                             ))}
                                         </div>
                                     </div>
@@ -179,10 +177,10 @@ const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
                         </div>
                     </div>
                 </div>
-            </div>
+            </div >
 
             {/* Delete Dialog */}
-            <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60">
+            < Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60" >
                 <DialogPanel className="bg-gray-900 p-6 rounded-xl w-80">
 
                     <DialogTitle className="text-xl font-bold">Delete summary?</DialogTitle>
@@ -210,7 +208,7 @@ const Sidebar: React.FC<SidebarProps> = ({ setId }) => {
                         </button>
                     </div>
                 </DialogPanel>
-            </Dialog>
+            </Dialog >
         </>
     );
 };
