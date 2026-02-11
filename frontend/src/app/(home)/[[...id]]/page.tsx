@@ -12,6 +12,7 @@ import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Cookies from "js-cookie";
 import Navbar from "@/app/components/Navbar";
+import InputBox from "@/app/components/InputBox";
 
 const Page = () => {
   const { id } = useParams();
@@ -20,16 +21,13 @@ const Page = () => {
   const rawId = Array.isArray(id) ? id[0] : id;
 
   const [loading, setLoading] = useState(false);
-  const [url, setUrl] = useState<string | null>(null);
+  const [query, setQuery] = useState<string>("");
   const [metadata, setMetadata] = useState<metadata | null>(null);
-  const doc = useRef<HTMLInputElement | null>(null);
-  const [files, setFiles] = useState<File[]>([]);
   const { sendQuery } = useMutations();
-
   const [queries, setQueries] = useState<query[]>([]);
   const [activeId, setActiveId] = useState<string | undefined>();
 
-  // Load history when URL id changes
+  // Load history when query id changes
   useEffect(() => {
     if (!rawId) {
       setQueries([]);
@@ -46,7 +44,6 @@ const Page = () => {
         const res = await axios.get(`http://localhost:8000/history/${rawId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-
         if (res.data?.history) {
           setQueries(res.data.history);
         }
@@ -58,23 +55,17 @@ const Page = () => {
     fetchHistory();
   }, [rawId]);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    setLoading(true);
-    if (e.target.files?.length) {
-      setFiles(prev => [...prev, ...Array.from(e.target.files!)]);
-    }
-    e.target.value = "";
-    setLoading(false);
-  };
+
 
   const handleSend = async (text: string) => {
     if (!text.trim()) return;
-    setUrl("");
+    setQuery("");
     setQueries(prev => [...prev, { sender: "user", content: text }]);
     try {
       const data = await sendQuery.mutateAsync({
         query: text,
         id: activeId!, // undefined on first message
+        files: []
       });
       if (!activeId && data.id) {
         setActiveId(data.id);
@@ -89,7 +80,6 @@ const Page = () => {
   return (
     <>
       <Navbar component={<Sidebar />} />
-
       <AnimatePresence mode="wait">
         {activeId && queries.length > 0 ? (
           <motion.div
@@ -100,10 +90,12 @@ const Page = () => {
             className="w-full h-full"
           >
             <Chats
+              query={query}
               queries={queries}
               setQueries={setQueries}
               isPending={sendQuery.isPending}
               handleSend={handleSend}
+              setQuery={setQuery}
             />
           </motion.div>
         ) : (
@@ -112,65 +104,15 @@ const Page = () => {
             initial={{ opacity: 0, scale: 0.95, x: "-50%", y: "-50%" }}
             animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
             exit={{ opacity: 0, scale: 0.95, x: "-50%", y: "-50%" }}
-            className="fixed top-1/2 left-1/2 w-full max-w-3xl px-4 text-white"
-          >
+            className="fixed top-1/2 left-1/2 w-full max-w-3xl px-4 text-white">
             <div className="flex flex-col gap-10">
-
-              <div className="text-center">
-                <h3 className="text-5xl font-bold">How can I help you today?</h3>
-                <p className="text-gray-400 mt-4">
+              <div className="text-center space-y-4">
+                <h3 className="text-4xl md:text-5xl font-bold">How can I help you today?</h3>
+                <p className="text-gray-400">
                   Ask anything, upload docs, brainstorm, or chat.
                 </p>
+                <InputBox query={query} setQuery={setQuery} send={handleSend} isPending={sendQuery.isPending} />
               </div>
-
-              <div className="flex gap-4 items-end">
-                <span className="w-full">
-
-                  <div className="flex bg-white/5 rounded-full">
-                    <button
-                      className="bg-gray-900 rounded-full p-4 flex items-center justify-center"
-                      onClick={() => doc.current?.click()}
-                    >
-                      <input
-                        ref={doc}
-                        type="file"
-                        hidden
-                        multiple
-                        onChange={handleFileChange}
-                      />
-                      <Paperclip />
-                    </button>
-
-                    <input
-                      value={url ?? ""}
-                      onChange={e => setUrl(e.target.value)}
-                      onKeyDown={e => e.key === "Enter" && url && handleSend(url)}
-                      className="bg-transparent w-full outline-none pl-2"
-                      placeholder="Ask AI..."
-                    />
-                  </div>
-
-                </span>
-
-                <button
-                  disabled={!url}
-                  onClick={() => url && handleSend(url)}
-                  className="p-4 bg-gray-900 rounded-full"
-                >
-                  {sendQuery.isPending ? (
-                    <Loader2 className="animate-spin" />
-                  ) : (
-                    <SendHorizontal />
-                  )}
-                </button>
-              </div>
-
-              <ContentDialog
-                metadata={metadata}
-                setMetadata={setMetadata}
-                setUrl={setUrl}
-                url={url}
-              />
             </div>
           </motion.div>
         )}

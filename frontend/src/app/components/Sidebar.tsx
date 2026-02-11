@@ -111,7 +111,7 @@ const Sidebar: React.FC = () => {
             {/* Toggle Button */}
             <button
                 onClick={toggleSidebar}
-                className="text-white bg-gray-900 p-3  rounded-full"
+                className="text-secondary bg-primary p-3  rounded-full"
             >
                 <PanelLeft size={20} />
             </button>
@@ -119,18 +119,17 @@ const Sidebar: React.FC = () => {
             {/* Overlay */}
             <div
                 onClick={toggleSidebar}
-                className={`fixed inset-0 bg-black/50 transition ${isOpen ? "opacity-100 pointer-events-auto z-40" : "opacity-0 pointer-events-none"
+                className={`fixed inset-0 bg-black/5 transition ${isOpen ? "opacity-100 pointer-events-auto z-40" : "opacity-0 pointer-events-none"
                     }`}
             />
 
             {/* Sidebar */}
             <div
-                className={`fixed top-0 left-0 h-full text-white w-72 bg-gray-900 shadow-lg transform transition-transform duration-300 z-50 ${isOpen ? "translate-x-0" : "-translate-x-full"
+                className={`fixed top-0 left-0 h-full text-white w-72 bg-white/5 shadow-lg transform transition-transform duration-300 z-50 ${isOpen ? "translate-x-0" : "-translate-x-full"
                     }`}
             >
                 <div className="p-4 flex flex-col gap-4 h-full">
-
-                    <h2 className="text-xl font-bold ">History</h2>
+                    <h2 className="text-xl font-bold ">Chats</h2>
 
                     <input
                         placeholder="Search..."

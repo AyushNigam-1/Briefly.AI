@@ -12,6 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Copy, Ellipsis, Loader2, Paperclip, RefreshCw, SendHorizontal } from 'lucide-react';
 // 1. Import Framer Motion
 import { motion, AnimatePresence } from "framer-motion";
+import InputBox from './InputBox';
 
 const getChats = async (summaryId: string) => {
     try {
@@ -59,9 +60,11 @@ interface ChatsProps {
     setQueries: Dispatch<SetStateAction<query[]>>;
     isPending: boolean;
     handleSend: (query: string) => Promise<void>;
+    query: string;
+    setQuery: (value: string) => void
 }
 
-const Chats = ({ queries, setQueries, isPending, handleSend }: ChatsProps) => {
+const Chats = ({ queries, setQueries, isPending, handleSend, query, setQuery }: ChatsProps) => {
 
     const [isLoading, setLoading] = useState<boolean>(false);
     const [summaryId, setSummaryId] = useState<string | undefined>(undefined);
@@ -141,11 +144,11 @@ const Chats = ({ queries, setQueries, isPending, handleSend }: ChatsProps) => {
 
     return <>
         {/* Main Container */}
-        <div className='flex flex-col items-center w-full h-[calc(100vh-160px)]'>
+        <div className='flex flex-col items-center w-full h-[calc(100vh-140px)] '>
             {/* Scrollable Chat Area */}
             <div
                 ref={queriesContainerRef}
-                className='w-full max-w-6xl overflow-y-auto scrollbar-none'
+                className='w-full  overflow-y-auto scrollbar-none max-w-6xl'
             >
                 <div className="flex flex-col gap-6 py-4">
                     {/* 2. AnimatePresence enables exit animations and clean DOM updates */}
@@ -160,9 +163,9 @@ const Chats = ({ queries, setQueries, isPending, handleSend }: ChatsProps) => {
                                 className={`flex w-full ${query.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                             >
                                 <div className={`flex flex-col gap-2 max-w-[80%] ${query.sender === 'user' ? 'items-end' : 'items-start'}`}>
-                                    <div className={`p-4 rounded-2xl text-white shadow-sm ${query.sender === 'user'
-                                        ? 'bg-white/10 rounded-br-none'
-                                        : 'bg-gray-900 rounded-bl-none'
+                                    <div className={`p-4 rounded-2xl shadow-sm ${query.sender === 'user'
+                                        ? 'bg-primary text-secondary'
+                                        : 'text-primary bg-white/5 border-gray-800 border'
                                         }`}>
                                         <ReactMarkdown
                                             remarkPlugins={[remarkGfm]}
@@ -216,9 +219,12 @@ const Chats = ({ queries, setQueries, isPending, handleSend }: ChatsProps) => {
                 </div>
             </div>
         </div>
+        <div className='max-w-6xl mx-auto' >
+            <InputBox query={query} setQuery={setQuery} send={handleSend} isPending={isPending} />
+        </div>
 
         {/* Input Area */}
-        <div className='flex gap-4 w-full items-end max-w-6xl mx-auto text-gray-100 pt-4'>
+        {/* <div className='flex gap-4 w-full items-end max-w-6xl mx-auto text-gray-100 pt-4'>
             <span className=' w-full space-y-2 '>
                 <div className='flex gap-2 bg-white/5  rounded-full '>
                     <button className='bg-gray-900 rounded-full p-4 flex items-center justify-center'>
@@ -240,7 +246,7 @@ const Chats = ({ queries, setQueries, isPending, handleSend }: ChatsProps) => {
                     {isPending ? <Loader2 className='animate-spin' size="20" /> : <SendHorizontal size="20" />}
                 </div>
             </button>
-        </div>
+        </div> */}
     </>
 
 }

@@ -24,8 +24,8 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
       <body
-        className="font-mulish antialiased bg-fixed bg-cover bg-center h-screen "
-        style={{ backgroundImage: "url('/1092758.jpg')" }}
+        className="font-mulish antialiased bg-fixed bg-cover bg-center bg-black/95 h-screen backdrop-blur-2xl"
+      // style={{ backgroundImage: "url('https://img.freepik.com/premium-photo/abstract-gradient-background-dark-gradient_1026065-86836.jpg')" }}
       >
         <QueryProvider>
           <div className="relative max-h-screen max-w-screen">

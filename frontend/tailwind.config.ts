@@ -1,5 +1,5 @@
 import type { Config } from "tailwindcss";
-
+import colors from "tailwindcss/colors"; // 1. Import default colors
 export default {
   darkMode: ["class"],
   content: [
@@ -20,6 +20,8 @@ export default {
       },
       colors: {
         customGray: "rgba(154, 154, 154, 0.44)",
+        "primary": colors.gray[200],   // This makes 'bg-primary' effectively 'bg-gray-200'
+        "secondary": colors.gray[800]
       },
     },
   },

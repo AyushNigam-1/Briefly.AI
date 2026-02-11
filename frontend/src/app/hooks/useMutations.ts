@@ -8,27 +8,39 @@ export const useMutations = () => {
     interface QueryPayload {
         query: string;
         id: string;
+        files: File[]
     }
 
     interface QueryResponse {
         res: string; // matches your result.res
         sources?: any[];
         id?: string;
+
     }
 
     const sendQuery = useMutation({
-        mutationFn: async (payload: QueryPayload) => {
-            const { data } = await axios.post<QueryResponse>(
+        mutationFn: async ({ query, id, files }: QueryPayload) => {
+            const form = new FormData();
+
+            form.append("query", query);
+            form.append("id", id);
+
+            files.forEach((file: File) => {
+                form.append("files", file);
+            });
+
+            const { data } = await axios.post(
                 "http://localhost:8000/query",
-                payload,
+                form,
                 {
-                    // 2. THIS IS THE MISSING PART
                     headers: {
-                        Authorization: `Bearer ${token}`
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "multipart/form-data",
                     },
                     withCredentials: true,
-                },
+                }
             );
+
             return data;
         },
         onError: (error) => {
