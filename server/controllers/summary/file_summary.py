@@ -191,18 +191,18 @@ async def get_file_summary(
         if not main_part:
             raise RuntimeError("Empty Gemini response")
 
-        result = save_summary_to_mongo(
-            user_id,
-            file_url,
-            url,
-            main_part,
-            think_part,
-            extracted_text,
-            title,
-            type,
-        )
+        # result = save_summary_to_mongo(
+        #     user_id,
+        #     file_url,
+        #     url,
+        #     main_part,
+        #     think_part,
+        #     extracted_text,
+        #     title,
+        #     type,
+        # )
 
-        return result
+        return main_part
 
     except Exception as e:
         print(e)

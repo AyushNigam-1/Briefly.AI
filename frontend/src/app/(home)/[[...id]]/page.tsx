@@ -26,6 +26,7 @@ const Page = () => {
   const { sendQuery } = useMutations();
   const [queries, setQueries] = useState<query[]>([]);
   const [activeId, setActiveId] = useState<string | undefined>();
+  const [files, setFiles] = useState<File[]>([]);
 
   // Load history when query id changes
   useEffect(() => {
@@ -56,20 +57,36 @@ const Page = () => {
   }, [rawId]);
 
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    // setLoading(true);
+    if (e.target.files?.length) {
+      setFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+    }
+    e.target.value = "";
+    // setLoading(false);
+  };
 
-  const handleSend = async (text: string) => {
-    if (!text.trim()) return;
+  const handleSend = async (query: string, files: File[]) => {
+    if (!query.trim()) return;
     setQuery("");
-    setQueries(prev => [...prev, { sender: "user", content: text }]);
+    setFiles([])
+    setQueries(prev => [...prev, {
+      sender: "user", content: query, files: files.map(file => ({
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        url: ""
+      }))
+    }]);
     try {
       const data = await sendQuery.mutateAsync({
-        query: text,
-        id: activeId!, // undefined on first message
-        files: []
+        query: query,
+        id: activeId!,
+        files: files
       });
       if (!activeId && data.id) {
-        setActiveId(data.id);
-        router.replace(`/${data.id}`);
+        setActiveId(data.id); () => void
+          router.replace(`/${data.id}`);
       }
       setQueries(prev => [...prev, { sender: "llm", content: data.res }]);
     } catch (e) {
@@ -96,6 +113,9 @@ const Page = () => {
               isPending={sendQuery.isPending}
               handleSend={handleSend}
               setQuery={setQuery}
+              files={files}
+              setFiles={setFiles}
+              handleFileChange={handleFileChange}
             />
           </motion.div>
         ) : (
@@ -111,7 +131,7 @@ const Page = () => {
                 <p className="text-gray-400">
                   Ask anything, upload docs, brainstorm, or chat.
                 </p>
-                <InputBox query={query} setQuery={setQuery} send={handleSend} isPending={sendQuery.isPending} />
+                <InputBox query={query} setQuery={setQuery} send={handleSend} isPending={sendQuery.isPending} handleFileChange={handleFileChange} files={files} setFiles={setFiles} />
               </div>
             </div>
           </motion.div>

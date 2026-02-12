@@ -9,11 +9,19 @@ export type metadata = {
 };
 
 export type query = {
-    sender?: string;
-    content?: string;
+    sender: string;
+    content: string;
     thought?: string;
-    sources?: []
+    sources?: [];
+    files?: FileMetadata[]
 };
+
+export type FileMetadata = {
+    name: string,
+    type: string,
+    size: number,
+    url: ""
+}
 export type SortOptions = {
     icon: JSX.Element;
     sort: string;

@@ -2,10 +2,9 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
 import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css'; // Ensure CSS is imported
+import 'react-toastify/dist/ReactToastify.css';
 import { User } from 'lucide-react';
 
 const LoginPage: React.FC = () => {
@@ -15,6 +14,33 @@ const LoginPage: React.FC = () => {
     const [loading, setLoading] = useState<boolean>(false);
     const router = useRouter()
 
+    // const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    //     event.preventDefault();
+    //     setLoading(true);
+    //     const formData = new FormData(event.currentTarget);
+    //     const username = formData.get("name") as string;
+    //     const password = formData.get("password") as string;
+    //     const data = {
+    //         action: 'login',
+    //         username,
+    //         password,
+    //     };
+    //     try {
+    //         const response = await axios.post('http://10.63.43.43/auth', data, {
+    //             withCredentials: true,
+    //         });
+    //         if (response.status === 200) {
+    //             localStorage.setItem('favourites', JSON.stringify(response.data.favourites));
+    //             router.push("/")
+    //         } else {
+    //             toast.error("Something went wrong")
+    //         }
+    //     } catch (err) {
+    //         toast.error("Invalid credentials or server error")
+    //     } finally {
+    //         setLoading(false);
+    //     }
+    // };
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         setLoading(true);
@@ -27,7 +53,7 @@ const LoginPage: React.FC = () => {
             password,
         };
         try {
-            const response = await axios.post('http://10.63.43.43/auth', data, {
+            const response = await axios.post('http://localhost:8000/auth', data, {
                 withCredentials: true,
             });
             if (response.status === 200) {
@@ -37,7 +63,7 @@ const LoginPage: React.FC = () => {
                 toast.error("Something went wrong")
             }
         } catch (err) {
-            toast.error("Invalid credentials or server error")
+            toast.error("Something went wrong")
         } finally {
             setLoading(false);
         }

@@ -4,39 +4,36 @@ from controllers.db.conn import summary_collection
 from agent.search_agent import get_agent
 from controllers.summary.file_summary import get_file_summary
 
+
 async def chat_with_summary(user_input: str, user: str, id=None, files=None):
     summary_data = None
     object_id = None
+    is_new_chat = False
 
-    # 1️⃣ Try loading existing conversation (Only if ID is valid)
+    # 1️⃣ Try loading existing conversation
     if id and ObjectId.is_valid(id):
         summary_data = summary_collection.find_one({
             "_id": ObjectId(id),
-            "user_id": user,   # Ownership check
+            "user_id": user,
         })
 
-    # 2️⃣ Create new conversation if not found (or ID was invalid/None)
+    # 2️⃣ Create new conversation if not found
     if not summary_data:
+        is_new_chat = True
         summary_data = {
             "user_id": user,
             "queries": [],
             "timestamp": datetime.now(timezone.utc),
             "title": "New Chat",
-            "thumbnail": "",
-            "url": "",
-            "type": "General Chat",
-            "original_summary": "",
-            "summarized_summary": "",
             "thought": ""
         }
-        # Insert immediately to get the generated _id
         insert_result = summary_collection.insert_one(summary_data)
         object_id = insert_result.inserted_id
     else:
         object_id = summary_data["_id"]
 
-    
     file_context = ""
+    uploaded_files = []
 
     if files:
         for file in files:
@@ -49,50 +46,90 @@ async def chat_with_summary(user_input: str, user: str, id=None, files=None):
                 current_user={"user_id": user},
             )
 
-            file_context += f"\nFile ({file.filename}):\n{result['summary']}\n"
+            uploaded_files.append({
+                "name": file.filename,
+                "type": file.content_type,
+                "size": file.size,
+                "url": "",
+            })
+
+            file_context += f"\nFile ({file.filename}):\n{result}\n"
 
     messages = [
-    ("system", f"""
-    You are a helpful AI assistant. Be concise. Never hallucinate.
+        ("system", f"""
+        You are a helpful AI assistant. Be concise. Never hallucinate.
 
-    Uploaded file context:
-    {file_context if file_context else "None"}
-    """)
+        Uploaded file context:
+        {file_context if file_context else "None"}
+        """)
     ]
-    # Add existing history (safely handle missing keys)
+
     for q in summary_data.get("queries", []):
         role = "human" if q.get("sender") == "user" else "assistant"
         content = q.get("content", "")
         if content:
             messages.append((role, content))
 
-    # 4️⃣ Add current user message
     messages.append(("human", user_input))
 
-    # 5️⃣ Call agent
     agent = get_agent()
     response = agent.invoke({"messages": messages})
     assistant_text = response["messages"][-1].content
 
-    # 6️⃣ Persist messages & Update Timestamp
-    summary_collection.update_one(
-        {"_id": object_id},
-        {
-            "$push": {
-                "queries": {
-                    "$each": [
-                        {"sender": "user", "content": user_input},
-                        {"sender": "llm", "content": assistant_text},
-                    ]
-                }
-            },
-            # Update timestamp so it moves to the top of the list
-            "$set": {"timestamp": datetime.now(timezone.utc)}
-        },
-    )
+    title = None
 
-    # 7️⃣ Return data
+    if is_new_chat:
+        title_prompt = f"""
+            Create a short 3–5 word title for this conversation.
+
+            User:
+            {user_input}
+
+            Assistant:
+            {assistant_text}
+
+            Return ONLY the title.
+            """
+
+        title_agent = get_agent()
+
+        title_response = title_agent.invoke({
+            "messages": [
+                ("system", "You generate short conversation titles."),
+                ("human", title_prompt),
+            ]
+        })
+
+        title = title_response["messages"][-1].content.strip()
+
+    update_payload = {
+        "$push": {
+            "queries": {
+                "$each": [
+                    {
+                        "sender": "user",
+                        "content": user_input,
+                        "files": uploaded_files if uploaded_files else []
+                    },
+                    {
+                        "sender": "llm",
+                        "content": assistant_text
+                    },
+                ]
+            }
+        },
+        "$set": {
+            "timestamp": datetime.now(timezone.utc)
+        }
+    }
+
+    if title:
+        update_payload["$set"]["title"] = title
+
+    summary_collection.update_one({"_id": object_id}, update_payload)
+
     return {
         "id": str(object_id),
         "res": assistant_text,
+        "title": title,
     }

@@ -9,7 +9,7 @@ import HashLoader from "react-spinners/HashLoader"
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm'
 import { useQuery } from "@tanstack/react-query";
-import { Copy, Ellipsis, Loader2, Paperclip, RefreshCw, SendHorizontal } from 'lucide-react';
+import { Copy, Ellipsis, FileText, ImageIcon, Loader2, Paperclip, RefreshCw, SendHorizontal, VideoIcon, X } from 'lucide-react';
 // 1. Import Framer Motion
 import { motion, AnimatePresence } from "framer-motion";
 import InputBox from './InputBox';
@@ -59,13 +59,16 @@ interface ChatsProps {
     queries: query[];
     setQueries: Dispatch<SetStateAction<query[]>>;
     isPending: boolean;
-    handleSend: (query: string) => Promise<void>;
+    handleSend: (query: string, files: File[]) => Promise<void>;
     query: string;
     setQuery: (value: string) => void
+    handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>
+    files: File[],
+    setFiles: (e: File) => void
 }
 
-const Chats = ({ queries, setQueries, isPending, handleSend, query, setQuery }: ChatsProps) => {
-
+const Chats = ({ queries, setQueries, isPending, handleSend, query, setQuery, files, handleFileChange, setFiles }: ChatsProps) => {
+    console.log("queries", queries)
     const [isLoading, setLoading] = useState<boolean>(false);
     const [summaryId, setSummaryId] = useState<string | undefined>(undefined);
     const [progress, setProgress] = useState<ProgressResponse>();
@@ -163,19 +166,87 @@ const Chats = ({ queries, setQueries, isPending, handleSend, query, setQuery }: 
                                 className={`flex w-full ${query.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                             >
                                 <div className={`flex flex-col gap-2 max-w-[80%] ${query.sender === 'user' ? 'items-end' : 'items-start'}`}>
-                                    <div className={`p-4 rounded-2xl shadow-sm ${query.sender === 'user'
-                                        ? 'bg-primary text-secondary'
-                                        : 'text-primary bg-white/5 border-gray-800 border'
-                                        }`}>
+                                    <div className='space-y-2' >
+                                        {
+                                            query?.files?.length != 0 &&
+                                            <div className="flex gap-3 overflow-x-auto justify-end scrollbar-none animate-in fade-in slide-in-from-bottom-2">
+                                                {query.files?.map((file, index) => (
+                                                    <div key={`${file.name}-${index}`} className="relative group flex-shrink-0">
+                                                        <div className='p-2 pr-6 flex gap-2  bg-white/5 text-primary rounded-xl relative border border-secondary'>
+                                                            {/* Icon based on file type */}
+                                                            <div className='p-3 rounded-full bg-primary my-auto text-secondary'>
+                                                                {file.type.startsWith("image/") ?
+                                                                    <ImageIcon size={20} /> : file.type.startsWith("video/") ?
+                                                                        <VideoIcon size={20} /> : <FileText size={20} />
+                                                                }
+                                                            </div>
+
+                                                            <div className='flex gap-1 flex-col'>
+                                                                <h1 className='font-semibold truncate'>
+                                                                    {file.name.slice(0, 14)}
+                                                                </h1>
+                                                                <p className='text-sm text-start'>
+                                                                    {file.size >= 1048576
+                                                                        ? (file.size / 1048576).toFixed(2) + ' MB'
+                                                                        : (file.size / 1024).toFixed(2) + ' KB'}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Remove Button (X) */}
+
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        }
                                         <ReactMarkdown
                                             remarkPlugins={[remarkGfm]}
+                                            className={`p-4 rounded-2xl shadow-sm leading-relaxed space-y-3 max-w-[720px] ${query.sender === "user"
+                                                ? "bg-primary text-secondary ml-auto rounded-tr-none"
+                                                : "text-primary bg-white/5 border border-gray-800 rounded-tl-none"
+                                                }`}
                                             components={{
-                                                ul: ({ children }) => <ul className="list-disc ml-5">{children}</ul>,
-                                                ol: ({ children }) => <ul className="list-decimal ml-5">{children}</ul>
+                                                p: ({ children }) => (
+                                                    <p className="leading-6 font-semibold">{children}</p>
+                                                ),
+
+                                                ul: ({ children }) => (
+                                                    <ul className="list-disc ml-5 space-y-2 ">{children}</ul>
+                                                ),
+
+                                                ol: ({ children }) => (
+                                                    <ol className="list-decimal ml-5 space-y-2 ">{children}</ol>
+                                                ),
+
+                                                li: ({ children }) => (
+                                                    <li className="leading-6">{children}</li>
+                                                ),
+
+                                                blockquote: ({ children }) => (
+                                                    <blockquote className="border-l-4 border-primary pl-4 italic text-gray-400 my-2">
+                                                        {children}
+                                                    </blockquote>
+                                                ),
+
+                                                // code: ({ inline, children }) =>
+                                                //     inline ? (
+                                                //         <code className="bg-white/10 px-1.5 py-0.5 rounded">
+                                                //             {children}
+                                                //         </code>
+                                                //     ) : (
+                                                //         <pre className="bg-black/40 p-3 rounded-xl overflow-x-auto my-2">
+                                                //             <code>{children}</code>
+                                                //         </pre>
+                                                //     ),
+
+                                                strong: ({ children }) => (
+                                                    <strong className="font-semibold">{children}</strong>
+                                                ),
                                             }}
                                         >
                                             {query.content}
                                         </ReactMarkdown>
+
                                     </div>
 
                                     {/* Action Buttons */}
@@ -220,33 +291,8 @@ const Chats = ({ queries, setQueries, isPending, handleSend, query, setQuery }: 
             </div>
         </div>
         <div className='max-w-6xl mx-auto' >
-            <InputBox query={query} setQuery={setQuery} send={handleSend} isPending={isPending} />
+            <InputBox query={query} setQuery={setQuery} send={handleSend} isPending={isPending} files={files} setFiles={setFiles} handleFileChange={handleFileChange} />
         </div>
-
-        {/* Input Area */}
-        {/* <div className='flex gap-4 w-full items-end max-w-6xl mx-auto text-gray-100 pt-4'>
-            <span className=' w-full space-y-2 '>
-                <div className='flex gap-2 bg-white/5  rounded-full '>
-                    <button className='bg-gray-900 rounded-full p-4 flex items-center justify-center'>
-                        <input type="file" className="hidden"
-                            accept=".pdf,.txt,image/*,video/*"
-                            multiple />
-                        <Paperclip size="20" />
-                    </button>
-                    <input type="text"
-                        onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => { if (e.key === "Enter" && e.currentTarget.value.trim()) { handleSend(e.currentTarget.value); inputRef.current!.value = ""; } }}
-                        ref={inputRef}
-                        placeholder='Ask AI' className='appearance-none border-none outline-none bg-transparent p-2 w-full h-14' />
-                </div>
-            </span>
-            <button
-                onClick={() => { handleSend(inputRef.current?.value!); inputRef.current!.value = ""; }}
-                className=" rounded-full bg-gray-900 flex items-center justify-center hover:scale-105 transition-transform duration-200">
-                <div className=" rounded-full p-4 flex items-center justify-center">
-                    {isPending ? <Loader2 className='animate-spin' size="20" /> : <SendHorizontal size="20" />}
-                </div>
-            </button>
-        </div> */}
     </>
 
 }

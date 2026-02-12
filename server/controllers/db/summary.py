@@ -204,11 +204,8 @@ def get_summaries_by_user(user_id: str):
         result.append({
             "id": str(summary["_id"]),
             "title": summary["title"],
-            "thumbnail": summary.get("thumbnail", ""),
             "timestamp": summary["timestamp"],
             "queries": len(summary.get("queries", [])),
-            "url": summary["url"],
-            "type": summary["type"],
         })
     
 
