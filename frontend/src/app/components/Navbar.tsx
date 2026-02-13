@@ -38,7 +38,7 @@ const Navbar: React.FC<NavbarProps> = ({ component }) => {
     ));
 
     return (
-        <div className='flex justify-between relative items-center max-w-6xl mx-auto py-3 border-b-2 border-secondary' >
+        <div className='flex justify-between relative items-center max-w-6xl mx-auto py-4 border-b-2 border-secondary' >
             {component ?? null}
             <div>
                 <img src="/logo.png" alt="" className='w-40 h-auto ' />
@@ -50,8 +50,8 @@ const Navbar: React.FC<NavbarProps> = ({ component }) => {
                 <MenuItems
                     transition
                     anchor="bottom end"
-                    className="w-52 origin-top-right my-3 rounded-xl border border-gray-800 bg-[#0b0b0b] text-sm/6 text-primary transition duration-100 ease-out [--anchor-gap:var(--spacing-1)] focus:outline-none data-[closed]:scale-95 data-[closed]:opacity-0 z-50 flex flex-col p-2">
-
+                    className="w-52 origin-top-right my-3 rounded-xl border border-gray-800 
+                    text-sm/6 text-primary transition duration-100 ease-out [--anchor-gap:var(--spacing-1)] focus:outline-none data-[closed]:scale-95 data-[closed]:opacity-0 z-50 flex flex-col p-2">
                     {Cookies.get('access_token') ? renderMenuItems(options2) : renderMenuItems(options)}
                 </MenuItems>
             </Menu>

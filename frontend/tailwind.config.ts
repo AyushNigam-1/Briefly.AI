@@ -21,7 +21,8 @@ export default {
       colors: {
         customGray: "rgba(154, 154, 154, 0.44)",
         "primary": colors.gray[200],   // This makes 'bg-primary' effectively 'bg-gray-200'
-        "secondary": colors.gray[800]
+        "secondary": colors.gray[800],
+        "tertiary": colors.neutral[900]
       },
     },
   },

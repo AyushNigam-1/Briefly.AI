@@ -83,12 +83,13 @@ const Page = () => {
         query: query,
         id: activeId!,
         files: files
+
       });
       if (!activeId && data.id) {
         setActiveId(data.id); () => void
           router.replace(`/${data.id}`);
       }
-      setQueries(prev => [...prev, { sender: "llm", content: data.res }]);
+      setQueries(prev => [...prev, { sender: "llm", content: data.res, sources: data.sources }]);
     } catch (e) {
       console.error("Send failed", e);
     }

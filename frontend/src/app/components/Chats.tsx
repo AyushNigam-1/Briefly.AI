@@ -9,10 +9,11 @@ import HashLoader from "react-spinners/HashLoader"
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm'
 import { useQuery } from "@tanstack/react-query";
-import { Copy, Ellipsis, FileText, ImageIcon, Loader2, Paperclip, RefreshCw, SendHorizontal, VideoIcon, X } from 'lucide-react';
+import { Copy, Ellipsis, FileText, ImageIcon, Link, Loader2, Paperclip, RefreshCw, SendHorizontal, VideoIcon, X } from 'lucide-react';
 // 1. Import Framer Motion
 import { motion, AnimatePresence } from "framer-motion";
 import InputBox from './InputBox';
+import SourcesSidebar from './SourcesPanel';
 
 const getChats = async (summaryId: string) => {
     try {
@@ -90,7 +91,8 @@ const Chats = ({ queries, setQueries, isPending, handleSend, query, setQuery, fi
     const { id } = useParams();
     const [messages, setMessages] = useState([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
-
+    const [sourcesOpen, setSourcesOpen] = useState(false);
+    const [sources, setSources] = useState<any[]>([]);
     const copyToClipboard = async (text?: string) => {
         if (text)
             try {
@@ -172,7 +174,7 @@ const Chats = ({ queries, setQueries, isPending, handleSend, query, setQuery, fi
                                             <div className="flex gap-3 overflow-x-auto justify-end scrollbar-none animate-in fade-in slide-in-from-bottom-2">
                                                 {query.files?.map((file, index) => (
                                                     <div key={`${file.name}-${index}`} className="relative group flex-shrink-0">
-                                                        <div className='p-2 pr-6 flex gap-2  bg-white/5 text-primary rounded-xl relative border border-secondary'>
+                                                        <div className='p-2 pr-6 flex gap-2  bg-tertiary text-primary rounded-xl relative border border-secondary'>
                                                             {/* Icon based on file type */}
                                                             <div className='p-3 rounded-full bg-primary my-auto text-secondary'>
                                                                 {file.type.startsWith("image/") ?
@@ -202,8 +204,8 @@ const Chats = ({ queries, setQueries, isPending, handleSend, query, setQuery, fi
                                         <ReactMarkdown
                                             remarkPlugins={[remarkGfm]}
                                             className={`p-4 rounded-2xl shadow-sm leading-relaxed space-y-3 max-w-[720px] ${query.sender === "user"
-                                                ? "bg-primary text-secondary ml-auto rounded-tr-none"
-                                                : "text-primary bg-white/5 border border-gray-800 rounded-tl-none"
+                                                ? "bg-primary text-secondary ml-auto "
+                                                : "text-primary bg-tertiary border border-gray-800 "
                                                 }`}
                                             components={{
                                                 p: ({ children }) => (
@@ -250,22 +252,35 @@ const Chats = ({ queries, setQueries, isPending, handleSend, query, setQuery, fi
                                     </div>
 
                                     {/* Action Buttons */}
-                                    <div className="flex gap-2 opacity-50 hover:opacity-100 transition-opacity">
-                                        <button
-                                            onClick={() => copyToClipboard(query?.content)}
-                                            className="p-1 hover:text-white text-gray-400 transition-colors"
-                                            title="Copy"
-                                        >
-                                            <Copy size={16} />
-                                        </button>
-                                        {query.sender !== 'user' && (
+                                    <div className="flex gap-2 justify-between w-full">
+
+                                        <div className='flex gap-2 opacity-50 hover:opacity-100 transition-opacity'>
                                             <button
+                                                onClick={() => copyToClipboard(query?.content)}
                                                 className="p-1 hover:text-white text-gray-400 transition-colors"
-                                                title="Regenerate"
+                                                title="Copy"
                                             >
-                                                <RefreshCw size={16} />
+                                                <Copy size={16} />
                                             </button>
-                                        )}
+                                            {query.sender !== 'user' && (
+                                                <button
+                                                    className="p-1 hover:text-white text-gray-400 transition-colors"
+                                                    title="Regenerate"
+                                                >
+                                                    <RefreshCw size={16} />
+                                                </button>
+                                            )}
+                                        </div>
+                                        {
+                                            query.sources?.length ? <button
+                                                onClick={() => { setSources(query.sources); setSourcesOpen(true) }}
+                                                className=" hover:text-white text-gray-400 transition-colors flex gap-2 items-center"
+                                                title="Copy"
+                                            >
+                                                <Link size={16} />
+                                                Sources
+                                            </button> : ""
+                                        }
                                     </div>
                                 </div>
                             </motion.div>
@@ -281,8 +296,10 @@ const Chats = ({ queries, setQueries, isPending, handleSend, query, setQuery, fi
                                 exit={{ opacity: 0, scale: 0.9 }}
                                 className="flex justify-start w-full"
                             >
-                                <div className="bg-gray-900 p-4 rounded-2xl rounded-bl-none">
-                                    <Ellipsis className='animate-bounce text-white' size={24} />
+                                <div className="bg-tertiary border border-secondary p-4 rounded-2xl flex items-center gap-1">
+                                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></div>
                                 </div>
                             </motion.div>
                         )}
@@ -293,6 +310,12 @@ const Chats = ({ queries, setQueries, isPending, handleSend, query, setQuery, fi
         <div className='max-w-6xl mx-auto' >
             <InputBox query={query} setQuery={setQuery} send={handleSend} isPending={isPending} files={files} setFiles={setFiles} handleFileChange={handleFileChange} />
         </div>
+        <SourcesSidebar
+            isOpen={sourcesOpen}
+            onClose={() => setSourcesOpen(false)}
+            sources={sources}
+        />
+
     </>
 
 }

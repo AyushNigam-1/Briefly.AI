@@ -10,7 +10,7 @@ import {
 } from "@headlessui/react";
 import { MessageSquare, PanelLeft, PanelLeftDashed, Plus, Search } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 const groupSummariesByDate = (summaries: SummaryHistoryResponse[]) => {
     const grouped = {
@@ -51,6 +51,8 @@ const Sidebar: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [summaryId, setSummaryId] = useState<string>();
+    const params = useParams();
+    const activeId = params?.id;
 
     const toggleSidebar = () => { setIsOpen((v) => !v); console.log("working") };
 
@@ -127,30 +129,27 @@ const Sidebar: React.FC = () => {
 
             {/* Sidebar */}
             <div
-                className={`fixed top-0 left-0 h-full text-white w-72 bg-[#0b0b0b] border-r-2 border-secondary shadow-lg transform transition-transform duration-300 z-50 ${isOpen ? "translate-x-0" : "-translate-x-full"
+                className={`fixed top-0 left-0 h-full text-white w-72 bg-tertiary border-r border-secondary shadow-lg transform transition-transform duration-300 z-50 ${isOpen ? "translate-x-0" : "-translate-x-full"
                     }`}
             >
                 <div className="p-4 flex flex-col gap-4 h-full ">
                     <button
                         onClick={() => router.push("/")}
-                        className="p-3 flex items-center justify-center gap-2 font-bold bg-white/5 border border-secondary rounded-full text-primary"
+                        className="p-3 flex items-center hover:bg-white/10 justify-center gap-2 font-bold bg-white/5 border border-secondary rounded-full text-primary"
                     >
                         <Plus size={20} /> New Chat
                     </button>
-
-                    <div className="flex bg-white/5 rounded-full border border-secondary p-3 gap-2">
-                        <span className="rounded-full flex items-center justify-center text-gray-500">
-                            <Search size={20} />
-                        </span>
-                        <input
-                            placeholder="Search..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="bg-transparent w-full outline-none text-lg text-primary"
-                        />
+                    <button
+                        onClick={() => router.push("/")}
+                        className="p-3 flex items-center hover:bg-white/10 justify-center gap-2 font-bold bg-white/5 border border-secondary rounded-full text-primary"
+                    >
+                        <Search size={20} /> Search Chat
+                    </button>
+                    <div className="flex items-center">
+                        <div className="border-t border-secondary w-full"></div>
+                        <h2 className="text-xl font-bold px-2">Chats</h2>
+                        <div className="border-t border-secondary w-full "></div>
                     </div>
-                    <hr className="border border-secondary" />
-                    <h2 className="text-xl font-bold "> Chats</h2>
 
                     <div className="flex-1 overflow-y-auto">
                         {loading && <p>Loading…</p>}
@@ -158,20 +157,19 @@ const Sidebar: React.FC = () => {
                         <div className="space-y-2">
                             {Object.keys(grouped).map((k) =>
                                 grouped[k].length ? (
-                                    <div key={k} className=" space-y-2">
-                                        <h3 className="font-bold  text-gray-200">{k}</h3>
-                                        <div className="space-y-2">
-
+                                    <div key={k} className="">
+                                        {/* <h3 className="font-bold text-gray-200">{k}</h3> */}
+                                        <div className="">
                                             {grouped[k].map((s) => (
                                                 <Link
                                                     href={`/${s.id}`}
                                                     key={s.id}
-                                                    // onClick={() => setId(s.id)}
-                                                    // onClick={() => window.history.pushState({ path: `${window.location.pathname.replace(/\/$/, '')}/${s.id}` }, '', `${window.location.pathname.replace(/\/$/, '')}/${s.id}`)
-                                                    // }
-                                                    className="flex justify-between cursor-pointer hover:text-gray-300"
+                                                    className={`p-2 text-gray-300 cursor-pointer flex justify-between transition ${activeId == s.id
+                                                        && " font-bold border-primary text-white border-l-2"
+                                                        }`}
+                                                // className="flex justify-between cursor-pointer hover:text-gray-300"
                                                 >
-                                                    <span className="truncate text-lg">{s.title}</span>
+                                                    <span className="truncate text-lg font-semibold">{s.title}</span>
 
                                                     {/* <button
                                                         onClick={(e) => {

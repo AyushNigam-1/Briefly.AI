@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from controllers.db.conn import summary_collection
 from agent.search_agent import get_agent
 from controllers.summary.file_summary import get_file_summary
-
+import json
 
 async def chat_with_summary(user_input: str, user: str, id=None, files=None):
     summary_data = None
@@ -73,11 +73,23 @@ async def chat_with_summary(user_input: str, user: str, id=None, files=None):
     messages.append(("human", user_input))
 
     agent = get_agent()
-    response = agent.invoke({"messages": messages})
+    response = agent.invoke({"messages": messages},return_intermediate_steps=True)
     assistant_text = response["messages"][-1].content
+    sources = [] 
+    for msg in response["messages"]: 
+        if hasattr(msg, 'type') and msg.type == "tool": 
+            try: # Handle tool output parsing safely
+                content = msg.content 
+                print("content",content)
+                if isinstance(content, str):
+                    parsed = json.loads(content)
+                    if isinstance(parsed, list): 
+                        sources.extend(parsed) 
+            except Exception:
+                pass
 
     title = None
-
+    print(sources)
     if is_new_chat:
         title_prompt = f"""
             Create a short 3–5 word title for this conversation.
@@ -113,7 +125,8 @@ async def chat_with_summary(user_input: str, user: str, id=None, files=None):
                     },
                     {
                         "sender": "llm",
-                        "content": assistant_text
+                        "content": assistant_text,
+                        "sources":sources
                     },
                 ]
             }
@@ -132,4 +145,5 @@ async def chat_with_summary(user_input: str, user: str, id=None, files=None):
         "id": str(object_id),
         "res": assistant_text,
         "title": title,
+        "sources":sources
     }
