@@ -31,18 +31,18 @@ const SourcesSidebar: React.FC<SourcesSidebarProps> = ({
 
             {/* Sidebar */}
             <div
-                className={`fixed top-0 right-0 h-full text-white w-80 bg-tertiary border-r border-secondary shadow-lg transform transition-transform duration-300 z-50 ${isOpen ? "-translate-x-0" : "translate-x-full"
+                className={`fixed top-0 right-0 h-full text-white w-72 bg-tertiary border-r border-secondary shadow-lg transform transition-transform duration-300 z-50 ${isOpen ? "-translate-x-0" : "translate-x-full"
                     }`}
             >
                 <div className="p-4 flex flex-col h-full space-y-4">
                     {/* Header */}
-                    {/* <div className="flex items-center justify-between ">
+                    <div className="flex items-center justify-between ">
                         <h2 className="text-xl font-bold text-white">Sources</h2>
                         <button onClick={onClose}>
                             <X size={20} className="text-gray-400 hover:text-white" />
                         </button>
                     </div>
-                    <hr className="border border-secondary" /> */}
+                    <hr className="border border-secondary" />
 
                     {/* Sources List */}
                     <div className="flex-1 overflow-y-auto space-y-3">
