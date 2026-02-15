@@ -9,8 +9,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
+  modal
 }: Readonly<{
   children: React.ReactNode;
+  modal: React.ReactNode;
+
 }>) {
 
 
@@ -29,7 +32,7 @@ export default function RootLayout({
       >
         <QueryProvider>
           <div className="relative max-h-screen max-w-screen">
-            <div className="relative z-10">{children}</div>
+            <div className="relative z-10">{children} {modal}</div>
           </div>
         </QueryProvider>
       </body>

@@ -31,10 +31,10 @@ const SourcesSidebar: React.FC<SourcesSidebarProps> = ({
 
             {/* Sidebar */}
             <div
-                className={`fixed top-0 right-0 h-full text-white w-72 bg-tertiary border-r border-secondary shadow-lg transform transition-transform duration-300 z-50 ${isOpen ? "-translate-x-0" : "translate-x-full"
+                className={`fixed top-0 right-0 h-full text-white w-72 bg-tertiary border-l border-secondary shadow-lg transform transition-transform duration-300 z-50 ${isOpen ? "-translate-x-0" : "translate-x-full"
                     }`}
             >
-                <div className="p-4 flex flex-col h-full space-y-4">
+                <div className="p-4 flex flex-col h-full space-y-4 font-mono">
                     {/* Header */}
                     <div className="flex items-center justify-between ">
                         <h2 className="text-xl font-bold text-white">Sources</h2>
@@ -55,19 +55,19 @@ const SourcesSidebar: React.FC<SourcesSidebarProps> = ({
                                 key={idx}
                                 className="rounded-lg bg-white/5 border border-secondary hover:bg-white/10 p-2"
                             >
-                                <Link className="space-y-1" target="_blank" href={src.link!}>
-                                    <p className="text-lg font-semibold text-white line-clamp-1">
+                                <Link className="space-y-2" target="_blank" href={src.link!}>
+                                    <p className="text- font-semibold text-white line-clamp-1">
                                         {src.title || "Untitled"}
                                     </p>
 
                                     {src.snippet && (
-                                        <p className=" text-gray-400 line-clamp-2">
+                                        <p className="text-sm text-gray-400 line-clamp-2">
                                             {src.snippet}
                                         </p>
                                     )}
 
                                     {src.link && (
-                                        <p className="text-sm text-primary truncate"> - {src.link}</p>
+                                        <p className="text-xs text-primary truncate"> - {src.link}</p>
                                     )}
                                 </Link>
                             </div>

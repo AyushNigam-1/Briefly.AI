@@ -126,9 +126,9 @@ const Page = () => {
             animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
             exit={{ opacity: 0, scale: 0.95, x: "-50%", y: "-50%" }}
             className="fixed top-1/2 left-1/2 w-full max-w-3xl px-4 text-white">
-            <div className="flex flex-col gap-10">
+            <div className="flex flex-col gap-10 font-mono">
               <div className="text-center space-y-4">
-                <h3 className="text-4xl md:text-5xl font-bold">How can I help you today?</h3>
+                <h3 className="text-2xl md:text-4xl font-bold">How can I help you today?</h3>
                 <p className="text-gray-400">
                   Ask anything, upload docs, brainstorm, or chat.
                 </p>

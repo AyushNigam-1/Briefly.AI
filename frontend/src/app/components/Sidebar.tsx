@@ -1,14 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Cookies from "js-cookie";
 import axios from "axios";
 import { SummaryHistoryResponse, SidebarProps } from "../types";
 import {
+    Menu,
     Description,
     Dialog,
     DialogPanel,
     DialogTitle,
+    MenuButton,
+    MenuItem,
+    MenuItems,
 } from "@headlessui/react";
-import { MessageSquare, PanelLeft, PanelLeftDashed, Plus, Search, X } from "lucide-react";
+import { Delete, EllipsisVertical, MessageSquare, PanelLeft, PanelLeftDashed, Pin, Plus, Search, Share, Share2, Trash, X } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
@@ -109,7 +113,17 @@ const Sidebar: React.FC = () => {
     };
 
     const grouped = groupSummariesByDate(filtered);
-
+    const options = useMemo(() => [
+        {
+            label: "Pin", route: '', icon: (<Pin size={20} />)
+        },
+        {
+            label: "Share", route: '/favourites', icon: (<Share2 size={20} />)
+        },
+        {
+            label: 'Delete', route: '/account/logout', icon: (<Trash size={20} />)
+        }
+    ], [])
     return (
         <>
             {/* Toggle Button */}
@@ -120,7 +134,7 @@ const Sidebar: React.FC = () => {
                 <PanelLeft size={20} />
             </button>
             <div
-                className={`fixed top-0 left-0 h-full text-white w-72 bg-tertiary border-r border-secondary shadow-lg transform transition-transform duration-300 z-50 ${isOpen ? "translate-x-0" : "-translate-x-full"
+                className={`fixed top-0 left-0 h-full text-white w-72 bg-tertiary border-r font-mono border-secondary shadow-lg transform transition-transform duration-300 z-50 ${isOpen ? "translate-x-0" : "-translate-x-full"
                     }`}
             >
                 <div className="p-4 space-y-4 h-full ">
@@ -161,22 +175,33 @@ const Sidebar: React.FC = () => {
                                                 <Link
                                                     href={`/${s.id}`}
                                                     key={s.id}
-                                                    className={`p-2 text-gray-300 cursor-pointer flex justify-between transition ${activeId == s.id
-                                                        && " font-bold text-white bg-white/5 rounded-full"
+                                                    className={`py-2 px-3 group relative overflow-hidden text-gray-400 cursor-pointer flex items-center justify-between transition ${activeId == s.id
+                                                        ? "font-bold text-white py-3 bg-white/5 border border-secondary rounded-full" : "hover:text-white"
                                                         }`}
-                                                // className="flex justify-between cursor-pointer hover:text-gray-300"
                                                 >
-                                                    <span className="truncate text-lg font-semibold">{s.title}</span>
+                                                    <span className="truncate ">{s.title}</span>
+                                                    <Menu>
+                                                        <MenuButton className="p-1 rounded-full bg-tertiary hover:bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                                            <EllipsisVertical size={20} />
+                                                        </MenuButton>
+                                                        <MenuItems
+                                                            transition
+                                                            anchor="right"
+                                                            className="w-52 origin-bottom-right mx-3 rounded-xl border bg-tertiary border-gray-800 
+                                                                        text-sm/6 text-primary transition duration-100 ease-out [--anchor-gap:var(--spacing-1)] focus:outline-none data-[closed]:scale-95 data-[closed]:opacity-0 z-50 flex flex-col p-2">
+                                                            {
+                                                                options.map(option => {
+                                                                    return <MenuItem key={Math.random()}>
+                                                                        <button className="group z-50 flex w-full p-2 items-center gap-2 rounded-lg data-[focus]:bg-white/5 text-lg font-bold">
+                                                                            {option.icon}
+                                                                            {option.label}
+                                                                        </button>
+                                                                    </MenuItem>
+                                                                })
+                                                            }
 
-                                                    {/* <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setSummaryId(s.id);
-                                                            setDialogOpen(true);
-                                                        }}
-                                                    >
-                                                        🗑
-                                                    </button> */}
+                                                        </MenuItems>
+                                                    </Menu>
                                                 </Link>
                                             ))}
                                         </div>

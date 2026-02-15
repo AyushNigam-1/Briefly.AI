@@ -109,7 +109,7 @@ async def chat_with_summary(user_input: str, user: str, id=None, files=None):
 
         print("Invoking agent...")
 
-        agent = await get_agent()
+        agent = await get_agent(user_notion_token="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")
 
         response = await agent.ainvoke(
             {
@@ -143,7 +143,7 @@ async def chat_with_summary(user_input: str, user: str, id=None, files=None):
         title = None
 
         if is_new_chat:
-            title_agent = await get_agent()
+            title_agent = await get_agent(user_notion_token="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")
 
             title_response = await title_agent.ainvoke(
                 {

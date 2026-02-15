@@ -12,7 +12,7 @@ const InputBox = ({ query, setQuery, send, isPending, files, setFiles, handleFil
             <div className="w-full space-y-4">
                 {
                     files?.length != 0 &&
-                    <div className="flex gap-3 overflow-x-auto  scrollbar-none animate-in fade-in slide-in-from-bottom-2">
+                    <div className="flex gap-3 overflow-x-auto  scrollbar-none animate-in fade-in slide-in-from-bottom-2 font-mono">
                         {files?.map((file, index) => (
                             <div key={`${file.name}-${index}`} className="relative group flex-shrink-0">
                                 <div className='p-2 pr-6 flex gap-2 bg-white/5 rounded-xl relative border border-secondary text-primary'>

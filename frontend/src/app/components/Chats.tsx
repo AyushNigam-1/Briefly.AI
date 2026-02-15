@@ -203,13 +203,13 @@ const Chats = ({ queries, setQueries, isPending, handleSend, query, setQuery, fi
                                         }
                                         <ReactMarkdown
                                             remarkPlugins={[remarkGfm]}
-                                            className={`p-4 rounded-2xl shadow-sm leading-relaxed space-y-3 max-w-[720px] ${query.sender === "user"
+                                            className={`p-4 rounded-2xl shadow-sm leading-relaxed space-y-3 max-w-[720px] font-mono ${query.sender === "user"
                                                 ? "bg-primary text-secondary ml-auto "
                                                 : "text-primary bg-tertiary border border-gray-800 "
                                                 }`}
                                             components={{
                                                 p: ({ children }) => (
-                                                    <p className="leading-6 font-semibold">{children}</p>
+                                                    <p className="leading-6 ">{children}</p>
                                                 ),
 
                                                 ul: ({ children }) => (
@@ -242,7 +242,7 @@ const Chats = ({ queries, setQueries, isPending, handleSend, query, setQuery, fi
                                                 //     ),
 
                                                 strong: ({ children }) => (
-                                                    <strong className="font-semibold">{children}</strong>
+                                                    <strong className="">{children}</strong>
                                                 ),
                                             }}
                                         >
