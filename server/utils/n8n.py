@@ -15,7 +15,7 @@ class N8nLegoBuilder:
         self.nodes = []
         self.connections = {}
         self.last_node_name = None
-        self.if_node_anchor = None # <--- STICKY ANCHOR FOR IF NODES
+        self.if_node_anchor = None 
         self.x_pos = 400 
         self.y_pos = 300
 
@@ -27,7 +27,9 @@ class N8nLegoBuilder:
         
         # 2. Strategic UI Positioning
         # Push Branch 1 (False) nodes 250 pixels lower to avoid overlap
-        current_y = self.y_pos + (250 if branch_index == 1 else 0)
+        # current_y = self.y_pos + (250 if branch_index == 1 else 0)
+        current_y = self.y_pos + (250 * (branch_index + 1))
+
         node_template["position"] = [self.x_pos, current_y]
         
         self.nodes.append(node_template)
@@ -116,8 +118,49 @@ class N8nLegoBuilder:
             "type": "n8n-nodes-base.httpRequest",
             "typeVersion": 3
         }
-        self._add_node(node)
+
+        name = self._add_node(node)
+
+        # Save for loop target
+        self.last_http_node = name
+
         return self
+
+    def add_webhook_notify(self, url, message, branch=0):
+        print("🧱 Adding Webhook Notify")
+
+        node = {
+            "parameters": {
+                "url": url,
+                "method": "POST",
+                "jsonParameters": True,
+                "bodyParametersJson": f'{{"text": "{message}"}}'
+            },
+            "name": "Webhook Notify",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 3
+        }
+
+        self._add_node(node, branch_index=branch)
+        return self
+
+    
+    def add_loop_back(self, target_node_name):
+        """
+        Creates a loop from the last node back to target_node_name
+        """
+        print(f"🧱 Adding Loop Back to {target_node_name}")
+
+        source = self.last_node_name
+
+        if source not in self.connections:
+            self.connections[source] = {"main": [[]]}
+
+        self.connections[source]["main"][0].append({
+            "node": target_node_name,
+            "type": "main",
+            "index": 0
+        })
 
     # --- LEGO BLOCK 3: DISCORD / LOG ---
     # (Using a Code node to simulate a message for now)
@@ -137,8 +180,7 @@ class N8nLegoBuilder:
         }
         self._add_node(node, branch_index=branch)
         return self
-# --- LEGO BLOCK 5: WAIT ---
-    # --- LEGO BLOCK 5: WAIT (BRANCH AWARE) ---
+
     def add_wait(self, amount, unit="seconds"):
         print(f"🧱 Adding Block: Wait ({amount} {unit})")
 

@@ -1,18 +1,16 @@
 "use client";
 
-import React, { useRef, useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { metadata, query } from "../../types";
-import { Loader2, Paperclip, SendHorizontal } from "lucide-react";
-import Sidebar from "../../components/Sidebar";
-import ContentDialog from "../../components/ContentDialog";
-import Chats from "../../components/Chats";
+import Chats from "../../components/ui/Chats";
 import { useMutations } from "../../hooks/useMutations";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Cookies from "js-cookie";
-import Navbar from "@/app/components/Navbar";
-import InputBox from "@/app/components/InputBox";
+import Navbar from "@/app/components/ui/Navbar";
+import InputBox from "@/app/components/ui/InputBox";
+import Sidebar from "@/app/components/ui/panels/Sidebar";
 
 const Page = () => {
   const { id } = useParams();
@@ -20,7 +18,6 @@ const Page = () => {
 
   const rawId = Array.isArray(id) ? id[0] : id;
 
-  const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState<string>("");
   const [metadata, setMetadata] = useState<metadata | null>(null);
   const { sendQuery } = useMutations();

@@ -1,4 +1,4 @@
-from controllers.db.auth import signup, login
+from controllers.auth_handler import signup, login
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel
 

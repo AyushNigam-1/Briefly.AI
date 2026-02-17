@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import QueryProvider from "./components/QueryProvider";
+import QueryProvider from "./components/providers/QueryProvider";
 
 export const metadata: Metadata = {
   title: "Briefly.ai",
@@ -9,7 +9,6 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-  modal
 }: Readonly<{
   children: React.ReactNode;
   modal: React.ReactNode;
@@ -32,7 +31,7 @@ export default function RootLayout({
       >
         <QueryProvider>
           <div className="relative max-h-screen max-w-screen">
-            <div className="relative z-10">{children} {modal}</div>
+            <div className="relative z-10">{children}</div>
           </div>
         </QueryProvider>
       </body>

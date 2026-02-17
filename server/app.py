@@ -1,12 +1,9 @@
 from fastapi import FastAPI , WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from routes.summarizer import router as summarizer_router
-from routes.metadata import router as metadata_router
-from routes.query import router as query_router
+from routes.chat import router as chat_router
 from routes.auth import router as auth_router
-from routes.prompt import router as prompt_router
-# from middleware.auth_middleware import auth_middleware  
-from fastapi import FastAPI, WebSocket
+from routes.instruction import router as instruction_router
+from routes.memory import router as memory_router
 from utils.websocket_manager import manager
 app = FastAPI()
 
@@ -31,11 +28,11 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
 
 
-app.include_router(summarizer_router)
-app.include_router(metadata_router)
-app.include_router(query_router)
+# app.include_router(summarizer_router)
+app.include_router(chat_router)
 app.include_router(auth_router)
-app.include_router(prompt_router)
+app.include_router(instruction_router)
+app.include_router(memory_router)
 
 
 if __name__ == "__main__":
