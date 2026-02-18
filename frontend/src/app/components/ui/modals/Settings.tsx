@@ -1,4 +1,4 @@
-import { Fragment, useState } from "react"
+import React, { Fragment, useState } from "react"
 import {
     Dialog,
     DialogBackdrop,
@@ -12,21 +12,23 @@ import {
     TransitionChild,
 } from "@headlessui/react"
 import {
-    X,
     User,
     Brain,
     Link,
     Palette,
     Database,
+    Settings2,
 } from "lucide-react"
 import clsx from "clsx"
+import Memory from "./tabs/Memory"
+import CustomInstructions from "./tabs/CustomInstruction"
+import Profile from "./tabs/Profile"
 
 const tabs = [
     { name: "Profile", icon: User },
-    { name: "Instructions", icon: Brain },
+    { name: "Preference", icon: Settings2 },
     { name: "Integrations", icon: Link },
     { name: "Memory", icon: Database },
-    { name: "Appearance", icon: Palette },
 ]
 
 export default function SettingsDialog({
@@ -61,11 +63,11 @@ export default function SettingsDialog({
                         leaveFrom="opacity-100 scale-100"
                         leaveTo="opacity-0 scale-95"
                     >
-                        <DialogPanel className="w-full max-w-2xl h-[50vh] bg-[#0b0b0b] border border-secondary rounded-xl overflow-hidden">
+                        <DialogPanel className="w-full max-w-3xl h-[60vh] bg-[#0b0b0b] border border-secondary rounded-xl overflow-hidden">
 
                             <TabGroup selectedIndex={activeTab} onChange={setActiveTab} className="h-full">
                                 <div className="flex h-full">
-                                    <TabList className="w-52 border-r border-secondary bg-tertiary text-primary p-4 space-y-3 h-full">
+                                    <TabList className="w-52 border-r border-secondary bg-tertiary text-primary p-2  space-y-3 h-full">
                                         {tabs.map((tab) => (
                                             <Tab
                                                 key={tab.name}
@@ -83,52 +85,40 @@ export default function SettingsDialog({
                                             </Tab>
                                         ))}
                                     </TabList>
-
                                     <div className="flex-1 flex flex-col">
+                                        <Transition
+                                            key={activeTab}
+                                            appear
+                                            show
+                                            enter="transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+                                            enterFrom="opacity-0 translate-y-3 scale-[0.98]"
+                                            enterTo="opacity-100 translate-y-0 scale-100"
+                                            leave="transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]"
+                                            leaveFrom="opacity-100 translate-y-0 scale-100"
+                                            leaveTo="opacity-0 translate-y-2 scale-[0.98]"
+                                        >
+                                            <TabPanels className="h-full p-4 custom-scrollbar overflow-y-auto">
 
-                                        <TabPanels className="flex-1 overflow-y-auto p-4">
+                                                <TabPanel className="space-y-4">
+                                                    <Profile />
+                                                </TabPanel>
 
-                                            <TabPanel className="space-y-4">
-                                                <div className="flex items-center gap-4 bg-white/5 p-2 rounded-xl">
-                                                    <div className="h-12 w-12 rounded-full bg-primary  flex items-center justify-center font-bold ">
-                                                        {userContext?.name?.[0] || "A"}
-                                                    </div>
-                                                    <div className="text-primary ">
-                                                        <p className="font-semibold">{userContext?.name || "Ayush"}</p>
-                                                        <p className="text-sm text-slate-400">
-                                                            ayu@briefly.ai
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </TabPanel>
+                                                <TabPanel className="space-y-4">
+                                                    <CustomInstructions />
+                                                </TabPanel>
 
-                                            <TabPanel>
-                                                <textarea
-                                                    className="w-full h-40 bg-white/5 rounded-xl p-3 outline-none"
-                                                    placeholder="Tell the AI how to behave globally..."
-                                                />
-                                            </TabPanel>
+                                                <TabPanel>
+                                                    <p className="text-slate-400">
+                                                        Manage Notion, APIs, MCP servers.
+                                                    </p>
+                                                </TabPanel>
 
-                                            <TabPanel>
-                                                <p className="text-slate-400">
-                                                    Manage Notion, APIs, MCP servers.
-                                                </p>
-                                            </TabPanel>
+                                                <TabPanel className="space-y-6">
+                                                    <Memory />
+                                                </TabPanel>
 
-                                            <TabPanel>
-                                                <p className="text-slate-400">
-                                                    View / delete long-term user memory.
-                                                </p>
-                                            </TabPanel>
-
-                                            <TabPanel>
-                                                <p className="text-slate-400">
-                                                    Theme + UI preferences.
-                                                </p>
-                                            </TabPanel>
-
-                                        </TabPanels>
-
+                                            </TabPanels>
+                                        </Transition>
                                     </div>
                                 </div>
                             </TabGroup>
@@ -139,3 +129,9 @@ export default function SettingsDialog({
         </Transition>
     )
 }
+
+
+
+
+
+

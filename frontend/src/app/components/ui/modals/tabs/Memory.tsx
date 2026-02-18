@@ -1,0 +1,181 @@
+"use client"
+
+import { Switch } from "@headlessui/react"
+import axios from "axios"
+import clsx from "clsx"
+import React, {
+    useEffect,
+    useLayoutEffect,
+    useRef,
+    useState,
+} from "react"
+
+interface MemoryItem {
+    id: string
+    text: string
+    created_at?: string
+}
+
+const Memory: React.FC = () => {
+    const [memories, setMemories] = useState<MemoryItem[]>([])
+    const [newMemory, setNewMemory] = useState("")
+    const [memoryEnabled, setMemoryEnabled] = useState(true)
+
+    const textareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({})
+
+    useEffect(() => {
+        axios.get("/memory").then(res => {
+            setMemories(res.data.memories || [])
+        })
+
+        axios.get("/memory/toggle").then(res => {
+            setMemoryEnabled(Boolean(res.data.enabled))
+        })
+    }, [])
+
+    const toggleMemory = async (val: boolean) => {
+        setMemoryEnabled(val)
+        await axios.post("/memory/toggle", { enabled: val })
+    }
+
+    const handleAddMemory = async () => {
+        if (!newMemory.trim()) return
+
+        const res = await axios.post("/memory", {
+            memories: [newMemory],
+        })
+
+        setMemories(res.data.memories)
+        setNewMemory("")
+    }
+
+    const handleUpdateMemory = async (id: string, text: string) => {
+        await axios.put("/memory", {
+            memory_id: id,
+            text,
+        })
+
+        setMemories(prev =>
+            prev.map(m => (m.id === id ? { ...m, text } : m))
+        )
+    }
+
+    const handleDeleteMemory = async (id: string) => {
+        const res = await axios.delete(`/memory/${id}`)
+        setMemories(res.data.memories)
+    }
+
+    useLayoutEffect(() => {
+        memories.forEach(m => {
+            const el = textareaRefs.current[m.id]
+            if (!el) return
+            el.style.height = "auto"
+            el.style.height = el.scrollHeight - 2 + "px"
+        })
+    }, [memories])
+
+    return (
+        <div className="space-y-6">
+
+            {/* HEADER */}
+            <div>
+                <h3 className="text-xl font-semibold text-slate-300">
+                    Saved Memories
+                </h3>
+                <p className="text-sm text-slate-500">
+                    Long-term facts the assistant can use during conversations.
+                </p>
+            </div>
+
+            {/* TOGGLE */}
+            <div className="flex items-center justify-between bg-white/5 border border-secondary rounded-xl px-4 py-3">
+                <div>
+                    <p className="text-slate-200 font-medium">
+                        Use memories in conversations
+                    </p>
+                    <p className="text-xs text-slate-400">
+                        Turn off to temporarily disable personalization.
+                    </p>
+                </div>
+
+                <Switch
+                    checked={memoryEnabled}
+                    onChange={toggleMemory}
+                    className={clsx(
+                        "relative inline-flex h-6 w-11 items-center rounded-full transition",
+                        memoryEnabled ? "bg-white/20" : "bg-white/5"
+                    )}
+                >
+                    <span
+                        className={clsx(
+                            "inline-block h-4 w-4 transform rounded-full bg-white transition",
+                            memoryEnabled ? "translate-x-6" : "translate-x-1"
+                        )}
+                    />
+                </Switch>
+            </div>
+
+            {/* MEMORY LIST */}
+            <div className="space-y-3 overflow-y-auto custom-scrollbar max-h-[260px]">
+
+                {memories.map(m => (
+                    <div
+                        key={m.id}
+                        className="bg-white/5 border border-secondary rounded-xl px-3 py-2"
+                    >
+                        <textarea
+                            // ref={el => (textareaRefs.current[m.id] = el)}
+                            rows={1}
+                            value={m.text}
+                            onChange={e =>
+                                setMemories(prev =>
+                                    prev.map(x =>
+                                        x.id === m.id
+                                            ? { ...x, text: e.target.value }
+                                            : x
+                                    )
+                                )
+                            }
+                            onBlur={() => handleUpdateMemory(m.id, m.text)}
+                            onKeyDown={e => {
+                                if (e.key === "Enter" && !e.shiftKey) {
+                                    e.preventDefault()
+                                    handleUpdateMemory(m.id, m.text)
+                                }
+                            }}
+                            className="w-full bg-transparent outline-none resize-none overflow-hidden text-slate-200 leading-snug p-0 block"
+                        />
+
+                        <button
+                            onClick={() => handleDeleteMemory(m.id)}
+                            className="mt-2 text-xs text-red-400 hover:text-red-300"
+                        >
+                            Delete
+                        </button>
+                    </div>
+                ))}
+
+            </div>
+
+            {/* ADD MEMORY */}
+            <div className="space-y-3 pt-4 border-t border-secondary">
+                <textarea
+                    value={newMemory}
+                    onChange={e => setNewMemory(e.target.value)}
+                    className="w-full h-20 bg-white/5 rounded-xl p-3 outline-none text-slate-200 resize-none border border-secondary"
+                    placeholder="Example: User prefers Rust code examples"
+                />
+
+                <button
+                    onClick={handleAddMemory}
+                    className="px-4 py-2 bg-white/5 border border-secondary rounded-lg hover:bg-white/10 transition text-sm"
+                >
+                    Save Memory
+                </button>
+            </div>
+
+        </div>
+    )
+}
+
+export default Memory

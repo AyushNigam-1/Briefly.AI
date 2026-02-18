@@ -1,11 +1,33 @@
 "use client"
-import { FileText, ImageIcon, Loader2, Paperclip, SendHorizontal, X } from 'lucide-react';
+import { Listbox, ListboxButton, ListboxOption, ListboxOptions, MenuButton, MenuItem, MenuItems, Menu } from '@headlessui/react';
+import clsx from 'clsx';
+import { AlarmClock, AlarmClockCheck, ChevronDown, FileText, Filter, ImageIcon, Loader2, MessageCircle, MessageSquare, Paperclip, SendHorizontal, SlidersHorizontal } from 'lucide-react';
 import React, { useRef, useState } from 'react'
+
+const options = [
+    {
+        section: "Mode",
+        items: [
+            { label: "Chat", value: "chat", icon: (<MessageCircle size={20} />) },
+            { label: "Task", value: "task", icon: (<AlarmClock size={20} />) },
+        ],
+    },
+    {
+        section: "Model",
+        items: [
+            { label: "GPT-OSS-120B", value: "gpt" },
+            { label: "Llama-70B", value: "llama" },
+        ],
+    },
+]
+
 
 const InputBox = ({ query, setQuery, send, isPending, files, setFiles, handleFileChange }: {
     query: string, setQuery: (value: string) => void, send: (value: string, files: File[]) => void, files: File[], setFiles: ((file: File) => void), isPending: boolean, handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>
 }) => {
     const doc = useRef<HTMLInputElement | null>(null);
+
+    const [selected, setSelected] = useState(options[0])
 
     return (
         <div className="flex gap-4 items-end">
@@ -66,6 +88,44 @@ const InputBox = ({ query, setQuery, send, isPending, files, setFiles, handleFil
                         className="bg-transparent w-full outline-none pl-2 text-lg text-primary"
                         placeholder="Ask AI..."
                     />
+
+                    {/* MODEL SELECT */}
+                    <Menu
+                        as="div" className="relative">
+                        <MenuButton className="flex items-center gap-2 p-4 bg-white/5 border border-secondary rounded-full text-sm text-slate-300">
+                            <SlidersHorizontal size={20} />
+                        </MenuButton>
+
+                        <MenuItems
+                            transition className="absolute right-0 bottom-full mb-4 bg-tertiary text-primary border border-secondary rounded-xl p-2 z-50 min-w-[220px] space-y-2">
+
+                            {options.map((group) => (
+                                <div key={group.section} className="">
+                                    <div className=" text-slate-400 pb-2 px-2 uppercase font-semibold">
+                                        {group.section}
+                                    </div>
+                                    {group.items.map((item) => (
+                                        <MenuItem key={item.value}>
+                                            {({ active }) => (
+                                                <button
+                                                    // onClick={() => setSelected(item)}
+                                                    className={clsx(
+                                                        "w-full text-left flex gap-2 p-2 text-lg rounded-lg items-center cursor-pointer ",
+                                                        active && "bg-white/5"
+                                                    )}
+                                                >
+                                                    {item.icon && item.icon}
+                                                    {item.label}
+                                                </button>
+                                            )}
+                                        </MenuItem>
+                                    ))}
+
+                                </div>
+                            ))}
+
+                        </MenuItems>
+                    </Menu>
                 </div>
             </div>
 
