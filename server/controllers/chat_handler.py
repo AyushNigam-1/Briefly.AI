@@ -76,12 +76,12 @@ async def chat(user_input: str, user_id: str, chat_id=None, files=None):
 
         sources = extract_sources(raw_msgs)
 
-        try:
-            existing = get_user_memories(user_id)
-            new_memories = await extract_memory(user_input, assistant_text, existing)
-            save_user_memories(user_id, new_memories)
-        except:
-            pass
+        # try:
+        #     existing = get_user_memories(user_id)
+        #     new_memories = await extract_memory(user_input, assistant_text, existing)
+        #     save_user_memories(user_id, new_memories)
+        # except:
+        #     pass
     
         title = None
         if is_new:

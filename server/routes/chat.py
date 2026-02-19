@@ -3,34 +3,33 @@ from utils.auth import get_current_user
 from controllers.chat_handler import chat , get_chats_by_user
 from typing import Optional
 from controllers.chat_handler import get_last_50_chats
-from controllers.task_handler import perform_task
+# from controllers.task_handler import perform_task
 from fastapi import UploadFile, File
 
-router = APIRouter()
+router = APIRouter()    
 
 @router.post("/query")
 async def query_handler(
     query: str = Form(...),
     id: Optional[str] = Form(None),
-    mode: str = Form("chat"),  # Default to chat
     files: list[UploadFile] = File(None),
     user=Depends(get_current_user)
 ):
     try:
         user_id = user["user_id"]
-        if mode == "task":
-            return await perform_task(
-                user_input=query,
-                user_id=user_id,
-                chat_id=id
-            )
-        else:
-            return await chat(
-                user_input=query, 
-                user_id=user_id, 
-                chat_id=id, 
-                files=files
-            )
+        # if mode == "task":
+            # return await perform_task(
+            #     user_input=query,
+            #     user_id=user_id,
+            #     chat_id=id
+            # )
+        # else:
+        return await chat(
+            user_input=query, 
+            user_id=user_id, 
+            chat_id=id, 
+            files=files
+        )
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

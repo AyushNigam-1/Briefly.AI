@@ -1,77 +1,75 @@
-# agent/tools.py
-from utils.n8n import N8nLegoBuilder
-import json
+# from langchain_mcp_adapters.client import MultiServerMCPClient
 
-def create_automation_workflow(user_intent: str, config: str):
-    try:
-        plan = json.loads(config)
-        steps = plan.get("steps", [])
-        builder = N8nLegoBuilder(workflow_name=user_intent)
-        
-        for step in steps:
-            tool_name = step.get("tool")
-            args = step.get("args", {})            
-            raw_branch = step.get("branch")
-            if raw_branch is None:
-                raw_branch = args.get("branch", 0) # Check inside args!
-            raw_branch = step.get("branch")
-            if raw_branch is None:
-                raw_branch = args.get("branch", 0)
-            branch_idx = 0
-            try:
-                branch_idx = int(raw_branch)
-                branch_idx = 1 if branch_idx == 1 else 0
-            except (ValueError, TypeError):
-                s = str(raw_branch).strip().lower()
-                if s in ("1", "true", "branch 1"):
-                    branch_idx = 1
-                else:
-                    branch_idx = 0
-            print(f"DEBUG: Processing {tool_name} on Branch {branch_idx}")
 
-            if tool_name == "add_schedule":
-                builder.add_schedule(hour=args.get("hour"), minute=args.get("minute"))
-            elif tool_name == "add_http_get":
-                builder.add_http_get(url=args.get("url"), node_name=args.get("name"))
-            elif tool_name == "add_edit_fields":
-                builder.add_edit_fields(assignments=args.get("assignments"))
-            elif tool_name == "add_if_condition":
-                builder.add_if_condition(
-                    value1=args.get("value1"),
-                    operation=args.get("operation"),
-                    value2=args.get("value2"),
-                    data_type=args.get("data_type", "number")
-                )
-            elif tool_name == "add_loop_back":
-                builder.add_loop_back(builder.last_http_node)
-            elif tool_name == "add_wait":
-                builder.add_wait(amount=args.get("amount"), unit=args.get("unit"))
-            elif tool_name == "add_logger":
-                builder.add_logger(message=args.get("message"), branch=branch_idx)
-            elif tool_name == "add_webhook_notify":
-                builder.add_webhook_notify(
-                    url=args.get("url"),
-                    message=args.get("message"),
-                    branch=branch_idx
-                )
-                
-        return json.dumps(builder.deploy())
-    except Exception as e:
-        return json.dumps({"status": "error", "message": str(e)})
+# N8N_MCP_URL = "http://localhost:5678/mcp-server/http"
+# N8N_ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4MTQyOTIxNy05MWExLTQzOWYtOGZjMC1iZjBlNmQwY2NmMjEiLCJpc3MiOiJuOG4iLCJhdWQiOiJtY3Atc2VydmVyLWFwaSIsImp0aSI6ImZhMTJkODBjLWM1MDgtNDY5OS04M2UwLWI1YjFjMzliNGM4MCIsImlhdCI6MTc3MTQ3MDE3Nn0.eL00XNMHz5l_lu4qUqTSvxaW4wSmCP_NqwEzTO6vpFM"  # <--- PASTE YOUR KEY
 
-# # --- MOCK TEST (Run this file directly to test) ---
-# if __name__ == "__main__":
-#     # This simulates what the LLM would output
-#     mock_llm_json = """
-#     {
-#         "steps": [
-#             { "tool": "add_schedule", "args": { "hour": 5, "minute": 0 } },
-#             { "tool": "add_http_get", "args": { "url": "https://stoic.tekloon.net/stoic-quote", "name": "Get Quote" } },
-#             { "tool": "add_logger", "args": { "message": "Quote received successfully" } }
-#         ]
-#     }
-#     """
-    
-#     print("🤖 AI Agent calling tool...")
-#     response = create_automation_workflow("Daily Stoic Bot", mock_llm_json)
-#     print("✅ Result:", response)
+
+
+# async def get_n8n_tools():
+#     client = MultiServerMCPClient(  
+#         {
+#             "n8n": {
+#                 "transport": "http",
+#                 "url": N8N_MCP_URL,
+#                 "headers": {
+#                     "Authorization": f"Bearer {N8N_ACCESS_TOKEN}",
+#                 },
+#             }
+#         }
+#     )
+
+#     tools = await client.get_tools()
+
+#     print(f"✅ n8n MCP loaded ({len(tools)} tools)")
+
+#     return tools
+
+from langchain_mcp_adapters.client import MultiServerMCPClient
+from dotenv import load_dotenv
+import os
+load_dotenv()
+ALLOWED_N8N_TOOLS = {
+    "n8n_create_workflow",
+    "n8n_update_partial_workflow",
+    "n8n_list_workflows",
+    "n8n_get_workflow",
+    "n8n_delete_workflow",
+    "n8n_test_workflow",
+}
+
+_n8n_tools_cache = None
+
+
+async def get_n8n_tools():
+    global _n8n_tools_cache
+
+    # 🔒 Cache tools (don't reload every time)
+    if _n8n_tools_cache:
+        return _n8n_tools_cache
+
+    client = MultiServerMCPClient({
+        "n8n": {
+            "transport": "stdio",
+            "command": "npx",
+            "args": ["-y", "n8n-mcp"],
+            "env": {
+                "MCP_MODE": "stdio",
+                "LOG_LEVEL": "error",
+                "DISABLE_CONSOLE_OUTPUT": "true",
+                "N8N_API_URL": "http://localhost:5678",
+                "N8N_API_KEY": os.getenv("N8N_API_KEY"),
+            }
+        }
+    })
+
+    tools = await client.get_tools()
+
+    # 🧠 HARD FILTER
+    tools = [t for t in tools if t.name in ALLOWED_N8N_TOOLS]
+
+    print("✅ Loaded n8n tools:", [t.name for t in tools])
+
+    _n8n_tools_cache = tools
+    return tools
+

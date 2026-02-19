@@ -1,7 +1,7 @@
 "use client"
 
-import axios from "axios"
-import React, { useEffect, useState } from "react"
+import api from "@/app/api"
+import React, { useEffect, useRef, useState } from "react"
 
 interface UserProfile {
     nickname?: string
@@ -13,46 +13,61 @@ interface UserProfile {
 
 export default function ProfilePanel() {
     const [profile, setProfile] = useState<UserProfile>({})
-    const [loading, setLoading] = useState(false)
+    const debounceRef = useRef<NodeJS.Timeout | null>(null)
 
     useEffect(() => {
-        axios.get("/profile").then(res => {
+        api.get("/profile").then(res => {
             setProfile(res.data)
         })
     }, [])
 
-    const update = async (field: keyof UserProfile, value: string) => {
+    const updateField = (field: keyof UserProfile, value: string) => {
+        // 1. Update UI immediately
         setProfile(prev => ({ ...prev, [field]: value }))
 
-        await axios.put("/profile", {
-            [field]: value
-        })
+        // 2. Clear previous debounce
+        if (debounceRef.current) {
+            clearTimeout(debounceRef.current)
+        }
+
+        // 3. Debounce backend call
+        debounceRef.current = setTimeout(async () => {
+            try {
+                await api.put("/profile", {
+                    [field]: value
+                })
+            } catch (err) {
+                console.error("Profile update failed:", err)
+            }
+        }, 800) // 800ms feels natural
     }
 
     return (
-        <div className="space-y-5 ">
+        <div className="space-y-5">
             <div className="flex items-center gap-3 bg-white/5 p-2 rounded-xl border border-secondary">
-                <div className="h-12 w-12 rounded-full bg-primary  flex items-center justify-center font-bold ">
+                <div className="h-12 w-12 rounded-full bg-primary flex items-center justify-center font-bold">
                     {"A"}
                 </div>
-                <div className="text-primary ">
+                <div className="text-primary">
                     <p className="font-semibold">{"Ayush"}</p>
                     <p className="text-sm text-slate-400">
-                        ayu@briefly.ai
+                        {profile.email || "ayu@briefly.ai"}
                     </p>
                 </div>
             </div>
+
             <Field
                 label="Email"
                 value={profile.email}
-                onChange={(v) => update("email", v)}
+                onChange={(v) => updateField("email", v)}
             />
 
             <Field
                 label="Phone"
                 value={profile.phone}
-                onChange={(v) => update("phone", v)}
+                onChange={(v) => updateField("phone", v)}
             />
+
             <div>
                 <h3 className="text-xl font-semibold text-slate-300">
                     About You
@@ -61,22 +76,23 @@ export default function ProfilePanel() {
                     This helps personalize your AI experience.
                 </p>
             </div>
+
             <Field
                 label="Nickname"
                 value={profile.nickname}
-                onChange={(v) => update("nickname", v)}
+                onChange={(v) => updateField("nickname", v)}
             />
 
             <Field
                 label="Occupation"
                 value={profile.occupation}
-                onChange={(v) => update("occupation", v)}
+                onChange={(v) => updateField("occupation", v)}
             />
 
             <Textarea
                 label="More About You"
                 value={profile.about}
-                onChange={(v) => update("about", v)}
+                onChange={(v) => updateField("about", v)}
             />
         </div>
     )

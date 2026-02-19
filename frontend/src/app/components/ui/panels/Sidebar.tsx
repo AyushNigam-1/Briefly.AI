@@ -16,6 +16,7 @@ import { Delete, EllipsisVertical, MessageSquare, PanelLeft, PanelLeftDashed, Pi
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { SummaryHistoryResponse } from "@/app/types";
+import TaskManagerModal from "../modals/Tasks";
 
 const groupSummariesByDate = (summaries: SummaryHistoryResponse[]) => {
     const grouped = {
@@ -138,7 +139,7 @@ const Sidebar: React.FC = () => {
                 className={`fixed top-0 left-0 h-full text-white w-72 bg-tertiary border-r font-mono border-secondary shadow-lg transform transition-transform duration-300 z-50 ${isOpen ? "translate-x-0" : "-translate-x-full"
                     }`}
             >
-                <div className="p-4 space-y-4 h-full ">
+                <div className="p-4 space-y-4 h-full flex flex-col">
                     <div className="flex items-center justify-between">
                         <h2 className="text-xl font-bold"> Chats</h2>
                         <button onClick={toggleSidebar}>
@@ -159,12 +160,12 @@ const Sidebar: React.FC = () => {
                     >
                         <Search size={18} /> Search Chat
                     </button>
+                    <TaskManagerModal />
 
-
-                    <div className="flex-1 overflow-y-auto">
+                    <div className="overflow-y-auto min-h-0 flex-1 custom-scrollbar">
                         {loading && <p>Loading…</p>}
                         {error && <p className="text-red-400">{error}</p>}
-                        <div className="space-y-2">
+                        <div className="space-y-2 overflow-y-auto">
                             {Object.keys(grouped).map((k) =>
                                 grouped[k].length ? (
                                     <div key={k} className="space-y-2">
@@ -175,7 +176,7 @@ const Sidebar: React.FC = () => {
                                                     href={`/${s.id}`}
                                                     key={s.id}
                                                     className={`p-2 group relative overflow-hidden text-gray-400 cursor-pointer flex items-center justify-between transition ${activeId == s.id
-                                                        ? "font-semibold text-white bg-white/5 border border-secondary rounded-xl" : "hover:text-white"
+                                                        ? "font-medium text-white bg-white/5 border border-secondary rounded-xl" : "hover:text-white"
                                                         }`}
                                                 >
                                                     <span className="truncate ">{s.title}</span>

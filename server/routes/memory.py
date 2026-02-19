@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from typing import List
-
+from utils.auth import get_current_user
 from controllers.memory_handler import (
     get_user_memories,
     save_user_memories,
@@ -37,7 +37,7 @@ class ToggleMemoryRequest(BaseModel):
 # -------------------------
 
 @router.get("/")
-async def fetch_memories(user=Depends()):
+async def fetch_memories(user: dict = Depends(get_current_user)):
     """
     Get all memories + toggle state
     """
@@ -48,7 +48,7 @@ async def fetch_memories(user=Depends()):
 
 
 @router.post("/")
-async def add_memory(payload: AddMemoryRequest, user=Depends()):
+async def add_memory(payload: AddMemoryRequest, user: dict = Depends(get_current_user)):
     """
     Manually add memories
     """
@@ -61,7 +61,7 @@ async def add_memory(payload: AddMemoryRequest, user=Depends()):
 
 
 @router.put("/")
-async def edit_memory(payload: UpdateMemoryRequest, user=Depends()):
+async def edit_memory(payload: UpdateMemoryRequest, user: dict = Depends(get_current_user)):
     """
     Update single memory
     """
@@ -78,7 +78,7 @@ async def edit_memory(payload: UpdateMemoryRequest, user=Depends()):
 
 
 @router.delete("/{memory_id}")
-async def delete_memory(memory_id: str, user=Depends()):
+async def delete_memory(memory_id: str, user: dict = Depends(get_current_user)):
     """
     Delete single memory
     """
@@ -91,7 +91,7 @@ async def delete_memory(memory_id: str, user=Depends()):
 
 
 @router.delete("/")
-async def delete_all_memories(user=Depends()):
+async def delete_all_memories(user: dict = Depends(get_current_user)):
     """
     Clear all memories
     """
@@ -104,7 +104,7 @@ async def delete_all_memories(user=Depends()):
 
 
 @router.get("/toggle")
-async def get_memory_toggle(user=Depends()):
+async def get_memory_toggle(user: dict = Depends(get_current_user)):
     """
     Get memory enabled flag
     """
@@ -114,7 +114,7 @@ async def get_memory_toggle(user=Depends()):
 
 
 @router.post("/toggle")
-async def toggle_memory(payload: ToggleMemoryRequest, user=Depends()):
+async def toggle_memory(payload: ToggleMemoryRequest, user: dict = Depends(get_current_user)):
     """
     Enable / disable memory usage
     """

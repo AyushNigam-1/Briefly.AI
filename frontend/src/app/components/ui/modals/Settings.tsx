@@ -21,7 +21,7 @@ import {
 } from "lucide-react"
 import clsx from "clsx"
 import Memory from "./tabs/Memory"
-import CustomInstructions from "./tabs/CustomInstruction"
+import CustomInstructions from "./tabs/Preference"
 import Profile from "./tabs/Profile"
 
 const tabs = [
@@ -97,7 +97,7 @@ export default function SettingsDialog({
                                             leaveFrom="opacity-100 translate-y-0 scale-100"
                                             leaveTo="opacity-0 translate-y-2 scale-[0.98]"
                                         >
-                                            <TabPanels className="h-full p-4 custom-scrollbar overflow-y-auto">
+                                            <TabPanels className="h-full p-4 ">
 
                                                 <TabPanel className="space-y-4">
                                                     <Profile />

@@ -1,30 +1,64 @@
 from langchain.agents import create_agent
 from agent.tools.notion_tools import get_notion_tools
 from agent.tools.search_tools import get_search_tools
+from agent.tools.n8n_tools import get_n8n_tools
+from agent.tool_cache import *
 from utils.llm import llm
 import json
-# 1. Accept the user's token as an argument
-async def get_agent(user_notion_token: str = None, enable_notion: bool = False):
+
+
+async def get_agent(
+    user_notion_token: str = None,
+    enable_notion: bool = False,
+    enable_n8n: bool = True,
+):
     tools = []
 
-    tools.extend(get_search_tools())
+    # ---------------- SEARCH (cached) ----------------
+
+    cached_search = get_cached_search_tools()
+    if not cached_search:
+        cached_search = get_search_tools()
+        set_cached_search_tools(cached_search)
+
+    tools.extend(cached_search)
+
+    # ---------------- N8N MCP (cached globally) ----------------
+
+    if enable_n8n:
+        cached_n8n = get_cached_n8n_tools()
+
+        if not cached_n8n:
+            try:
+                cached_n8n = await get_n8n_tools()
+                set_cached_n8n_tools(cached_n8n)
+                print("✅ n8n MCP cached")
+            except Exception as e:
+                print("⚠️ n8n MCP unavailable:", e)
+
+        if cached_n8n:
+            tools.extend(cached_n8n)
+
+    # ---------------- NOTION MCP (cached per token) ----------------
 
     if enable_notion and user_notion_token:
-        try:
-            notion_tools = await get_notion_tools(user_notion_token)
-            tools.extend(notion_tools)
-            print("✅ Notion MCP loaded")
-        except Exception as e:
-            print("⚠️ Notion MCP unavailable:", e)
+        cached_notion = get_cached_notion_tools(user_notion_token)
 
-    print(f"Total tools loaded: {len(tools)}")
+        if not cached_notion:
+            try:
+                cached_notion = await get_notion_tools(user_notion_token)
+                set_cached_notion_tools(user_notion_token, cached_notion)
+                print("✅ Notion MCP cached")
+            except Exception as e:
+                print("⚠️ Notion MCP unavailable:", e)
 
-    agent = create_agent(
-        llm,
-        tools=tools,
-    )
+        if cached_notion:
+            tools.extend(cached_notion)
 
-    return agent
+    print(f"Total tools active: {len(tools)}")
+
+    return create_agent(llm, tools=tools)
+
 
 
 async def run_agent(messages):
@@ -61,7 +95,7 @@ def extract_sources(messages):
 
 async def extract_memory(user_input, assistant_output, existing_memories):
 
-    agent = await get_agent()
+    agent = await get_agent(enable_n8n=False)
 
     response = await agent.ainvoke({
         "messages": [

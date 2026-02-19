@@ -1,5 +1,6 @@
 "use client"
 
+import api from "@/app/api"
 import { Switch } from "@headlessui/react"
 import axios from "axios"
 import clsx from "clsx"
@@ -19,38 +20,24 @@ interface MemoryItem {
 const Memory: React.FC = () => {
     const [memories, setMemories] = useState<MemoryItem[]>([])
     const [newMemory, setNewMemory] = useState("")
-    const [memoryEnabled, setMemoryEnabled] = useState(true)
+    const [memoryEnabled, setMemoryEnabled] = useState(false)
 
     const textareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({})
 
     useEffect(() => {
-        axios.get("/memory").then(res => {
+        api.get("/memory").then(res => {
             setMemories(res.data.memories || [])
-        })
-
-        axios.get("/memory/toggle").then(res => {
             setMemoryEnabled(Boolean(res.data.enabled))
         })
     }, [])
 
     const toggleMemory = async (val: boolean) => {
         setMemoryEnabled(val)
-        await axios.post("/memory/toggle", { enabled: val })
-    }
-
-    const handleAddMemory = async () => {
-        if (!newMemory.trim()) return
-
-        const res = await axios.post("/memory", {
-            memories: [newMemory],
-        })
-
-        setMemories(res.data.memories)
-        setNewMemory("")
+        await api.post("/memory/toggle", { enabled: val })
     }
 
     const handleUpdateMemory = async (id: string, text: string) => {
-        await axios.put("/memory", {
+        await api.put("/memory", {
             memory_id: id,
             text,
         })
@@ -61,7 +48,7 @@ const Memory: React.FC = () => {
     }
 
     const handleDeleteMemory = async (id: string) => {
-        const res = await axios.delete(`/memory/${id}`)
+        const res = await api.delete(`/memory/${id}`)
         setMemories(res.data.memories)
     }
 
@@ -116,7 +103,7 @@ const Memory: React.FC = () => {
             </div>
 
             {/* MEMORY LIST */}
-            <div className="space-y-3 overflow-y-auto custom-scrollbar max-h-[260px]">
+            <div className="space-y-3 overflow-y-auto custom-scrollbar">
 
                 {memories.map(m => (
                     <div
@@ -155,23 +142,6 @@ const Memory: React.FC = () => {
                     </div>
                 ))}
 
-            </div>
-
-            {/* ADD MEMORY */}
-            <div className="space-y-3 pt-4 border-t border-secondary">
-                <textarea
-                    value={newMemory}
-                    onChange={e => setNewMemory(e.target.value)}
-                    className="w-full h-20 bg-white/5 rounded-xl p-3 outline-none text-slate-200 resize-none border border-secondary"
-                    placeholder="Example: User prefers Rust code examples"
-                />
-
-                <button
-                    onClick={handleAddMemory}
-                    className="px-4 py-2 bg-white/5 border border-secondary rounded-lg hover:bg-white/10 transition text-sm"
-                >
-                    Save Memory
-                </button>
             </div>
 
         </div>
