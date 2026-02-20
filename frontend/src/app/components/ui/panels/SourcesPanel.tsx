@@ -45,7 +45,7 @@ const SourcesSidebar: React.FC<SourcesSidebarProps> = ({
                     <hr className="border border-secondary" />
 
                     {/* Sources List */}
-                    <div className="flex-1 overflow-y-auto space-y-3">
+                    <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar">
                         {!sources?.length && (
                             <p className="text-gray-500 text-sm">No sources available.</p>
                         )}

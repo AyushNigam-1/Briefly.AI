@@ -131,7 +131,7 @@ const Sidebar: React.FC = () => {
             {/* Toggle Button */}
             <button
                 onClick={toggleSidebar}
-                className="text-secondary bg-primary p-3  rounded-full"
+                className="text-tertiary bg-primary p-3  rounded-full"
             >
                 <PanelLeft size={20} />
             </button>

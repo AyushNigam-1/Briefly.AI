@@ -63,7 +63,7 @@ const Page = () => {
     // setLoading(false);
   };
 
-  const handleSend = async (query: string, files: File[]) => {
+  const handleSend = async (query: string, files: File[], modal: string) => {
     if (!query.trim()) return;
     setQuery("");
     setFiles([])
@@ -79,8 +79,8 @@ const Page = () => {
       const data = await sendQuery.mutateAsync({
         query: query,
         id: activeId!,
-        files: files
-
+        files: files,
+        modal: modal
       });
       if (!activeId && data.id) {
         setActiveId(data.id); () => void

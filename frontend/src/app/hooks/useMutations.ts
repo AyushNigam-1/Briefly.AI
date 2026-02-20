@@ -9,21 +9,22 @@ export const useMutations = () => {
         query: string;
         id: string;
         files: File[]
+        modal: string
     }
 
     interface QueryResponse {
         res: string; // matches your result.res
         sources?: any[];
         id?: string;
-
     }
 
     const sendQuery = useMutation({
-        mutationFn: async ({ query, id, files }: QueryPayload) => {
+        mutationFn: async ({ query, id, files, modal }: QueryPayload) => {
             const form = new FormData();
 
             form.append("query", query);
             form.append("id", id);
+            form.append("modal_name", modal)
 
             files.forEach((file: File) => {
                 form.append("files", file);

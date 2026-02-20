@@ -42,7 +42,7 @@ const Navbar: React.FC<NavbarProps> = ({ component }) => {
                 <img src="/logo.png" alt="" className='w-40 h-auto ' />
             </div>
             {/* <Menu> */}
-            <button onClick={() => setOpen(true)} className="text-secondary bg-primary p-3 rounded-full flex gap-2 items-center text-lg">
+            <button onClick={() => setOpen(true)} className="text-tertiary bg-primary p-3 rounded-full flex gap-2 items-center text-lg">
                 <User size="20" />
             </button>
             {/* <MenuItems

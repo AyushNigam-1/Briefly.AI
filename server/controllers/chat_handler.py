@@ -1,9 +1,12 @@
 from bson import ObjectId
 from datetime import datetime, timezone
 from controllers.mongo import summary_collection
+from langchain_groq import ChatGroq
+from langchain_core.messages import HumanMessage
 from agent.agent_factory import  run_agent , generate_chat_title , extract_sources , extract_memory
 from controllers.memory_handler import get_user_memories, save_user_memories
 from controllers.file_handler import process_files
+from controllers.guard_handler import run_guard
 import traceback
 
 def get_or_create_chat(chat_id, user_id):
@@ -64,15 +67,37 @@ def save_chat_turn(chat_id, user_input, assistant_text, files, sources, title=No
 
     summary_collection.update_one({"_id": chat_id}, payload)
 
-async def chat(user_input: str, user_id: str, chat_id=None, files=None):
+async def chat(user_input: str, user_id: str, chat_id=None, files=None,modal_name=None):
     try:
         chat_doc, chat_oid, is_new = get_or_create_chat(chat_id, user_id)
 
         file_context, uploaded_files = await process_files(files, user_id)
 
+        # 🔐 INPUT MODERATION
+        safe_input, guard_reason = await run_guard(user_input)
+
+        if not safe_input:
+            return {
+                "res": "Sorry — this request violates safety guidelines.",
+                "blocked": True,
+                "reason": guard_reason
+            }
+
         messages = build_messages(chat_doc, user_input, file_context)
 
-        assistant_text, raw_msgs = await run_agent(messages)
+
+        assistant_text, raw_msgs = await run_agent(messages, modal_name)
+
+        safe_output, guard_reason = await run_guard(assistant_text)
+
+        if not safe_output:
+            return {
+                "res": "The assistant response was blocked for safety reasons.",
+                "blocked": True,
+                "reason": guard_reason
+            }
+
+
 
         sources = extract_sources(raw_msgs)
 
@@ -102,16 +127,11 @@ async def chat(user_input: str, user_id: str, chat_id=None, files=None):
 
 def get_last_50_chats(id: str):
     try:
-        # Check if the provided ID is a valid MongoDB ObjectId
         if ObjectId.is_valid(id):
             query = {"_id": ObjectId(id)}
         else:
             query = {"id": id}  # Fallback for custom string IDs
 
-        # Projection: 
-        # 1. Exclude _id ("_id": 0) if you don't want to return it
-        # 2. Slice 'chat_history' to get the last 50 elements ("$slice": -50)
-        # Note: Replace 'chat_history' with the actual name of your array field in MongoDB
         result = summary_collection.find_one(
             query,
             {"queries": {"$slice": -50}, "_id": 0} 

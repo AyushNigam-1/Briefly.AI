@@ -13,22 +13,17 @@ async def query_handler(
     query: str = Form(...),
     id: Optional[str] = Form(None),
     files: list[UploadFile] = File(None),
+    modal_name: Optional[str] = Form(None),
     user=Depends(get_current_user)
 ):
     try:
         user_id = user["user_id"]
-        # if mode == "task":
-            # return await perform_task(
-            #     user_input=query,
-            #     user_id=user_id,
-            #     chat_id=id
-            # )
-        # else:
         return await chat(
             user_input=query, 
             user_id=user_id, 
             chat_id=id, 
-            files=files
+            files=files,
+            modal_name=modal_name
         )
 
     except Exception as e:

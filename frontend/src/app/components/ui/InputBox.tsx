@@ -1,33 +1,39 @@
 "use client"
 import { Listbox, ListboxButton, ListboxOption, ListboxOptions, MenuButton, MenuItem, MenuItems, Menu } from '@headlessui/react';
 import clsx from 'clsx';
-import { AlarmClock, AlarmClockCheck, ChevronDown, FileText, Filter, ImageIcon, Loader2, MessageCircle, MessageSquare, Paperclip, SendHorizontal, SlidersHorizontal } from 'lucide-react';
-import React, { useRef, useState } from 'react'
+import { AlarmClock, AlarmClockCheck, ChevronDown, FileText, Filter, ImageIcon, Loader2, MessageCircle, MessageSquare, Package, Paperclip, SendHorizontal, SlidersHorizontal } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react'
 
 const options = [
-    {
-        section: "Mode",
-        items: [
-            { label: "Chat", value: "chat", icon: (<MessageCircle size={20} />) },
-            { label: "Task", value: "task", icon: (<AlarmClock size={20} />) },
-        ],
-    },
-    {
-        section: "Model",
-        items: [
-            { label: "GPT-OSS-120B", value: "gpt" },
-            { label: "Llama-70B", value: "llama" },
-        ],
-    },
+    { label: "GPT OSS 120B", value: "openai/gpt-oss-120b", icon: "/openai.webp" },
+    { label: "GPT OSS 20B", value: "openai/gpt-oss-20b", icon: "/openai.webp" },
+    { label: "Llama 70B", value: "llama-3.3-70b-versatile", icon: "/meta.webp" },
+    { label: "Llama 4 Scout", value: "meta-llama/llama-4-scout-17b-16e-instruct", icon: "/meta.webp" },
+    { label: "Qwen 3 32B", value: "qwen/qwen3-32b", icon: "/qwen.webp" },
+    { label: "Kimi K2", value: "moonshotai/kimi-k2-instruct-0905", icon: "/kimi.webp" },
 ]
 
 
 const InputBox = ({ query, setQuery, send, isPending, files, setFiles, handleFileChange }: {
-    query: string, setQuery: (value: string) => void, send: (value: string, files: File[]) => void, files: File[], setFiles: ((file: File) => void), isPending: boolean, handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>
+    query: string, setQuery: (value: string) => void, send: (value: string, files: File[], model: string) => void, files: File[], setFiles: ((file: File) => void), isPending: boolean, handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>
 }) => {
     const doc = useRef<HTMLInputElement | null>(null);
-
     const [selected, setSelected] = useState(options[0])
+
+    useEffect(() => {
+        const savedModelValue = localStorage.getItem('selectedModel');
+        if (savedModelValue) {
+            const foundOption = options.find(opt => opt.value === savedModelValue);
+            if (foundOption) {
+                setSelected(foundOption);
+            }
+        }
+    }, []);
+
+    const handleModelChange = (item: typeof options[0]) => {
+        setSelected(item);
+        localStorage.setItem('selectedModel', item.value);
+    };
 
     return (
         <div className="flex gap-4 items-end">
@@ -39,7 +45,7 @@ const InputBox = ({ query, setQuery, send, isPending, files, setFiles, handleFil
                             <div key={`${file.name}-${index}`} className="relative group flex-shrink-0">
                                 <div className='p-2 pr-6 flex gap-2 bg-white/5 rounded-xl relative border border-secondary text-primary'>
                                     {/* Icon based on file type */}
-                                    <div className='p-3 rounded-full bg-primary my-auto text-secondary'>
+                                    <div className='p-3 rounded-full bg-primary my-auto text-tertiary'>
                                         {file.type.startsWith('image/') ? <ImageIcon size={20} /> : <FileText size={20} />}
                                     </div>
 
@@ -68,7 +74,7 @@ const InputBox = ({ query, setQuery, send, isPending, files, setFiles, handleFil
                 }
                 <div className="flex bg-white/5 rounded-full border border-secondary">
                     <button
-                        className="bg-primary rounded-full  p-4 flex items-center justify-center text-secondary"
+                        className="bg-primary rounded-full  p-4 flex items-center justify-center text-tertiary"
                         onClick={() => doc.current?.click()}
                     >
                         <input
@@ -84,7 +90,7 @@ const InputBox = ({ query, setQuery, send, isPending, files, setFiles, handleFil
                     <input
                         value={query}
                         onChange={e => setQuery(e.target.value)}
-                        onKeyDown={e => e.key === "Enter" && query && send(query, files)}
+                        onKeyDown={e => e.key === "Enter" && query && send(query, files, selected.value)}
                         className="bg-transparent w-full outline-none pl-2 text-lg text-primary"
                         placeholder="Ask AI..."
                     />
@@ -92,38 +98,33 @@ const InputBox = ({ query, setQuery, send, isPending, files, setFiles, handleFil
                     {/* MODEL SELECT */}
                     <Menu
                         as="div" className="relative">
-                        <MenuButton className="flex items-center gap-2 p-4 bg-white/5 border border-secondary rounded-full text-sm text-slate-300">
-                            <SlidersHorizontal size={20} />
+                        <MenuButton className="flex w-fit text-nowrap items-center gap-2 p-3.5 bg-white/5 border border-secondary rounded-full  text-slate-300">
+                            <Package size={20} />
                         </MenuButton>
 
                         <MenuItems
                             transition className="absolute right-0 bottom-full mb-4 bg-tertiary text-primary border border-secondary rounded-xl p-2 z-50 min-w-[220px] space-y-2">
+                            <div className=" text-slate-400 px-2 flex gap-2 items-center uppercase font-semibold">
+                                <Package size={18} /> Modals
+                            </div>
+                            <hr className="border border-secondary" />
 
-                            {options.map((group) => (
-                                <div key={group.section} className="">
-                                    <div className=" text-slate-400 pb-2 px-2 uppercase font-semibold">
-                                        {group.section}
-                                    </div>
-                                    {group.items.map((item) => (
-                                        <MenuItem key={item.value}>
-                                            {({ active }) => (
-                                                <button
-                                                    // onClick={() => setSelected(item)}
-                                                    className={clsx(
-                                                        "w-full text-left flex gap-2 p-2 text-lg rounded-lg items-center cursor-pointer ",
-                                                        active && "bg-white/5"
-                                                    )}
-                                                >
-                                                    {item.icon && item.icon}
-                                                    {item.label}
-                                                </button>
+                            {options.map((item) => (
+                                <MenuItem key={item.value}>
+                                    {() => (
+                                        <button
+                                            onClick={() => handleModelChange(item)}
+                                            className={clsx(
+                                                "w-full text-left flex gap-2 p-2 hover:bg-white/5 text-lg rounded-lg items-center cursor-pointer ",
+                                                selected.label == item.label && "bg-white/5"
                                             )}
-                                        </MenuItem>
-                                    ))}
-
-                                </div>
+                                        >
+                                            <img src={item.icon} className='size-5' alt={item.label} />
+                                            {item.label}
+                                        </button>
+                                    )}
+                                </MenuItem>
                             ))}
-
                         </MenuItems>
                     </Menu>
                 </div>
@@ -131,8 +132,8 @@ const InputBox = ({ query, setQuery, send, isPending, files, setFiles, handleFil
 
             <button
                 disabled={!query}
-                onClick={() => query && send(query, files)}
-                className="p-4  bg-primary rounded-full text-secondary"
+                onClick={() => query && send(query, files, selected.value)}
+                className="p-4  bg-primary rounded-full text-tertiary"
             >
                 {isPending ? (
                     <Loader2 className="animate-spin" />

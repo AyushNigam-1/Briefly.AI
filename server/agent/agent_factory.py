@@ -3,27 +3,31 @@ from agent.tools.notion_tools import get_notion_tools
 from agent.tools.search_tools import get_search_tools
 from agent.tools.n8n_tools import get_n8n_tools
 from agent.tool_cache import *
-from utils.llm import llm
+from dotenv import load_dotenv
+from langchain_groq import ChatGroq
+from groq import Groq
+import os
 import json
 
+load_dotenv()
+api_key = os.getenv("groq_api_key")
+groq_client = Groq(api_key=api_key)
 
 async def get_agent(
+    modal_name: str = "openai/gpt-oss-120b", 
     user_notion_token: str = None,
     enable_notion: bool = False,
     enable_n8n: bool = True,
 ):
+    print("modal_name",modal_name)
+    llm = ChatGroq(model=modal_name, groq_api_key=api_key)
     tools = []
-
-    # ---------------- SEARCH (cached) ----------------
-
     cached_search = get_cached_search_tools()
     if not cached_search:
         cached_search = get_search_tools()
         set_cached_search_tools(cached_search)
 
     tools.extend(cached_search)
-
-    # ---------------- N8N MCP (cached globally) ----------------
 
     if enable_n8n:
         cached_n8n = get_cached_n8n_tools()
@@ -39,8 +43,6 @@ async def get_agent(
         if cached_n8n:
             tools.extend(cached_n8n)
 
-    # ---------------- NOTION MCP (cached per token) ----------------
-
     if enable_notion and user_notion_token:
         cached_notion = get_cached_notion_tools(user_notion_token)
 
@@ -55,14 +57,14 @@ async def get_agent(
         if cached_notion:
             tools.extend(cached_notion)
 
-    print(f"Total tools active: {len(tools)}")
+    print(f"Total tools active: {len(tools)} | Model: {modal_name}")
 
     return create_agent(llm, tools=tools)
 
 
 
-async def run_agent(messages):
-    agent = await get_agent(user_notion_token="YOUR_NOTION_TOKEN")
+async def run_agent(messages,modal_name):
+    agent = await get_agent(user_notion_token="YOUR_NOTION_TOKEN",modal_name=modal_name)
     response = await agent.ainvoke({"messages": messages})
     return response["messages"][-1].content, response["messages"]
 

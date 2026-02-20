@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from utils.websocket_manager import manager
-from extra.summary import save_summary_to_mongo, fetch_existing_summary
+from extra.summary import  fetch_existing_summary
 from controllers.mongo import fs
 
 load_dotenv()
@@ -26,9 +26,6 @@ if not GOOGLE_API_KEY:
 
 client = genai.Client(api_key=GOOGLE_API_KEY)
 
-# ------------------------------------------------------------------
-# Helpers
-# ------------------------------------------------------------------
 
 def wait_for_file_active(file_obj, timeout=120):
     start = time.time()

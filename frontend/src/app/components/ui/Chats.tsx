@@ -60,7 +60,7 @@ interface ChatsProps {
     queries: query[];
     setQueries: Dispatch<SetStateAction<query[]>>;
     isPending: boolean;
-    handleSend: (query: string, files: File[]) => Promise<void>;
+    handleSend: (query: string, files: File[], modal: string) => Promise<void>;
     query: string;
     setQuery: (value: string) => void
     handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>
@@ -176,7 +176,7 @@ const Chats = ({ queries, setQueries, isPending, handleSend, query, setQuery, fi
                                                     <div key={`${file.name}-${index}`} className="relative group flex-shrink-0">
                                                         <div className='p-2 pr-6 flex gap-2  bg-tertiary text-primary rounded-xl relative border border-secondary'>
                                                             {/* Icon based on file type */}
-                                                            <div className='p-3 rounded-full bg-primary my-auto text-secondary'>
+                                                            <div className='p-3 rounded-full bg-primary my-auto text-tertiary'>
                                                                 {file.type.startsWith("image/") ?
                                                                     <ImageIcon size={20} /> : file.type.startsWith("video/") ?
                                                                         <VideoIcon size={20} /> : <FileText size={20} />
@@ -204,7 +204,7 @@ const Chats = ({ queries, setQueries, isPending, handleSend, query, setQuery, fi
                                         <ReactMarkdown
                                             remarkPlugins={[remarkGfm]}
                                             className={`p-4 rounded-xl shadow-sm leading-relaxed space-y-3 max-w-[720px] font-mono ${query.sender === "user"
-                                                ? "bg-primary text-secondary ml-auto "
+                                                ? "bg-primary text-tertiary ml-auto "
                                                 : "text-primary bg-tertiary border border-gray-800 "
                                                 }`}
                                             components={{
