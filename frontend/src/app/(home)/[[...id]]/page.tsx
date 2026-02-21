@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { metadata, query } from "../../types";
 import Chats from "../../components/ui/Chats";
@@ -11,20 +11,22 @@ import Cookies from "js-cookie";
 import Navbar from "@/app/components/ui/Navbar";
 import InputBox from "@/app/components/ui/InputBox";
 import Sidebar from "@/app/components/ui/panels/Sidebar";
+import { fetchEventSource } from '@microsoft/fetch-event-source';
 
 const Page = () => {
   const { id } = useParams();
   const router = useRouter();
-
+  const token = Cookies.get("access_token");
   const rawId = Array.isArray(id) ? id[0] : id;
-
   const [query, setQuery] = useState<string>("");
   const [metadata, setMetadata] = useState<metadata | null>(null);
   const { sendQuery } = useMutations();
   const [queries, setQueries] = useState<query[]>([]);
   const [activeId, setActiveId] = useState<string | undefined>();
+  const [isPending, setPending] = useState(false)
   const [files, setFiles] = useState<File[]>([]);
-
+  const streamBuffer = useRef("");
+  const flushTimer = useRef<NodeJS.Timeout | null>(null);
   // Load history when query id changes
   useEffect(() => {
     if (!rawId) {
@@ -64,34 +66,89 @@ const Page = () => {
   };
 
   const handleSend = async (query: string, files: File[], modal: string) => {
+    setPending(true)
     if (!query.trim()) return;
+
     setQuery("");
-    setFiles([])
-    setQueries(prev => [...prev, {
-      sender: "user", content: query, files: files.map(file => ({
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        url: ""
-      }))
-    }]);
+    setFiles([]);
+
+    // 1️⃣ Push user message
+    setQueries(prev => [
+      ...prev,
+      {
+        sender: "user",
+        content: query,
+        files: files.map(file => ({ name: file.name, size: file.size, type: file.type, url: "" }))
+      },
+      { sender: "llm", content: "", sources: [] }
+    ]);
+
     try {
-      const data = await sendQuery.mutateAsync({
-        query: query,
-        id: activeId!,
-        files: files,
-        modal: modal
+      const form = new FormData();
+      form.append("query", query);
+      if (activeId) form.append("id", activeId);
+      form.append("modal_name", modal);
+      files.forEach(file => form.append("files", file));
+
+      let assistantText = "";
+
+      await fetchEventSource("http://localhost:8000/query", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: form,
+
+        async onopen(response) {
+          setPending(false)
+          if (response.ok) return; // Everything is good
+          throw new Error(`Failed to connect: ${response.status}`);
+        },
+        onmessage(msg) {
+          const parsed = JSON.parse(msg.data);
+          if (parsed.type === "token") {
+            assistantText += parsed.data;
+            setQueries(prev => {
+              const updated = [...prev];
+              updated[updated.length - 1].content = assistantText;
+              return updated;
+            });
+          }
+
+          if (parsed.type === "done") {
+            if (!activeId && parsed.id) {
+              setActiveId(parsed.id);
+              router.replace(`/${parsed.id}`);
+            }
+            setQueries(prev => {
+              const updated = [...prev];
+              updated[updated.length - 1].sources = parsed.sources || [];
+              return updated;
+            });
+          }
+
+          if (parsed.type === "blocked") {
+            setQueries(prev => {
+              const updated = [...prev];
+              updated[updated.length - 1] = {
+                sender: "llm",
+                content: "Sorry — I can’t help with that request.",
+                blocked: true
+              };
+              return updated;
+            });
+          }
+        },
+        onerror(err) {
+          console.error("Stream error:", err);
+          throw err;
+        }
       });
-      if (!activeId && data.id) {
-        setActiveId(data.id); () => void
-          router.replace(`/${data.id}`);
-      }
-      setQueries(prev => [...prev, { sender: "llm", content: data.res, sources: data.sources }]);
-    } catch (e) {
-      console.error("Send failed", e);
+
+    } catch (err) {
+      console.error("Streaming failed", err);
     }
   };
-
   return (
     <>
       <Navbar component={<Sidebar />} />
@@ -108,7 +165,7 @@ const Page = () => {
               query={query}
               queries={queries}
               setQueries={setQueries}
-              isPending={sendQuery.isPending}
+              isPending={isPending}
               handleSend={handleSend}
               setQuery={setQuery}
               files={files}

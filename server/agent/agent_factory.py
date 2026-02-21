@@ -14,13 +14,13 @@ api_key = os.getenv("groq_api_key")
 groq_client = Groq(api_key=api_key)
 
 async def get_agent(
-    modal_name: str = "openai/gpt-oss-120b", 
+    modal_name: str = "meta-llama/llama-4-scout-17b-16e-instruct", 
     user_notion_token: str = None,
     enable_notion: bool = False,
-    enable_n8n: bool = True,
+    enable_n8n: bool = False,
 ):
     print("modal_name",modal_name)
-    llm = ChatGroq(model=modal_name, groq_api_key=api_key)
+    llm = ChatGroq(model=modal_name, groq_api_key=api_key,streaming=True)
     tools = []
     cached_search = get_cached_search_tools()
     if not cached_search:
@@ -61,6 +61,36 @@ async def get_agent(
 
     return create_agent(llm, tools=tools)
 
+async def stream_agent(messages):
+    print("\n================ STREAM AGENT START ================")
+    
+    agent = await get_agent()
+    print("✅ Agent created")
+
+    # ⚠️ FIX: Use astream_events with version="v2" to get token-level streaming
+    async for event in agent.astream_events({"messages": messages}, version="v2"):
+        
+        kind = event["event"]
+        
+        # 1. Token streaming path (Real-time words)
+        if kind == "on_chat_model_stream":
+            chunk = event["data"]["chunk"]
+            
+            if hasattr(chunk, "content") and chunk.content:
+                # print("➡️ Yielding token:", repr(chunk.content))
+                yield chunk.content
+                
+        # 2. Tool execution path (Optional: if you want to know when a tool starts)
+        elif kind == "on_tool_start":
+            tool_name = event["name"]
+            tool_inputs = event["data"].get("input")
+            print(f"🔧 TOOL STARTED: {tool_name} with inputs: {tool_inputs}")
+            
+        # 3. Final model message (Optional: if you need the full message at the end)
+        elif kind == "on_chat_model_end":
+            print("📦 MODEL GENERATION COMPLETE")
+
+    print("\n================ STREAM AGENT END ================\n")
 
 
 async def run_agent(messages,modal_name):

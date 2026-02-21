@@ -1,12 +1,14 @@
-from fastapi import APIRouter, HTTPException, Depends , Form    
+from fastapi import APIRouter, HTTPException, Depends , Form 
+from fastapi.responses import StreamingResponse  
 from utils.auth import get_current_user
-from controllers.chat_handler import chat , get_chats_by_user
+from controllers.chat_handler import chat_stream , get_chats_by_user
 from typing import Optional
 from controllers.chat_handler import get_last_50_chats
 # from controllers.task_handler import perform_task
 from fastapi import UploadFile, File
 
 router = APIRouter()    
+
 
 @router.post("/query")
 async def query_handler(
@@ -16,18 +18,17 @@ async def query_handler(
     modal_name: Optional[str] = Form(None),
     user=Depends(get_current_user)
 ):
-    try:
-        user_id = user["user_id"]
-        return await chat(
-            user_input=query, 
-            user_id=user_id, 
-            chat_id=id, 
-            files=files,
-            modal_name=modal_name
-        )
+    user_id = user["user_id"]
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    generator = chat_stream(
+        user_input=query,
+        user_id=user_id,
+        chat_id=id,
+        files=files,
+        modal_name=modal_name
+    )
+
+    return StreamingResponse(generator, media_type="text/event-stream")
 
 @router.get("/history/{id}")
 async def history(id: str):

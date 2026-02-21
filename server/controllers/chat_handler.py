@@ -3,11 +3,39 @@ from datetime import datetime, timezone
 from controllers.mongo import summary_collection
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage
-from agent.agent_factory import  run_agent , generate_chat_title , extract_sources , extract_memory
+from agent.agent_factory import  run_agent , generate_chat_title , extract_sources , extract_memory , stream_agent
 from controllers.memory_handler import get_user_memories, save_user_memories
 from controllers.file_handler import process_files
-from controllers.guard_handler import run_guard
 import traceback
+import os
+import json
+from groq import Groq
+
+client = Groq(api_key=os.getenv("groq_api_key"))
+
+GUARD_MODEL = "meta-llama/llama-prompt-guard-2-86m"
+
+async def run_guard(text: str):
+    res = client.chat.completions.create(
+        model=GUARD_MODEL,
+        messages=[{"role": "user", "content": text}],
+        temperature=0,
+    )
+
+    raw = res.choices[0].message.content.strip()
+
+    try:
+        score = float(raw)
+    except:
+        return True, raw
+    print("score",score)
+    THRESHOLD = 0.1
+
+    is_safe = score < THRESHOLD
+    print(is_safe,"issafe")
+    return is_safe
+
+
 
 def get_or_create_chat(chat_id, user_id):
     if chat_id and ObjectId.is_valid(chat_id):
@@ -67,63 +95,84 @@ def save_chat_turn(chat_id, user_input, assistant_text, files, sources, title=No
 
     summary_collection.update_one({"_id": chat_id}, payload)
 
-async def chat(user_input: str, user_id: str, chat_id=None, files=None,modal_name=None):
+
+async def chat_stream(user_input, user_id, chat_id=None, files=None, modal_name=None):
+
+    chat_doc, chat_oid, is_new = get_or_create_chat(chat_id, user_id)
+    file_context, uploaded_files = await process_files(files, user_id)
+
+    safe_input, _ = await run_guard(user_input)
+    if not safe_input:
+        yield json.dumps({"type": "blocked"}) + "\n"
+        return
+
+    messages = build_messages(chat_doc, user_input, file_context)
+
+    assistant_text = ""
+
     try:
-        chat_doc, chat_oid, is_new = get_or_create_chat(chat_id, user_id)
+        async for chunk in stream_agent(messages):
+            assistant_text += chunk
+            yield json.dumps({"type": "token", "data": chunk}) + "\n"
 
-        file_context, uploaded_files = await process_files(files, user_id)
-
-        # 🔐 INPUT MODERATION
-        safe_input, guard_reason = await run_guard(user_input)
-
-        if not safe_input:
-            return {
-                "res": "Sorry — this request violates safety guidelines.",
-                "blocked": True,
-                "reason": guard_reason
-            }
-
-        messages = build_messages(chat_doc, user_input, file_context)
-
-
-        assistant_text, raw_msgs = await run_agent(messages, modal_name)
-
-        safe_output, guard_reason = await run_guard(assistant_text)
-
+        # post moderation
+        safe_output, _ = await run_guard(assistant_text)
         if not safe_output:
-            return {
-                "res": "The assistant response was blocked for safety reasons.",
-                "blocked": True,
-                "reason": guard_reason
-            }
+            yield json.dumps({"type": "blocked"}) + "\n"
+            return
 
-
-
-        sources = extract_sources(raw_msgs)
-
-        # try:
-        #     existing = get_user_memories(user_id)
-        #     new_memories = await extract_memory(user_input, assistant_text, existing)
-        #     save_user_memories(user_id, new_memories)
-        # except:
-        #     pass
-    
+        sources = []
         title = None
         if is_new:
             title = await generate_chat_title(user_input)
 
         save_chat_turn(chat_oid, user_input, assistant_text, uploaded_files, sources, title)
 
-        return {
+        yield json.dumps({
+            "type": "done",
             "id": str(chat_oid),
-            "res": assistant_text,
             "title": title,
-            "sources": sources,
-        }
+            "sources": sources
+        }) + "\n"
 
-    except Exception as e:
+    except Exception:
         traceback.print_exc()
-        return {"res": "Internal error", "error": str(e)}
+        yield json.dumps({"type": "error"}) + "\n"
+
+async def chat_stream(user_input, user_id, chat_id=None, files=None, modal_name=None):
+    chat_doc, chat_oid, is_new = get_or_create_chat(chat_id, user_id)
+    file_context, uploaded_files = await process_files(files, user_id)
+
+    safe_input = await run_guard(user_input)
+    if not safe_input:
+        # ⚠️ FIX: Add 'data: ' prefix and '\n\n' suffix
+        yield f"data: {json.dumps({'type': 'blocked'})}\n\n"
+        return
+
+    messages = build_messages(chat_doc, user_input, file_context)
+    assistant_text = ""
+
+    try:
+        async for chunk in stream_agent(messages):
+            assistant_text += chunk
+            # ⚠️ FIX: Add 'data: ' prefix and '\n\n' suffix
+            yield f"data: {json.dumps({'type': 'token', 'data': chunk})}\n\n"
+
+        sources = []
+        title = None
+        if is_new:
+            title = await generate_chat_title(user_input)
+
+        save_chat_turn(chat_oid, user_input, assistant_text, uploaded_files, sources, title)
+
+        # ⚠️ FIX: Add 'data: ' prefix and '\n\n' suffix
+        yield f"data: {json.dumps({'type': 'done', 'id': str(chat_oid), 'title': title, 'sources': sources})}\n\n"
+
+    except Exception:
+        import traceback
+        traceback.print_exc()
+        # ⚠️ FIX: Add 'data: ' prefix and '\n\n' suffix
+        yield f"data: {json.dumps({'type': 'error'})}\n\n"
 
 def get_last_50_chats(id: str):
     try:
