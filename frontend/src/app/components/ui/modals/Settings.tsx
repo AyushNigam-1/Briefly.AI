@@ -13,21 +13,21 @@ import {
 } from "@headlessui/react"
 import {
     User,
-    Brain,
-    Link,
-    Palette,
+    LinkIcon,
     Database,
     Settings2,
+    LogOut,
 } from "lucide-react"
 import clsx from "clsx"
 import Memory from "./tabs/Memory"
 import CustomInstructions from "./tabs/Preference"
 import Profile from "./tabs/Profile"
+import Link from "next/link";
 
 const tabs = [
     { name: "Profile", icon: User },
     { name: "Preference", icon: Settings2 },
-    { name: "Integrations", icon: Link },
+    { name: "Integrations", icon: LinkIcon },
     { name: "Memory", icon: Database },
 ]
 
@@ -63,29 +63,38 @@ export default function SettingsDialog({
                         leaveFrom="opacity-100 scale-100"
                         leaveTo="opacity-0 scale-95"
                     >
-                        <DialogPanel className="w-full max-w-3xl h-[60vh] bg-[#0b0b0b] border border-secondary rounded-xl overflow-hidden">
+                        <DialogPanel className="w-full max-w-3xl h-[70vh] bg-[#0b0b0b] border border-secondary rounded-xl overflow-hidden">
 
                             <TabGroup selectedIndex={activeTab} onChange={setActiveTab} className="h-full">
-                                <div className="flex h-full">
-                                    <TabList className="w-52 border-r border-secondary bg-tertiary text-primary p-2  space-y-3 h-full">
-                                        {tabs.map((tab) => (
-                                            <Tab
-                                                key={tab.name}
-                                                className={({ selected }) =>
-                                                    clsx(
-                                                        "w-full flex items-center gap-3 px-3 py-2 rounded-lg outline-none",
-                                                        selected
-                                                            ? "bg-white/5 text-white"
-                                                            : "text-gray-400 hover:bg-white/5"
-                                                    )
-                                                }
-                                            >
-                                                <tab.icon size={16} />
-                                                {tab.name}
-                                            </Tab>
-                                        ))}
-                                    </TabList>
-                                    <div className="flex-1 flex flex-col">
+                                <div className="flex h-full ">
+                                    <div className="w-52 border-r border-secondary bg-tertiary text-primary p-4 flex flex-col h-full">
+                                        <TabList className=" space-y-3 h-full">
+                                            {tabs.map((tab) => (
+                                                <Tab
+                                                    key={tab.name}
+                                                    className={({ selected }) =>
+                                                        clsx(
+                                                            "w-full flex items-center gap-3 px-3 py-2 rounded-lg outline-none",
+                                                            selected
+                                                                ? "bg-white/5 text-white"
+                                                                : "text-gray-400 hover:bg-white/5"
+                                                        )
+                                                    }
+                                                >
+                                                    <tab.icon size={16} />
+                                                    {tab.name}
+                                                </Tab>
+                                            ))}
+                                        </TabList>
+                                        <Link
+                                            href="/account/logout"
+                                            className="mt-auto w-full flex text-center justify-center items-center gap-3 p-2 rounded-lg outline-none text-red-400/90 bg-red-500/10 font-medium"
+                                        >
+                                            <LogOut size={14} />
+                                            Logout
+                                        </Link>
+                                    </div>
+                                    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                                         <Transition
                                             key={activeTab}
                                             appear
@@ -97,7 +106,8 @@ export default function SettingsDialog({
                                             leaveFrom="opacity-100 translate-y-0 scale-100"
                                             leaveTo="opacity-0 translate-y-2 scale-[0.98]"
                                         >
-                                            <TabPanels className="h-full p-4 ">
+                                            <TabPanels className="p-4 overflow-y-auto custom-scrollbar"
+                                            >
 
                                                 <TabPanel className="space-y-4">
                                                     <Profile />

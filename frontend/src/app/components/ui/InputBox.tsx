@@ -1,7 +1,7 @@
 "use client"
 import { Listbox, ListboxButton, ListboxOption, ListboxOptions, MenuButton, MenuItem, MenuItems, Menu } from '@headlessui/react';
 import clsx from 'clsx';
-import { AlarmClock, AlarmClockCheck, ChevronDown, FileText, Filter, ImageIcon, Loader2, MessageCircle, MessageSquare, Package, Paperclip, SendHorizontal, SlidersHorizontal } from 'lucide-react';
+import { AlarmClock, AlarmClockCheck, ChevronDown, FileText, Filter, ImageIcon, Loader2, MessageCircle, MessageSquare, Package, Paperclip, PauseCircle, SendHorizontal, SlidersHorizontal } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react'
 
 const options = [
@@ -14,8 +14,8 @@ const options = [
 ]
 
 
-const InputBox = ({ query, setQuery, send, isPending, files, setFiles, handleFileChange }: {
-    query: string, setQuery: (value: string) => void, send: (value: string, files: File[], model: string) => void, files: File[], setFiles: ((file: File) => void), isPending: boolean, handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>
+const InputBox = ({ query, setQuery, send, isPending, files, setFiles, stop, handleFileChange }: {
+    query: string, setQuery: (value: string) => void, send: (value: string, files: File[], model: string) => void, files: File[], setFiles: ((file: File) => void), isPending: boolean, stop: () => void, handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>
 }) => {
     const doc = useRef<HTMLInputElement | null>(null);
     const [selected, setSelected] = useState(options[0])
@@ -94,16 +94,19 @@ const InputBox = ({ query, setQuery, send, isPending, files, setFiles, handleFil
                         className="bg-transparent w-full outline-none pl-2 text-lg text-primary"
                         placeholder="Ask AI..."
                     />
-
-                    {/* MODEL SELECT */}
                     <Menu
                         as="div" className="relative">
-                        <MenuButton className="flex w-fit text-nowrap items-center gap-2 p-3.5 bg-white/5 border border-secondary rounded-full  text-slate-300">
+                        <MenuButton className="flex w-fit text-nowrap items-center gap-2 p-3.5 bg-white/5 border border-secondary rounded-full  text-slate-300  ">
                             <Package size={20} />
                         </MenuButton>
 
                         <MenuItems
-                            transition className="absolute right-0 bottom-full mb-4 bg-tertiary text-primary border border-secondary rounded-xl p-2 z-50 min-w-[220px] space-y-2">
+                            transition className={clsx(
+                                "absolute right-0 bottom-full mb-4 bg-tertiary text-primary border border-secondary rounded-xl p-2 z-50 min-w-[220px] space-y-2",
+                                "origin-bottom-right transition duration-200 ease-out",
+                                "data-[closed]:scale-95 data-[closed]:opacity-0 data-[closed]:translate-y-2"
+                            )}
+                        >
                             <div className=" text-slate-400 px-2 flex gap-2 items-center uppercase font-semibold">
                                 <Package size={18} /> Modals
                             </div>
@@ -131,12 +134,11 @@ const InputBox = ({ query, setQuery, send, isPending, files, setFiles, handleFil
             </div>
 
             <button
-                disabled={!query}
-                onClick={() => query && send(query, files, selected.value)}
+                onClick={() => isPending ? stop() : query && send(query, files, selected.value)}
                 className="p-4  bg-primary rounded-full text-tertiary"
             >
                 {isPending ? (
-                    <Loader2 className="animate-spin" />
+                    <PauseCircle size={20} />
                 ) : (
                     <SendHorizontal size={20} />
                 )}

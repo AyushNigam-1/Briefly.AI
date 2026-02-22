@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import { metadata, query } from "../../types";
-import Chats from "../../components/ui/Chats";
-import { useMutations } from "../../hooks/useMutations";
+import { metadata, query } from "../../../types";
+import Chats from "../../../components/ui/Chats";
+import { useMutations } from "../../../hooks/useMutations";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Cookies from "js-cookie";
@@ -25,8 +25,7 @@ const Page = () => {
   const [activeId, setActiveId] = useState<string | undefined>();
   const [isPending, setPending] = useState(false)
   const [files, setFiles] = useState<File[]>([]);
-  const streamBuffer = useRef("");
-  const flushTimer = useRef<NodeJS.Timeout | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   // Load history when query id changes
   useEffect(() => {
     if (!rawId) {
@@ -37,6 +36,8 @@ const Page = () => {
 
     setQueries([]);
     setActiveId(rawId);
+
+
 
     const fetchHistory = async () => {
       try {
@@ -66,13 +67,12 @@ const Page = () => {
   };
 
   const handleSend = async (query: string, files: File[], modal: string) => {
-    setPending(true)
+    setPending(true);
     if (!query.trim()) return;
 
     setQuery("");
     setFiles([]);
 
-    // 1️⃣ Push user message
     setQueries(prev => [
       ...prev,
       {
@@ -90,44 +90,66 @@ const Page = () => {
       form.append("modal_name", modal);
       files.forEach(file => form.append("files", file));
 
-      let assistantText = "";
+      let displayedText = "";
+      let textQueue = "";
 
-      await fetchEventSource("http://localhost:8000/query", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: form,
+      let isNetworkDone = false;
+      let finalMetadata: any = null;
 
-        async onopen(response) {
-          setPending(false)
-          if (response.ok) return; // Everything is good
-          throw new Error(`Failed to connect: ${response.status}`);
-        },
-        onmessage(msg) {
-          const parsed = JSON.parse(msg.data);
-          if (parsed.type === "token") {
-            assistantText += parsed.data;
+      const typeWriterInterval = setInterval(() => {
+        if (textQueue.length > 0) {
+          const char = textQueue.charAt(0);
+          textQueue = textQueue.slice(1);
+          displayedText += char;
+
+          setQueries(prev => {
+            const updated = [...prev];
+            updated[updated.length - 1].content = displayedText;
+            return updated;
+          });
+        } else if (isNetworkDone) {
+          clearInterval(typeWriterInterval);
+          setPending(false);
+
+          if (finalMetadata && finalMetadata.sources) {
             setQueries(prev => {
               const updated = [...prev];
-              updated[updated.length - 1].content = assistantText;
+              updated[updated.length - 1].sources = finalMetadata.sources || [];
               return updated;
             });
           }
+        }
+      }, 15);
+      abortControllerRef.current = new AbortController();
+      await fetchEventSource("http://localhost:8000/query", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+        signal: abortControllerRef!.current.signal,
 
+        async onopen(response) {
+          if (response.ok) return;
+          throw new Error(`Failed to connect: ${response.status}`);
+        },
+
+        onmessage(msg) {
+          const parsed = JSON.parse(msg.data);
+          if (parsed.type === "token") {
+            textQueue += parsed.data;
+          }
           if (parsed.type === "done") {
+            isNetworkDone = true;
+            finalMetadata = parsed;
+
             if (!activeId && parsed.id) {
               setActiveId(parsed.id);
               router.replace(`/${parsed.id}`);
             }
-            setQueries(prev => {
-              const updated = [...prev];
-              updated[updated.length - 1].sources = parsed.sources || [];
-              return updated;
-            });
           }
 
           if (parsed.type === "blocked") {
+            clearInterval(typeWriterInterval);
+            setPending(false);
             setQueries(prev => {
               const updated = [...prev];
               updated[updated.length - 1] = {
@@ -140,14 +162,25 @@ const Page = () => {
           }
         },
         onerror(err) {
+          clearInterval(typeWriterInterval);
+          setPending(false);
           console.error("Stream error:", err);
           throw err;
         }
       });
 
     } catch (err) {
+      setPending(false);
       console.error("Streaming failed", err);
     }
+  };
+  const handleStop = () => {
+    console.log("stopped")
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setPending(false);
   };
   return (
     <>
@@ -170,6 +203,7 @@ const Page = () => {
               setQuery={setQuery}
               files={files}
               setFiles={setFiles}
+              handleStop={handleStop}
               handleFileChange={handleFileChange}
             />
           </motion.div>

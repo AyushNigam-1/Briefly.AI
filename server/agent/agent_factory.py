@@ -2,6 +2,7 @@ from langchain.agents import create_agent
 from agent.tools.notion_tools import get_notion_tools
 from agent.tools.search_tools import get_search_tools
 from agent.tools.n8n_tools import get_n8n_tools
+import asyncio
 from agent.tool_cache import *
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
@@ -67,26 +68,21 @@ async def stream_agent(messages):
     agent = await get_agent()
     print("✅ Agent created")
 
-    # ⚠️ FIX: Use astream_events with version="v2" to get token-level streaming
     async for event in agent.astream_events({"messages": messages}, version="v2"):
         
         kind = event["event"]
         
-        # 1. Token streaming path (Real-time words)
         if kind == "on_chat_model_stream":
             chunk = event["data"]["chunk"]
             
             if hasattr(chunk, "content") and chunk.content:
-                # print("➡️ Yielding token:", repr(chunk.content))
                 yield chunk.content
                 
-        # 2. Tool execution path (Optional: if you want to know when a tool starts)
         elif kind == "on_tool_start":
             tool_name = event["name"]
             tool_inputs = event["data"].get("input")
             print(f"🔧 TOOL STARTED: {tool_name} with inputs: {tool_inputs}")
             
-        # 3. Final model message (Optional: if you need the full message at the end)
         elif kind == "on_chat_model_end":
             print("📦 MODEL GENERATION COMPLETE")
 

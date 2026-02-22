@@ -6,6 +6,7 @@ from routes.instruction import router as preference_router
 from routes.memory import router as memory_router
 from routes.profile import router as profile_router
 from routes.tasks import router as tasks_router
+from routes.payments import router as payment_router
 from utils.websocket_manager import manager
 app = FastAPI()
 
@@ -37,7 +38,7 @@ app.include_router(preference_router)
 app.include_router(memory_router)
 app.include_router(profile_router)
 app.include_router(tasks_router)
-
+app.include_router(payment_router)
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,6 +1,6 @@
 "use client";
 
-import { X, ExternalLink } from "lucide-react";
+import { X } from "lucide-react";
 import Link from "next/link";
 
 type Source = {
@@ -22,14 +22,11 @@ const SourcesSidebar: React.FC<SourcesSidebarProps> = ({
 }) => {
     return (
         <>
-            {/* Overlay */}
             <div
                 onClick={onClose}
                 className={`fixed inset-0 bg-black/5 transition ${isOpen ? "opacity-100 pointer-events-auto z-40" : "opacity-0 pointer-events-none"
                     }`}
             />
-
-            {/* Sidebar */}
             <div
                 className={`fixed top-0 right-0 h-full text-white w-72 bg-tertiary border-l border-secondary shadow-lg transform transition-transform duration-300 z-50 ${isOpen ? "-translate-x-0" : "translate-x-full"
                     }`}

@@ -63,11 +63,12 @@ interface ChatsProps {
     query: string;
     setQuery: (value: string) => void
     handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>
+    handleStop: () => void
     files: File[],
     setFiles: (e: File) => void
 }
 
-const Chats = ({ queries, setQueries, isPending, handleSend, query, setQuery, files, handleFileChange, setFiles }: ChatsProps) => {
+const Chats = ({ queries, setQueries, isPending, handleSend, query, setQuery, files, handleFileChange, handleStop, setFiles }: ChatsProps) => {
     const [isLoading, setLoading] = useState<boolean>(false);
     const [summaryId, setSummaryId] = useState<string | undefined>(undefined);
     const [progress, setProgress] = useState<ProgressResponse>();
@@ -153,14 +154,19 @@ const Chats = ({ queries, setQueries, isPending, handleSend, query, setQuery, fi
                             return (
                                 <motion.div
                                     key={index}
-                                    // 🌟 1. LAYOUT PROP: This is the magic. It smoothly animates height changes as text streams in.
+                                    // 🌟 1. Use pure 'layout', not 'layout="position"' so it animates height/width changes too
                                     layout="position"
-                                    initial={{ opacity: 0, y: 20, scale: 0.98 }}
+                                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     transition={{
-                                        duration: 0.4,
-                                        ease: "easeOut",
-                                        layout: { duration: 0.3, ease: "circOut" } // Smooth height growth
+                                        opacity: { duration: 0.3 },
+                                        y: { duration: 0.3 },
+                                        // 🌟 2. Use a spring layout transition. This gives that bouncy, organic stretching feel.
+                                        layout: {
+                                            type: "spring",
+                                            bounce: 0.15,
+                                            duration: 0.5
+                                        }
                                     }}
                                     className={`flex w-full ${q.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                                 >
@@ -192,7 +198,7 @@ const Chats = ({ queries, setQueries, isPending, handleSend, query, setQuery, fi
                                             <div className={`relative ${isStreaming ? 'streaming-text-container' : ''}`}>
                                                 <ReactMarkdown
                                                     remarkPlugins={[remarkGfm]}
-                                                    className={`rounded-xl text-primary shadow-sm leading-relaxed space-y-3 font-mono 
+                                                    className={`rounded-xl w-full break-words whitespace-pre-wrap text-primary shadow-sm leading-relaxed space-y-3 font-mono 
                                                         ${q.blocked ? 'bg-tertiary text-red-500 border border-red-800' :
                                                             q.sender === "user" && "bg-tertiary border border-gray-800 max-w-[720px] p-4"}
                                                     `}
@@ -205,7 +211,7 @@ const Chats = ({ queries, setQueries, isPending, handleSend, query, setQuery, fi
                                                                     <motion.span
                                                                         initial={{ opacity: 0 }}
                                                                         animate={{ opacity: 1 }}
-                                                                        transition={{ repeat: Infinity, duration: 0.7, repeatType: "reverse" }}
+                                                                        transition={{ repeat: Infinity, duration: 0.9 }}
                                                                         className="inline-block w-2 h-4 ml-1 bg-primary align-middle rounded-sm"
                                                                     />
                                                                 )}
@@ -267,7 +273,7 @@ const Chats = ({ queries, setQueries, isPending, handleSend, query, setQuery, fi
         </div>
 
         <div className='max-w-6xl mx-auto'>
-            <InputBox query={query} setQuery={setQuery} send={handleSend} isPending={isPending} files={files} setFiles={setFiles} handleFileChange={handleFileChange} />
+            <InputBox query={query} setQuery={setQuery} send={handleSend} isPending={isPending} files={files} setFiles={setFiles} handleFileChange={handleFileChange} stop={handleStop} />
         </div>
 
         <SourcesSidebar isOpen={sourcesOpen} onClose={() => setSourcesOpen(false)} sources={sources} />

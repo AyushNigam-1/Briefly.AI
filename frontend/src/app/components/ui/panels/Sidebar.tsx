@@ -12,7 +12,7 @@ import {
     MenuItem,
     MenuItems,
 } from "@headlessui/react";
-import { Delete, EllipsisVertical, MessageSquare, PanelLeft, PanelLeftDashed, Pin, Plus, Search, Share, Share2, Trash, X } from "lucide-react";
+import { Delete, EllipsisVertical, MessageSquare, PanelLeft, PanelLeftDashed, Pin, Plus, Search, Share, Share2, Stars, Trash, X } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { SummaryHistoryResponse } from "@/app/types";
@@ -175,7 +175,7 @@ const Sidebar: React.FC = () => {
                                                 <Link
                                                     href={`/${s.id}`}
                                                     key={s.id}
-                                                    className={`p-2 group relative overflow-hidden text-gray-400 cursor-pointer flex items-center justify-between transition ${activeId == s.id
+                                                    className={`p-2 mr-2 group relative overflow-hidden text-gray-400 cursor-pointer flex items-center justify-between transition ${activeId == s.id
                                                         ? "font-medium text-white bg-white/5 border border-secondary rounded-xl" : "hover:text-white"
                                                         }`}
                                                 >
@@ -210,6 +210,12 @@ const Sidebar: React.FC = () => {
                             )}
                         </div>
                     </div>
+                    <Link
+                        href="/plans"
+                        className="flex items-center justify-center gap-2 bg-primary text-tertiary px-6 py-3 rounded-xl font-bold hover:bg-white/90 transition-colors disabled:opacity-50"
+                    ><Stars size="20" />
+                        Upgrade to Pro
+                    </Link>
                 </div>
             </div >
 
