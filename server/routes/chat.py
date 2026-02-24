@@ -1,14 +1,13 @@
 from fastapi import APIRouter, HTTPException, Depends , Form 
 from fastapi.responses import StreamingResponse  
 from utils.auth import get_current_user
-from controllers.chat_handler import chat_stream , get_chats_by_user
+from pydantic import BaseModel
+from controllers.chat_handler import chat_stream , get_chats_by_user , delete_summary_by_id , toggle_chat_pin
 from typing import Optional
 from controllers.chat_handler import get_last_50_chats
-# from controllers.task_handler import perform_task
 from fastapi import UploadFile, File
 
 router = APIRouter()    
-
 
 @router.post("/query")
 async def query_handler(
@@ -43,4 +42,33 @@ def get_user_summaries(current_user: dict = Depends(get_current_user)):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
-    
+
+class PinRequest(BaseModel):
+    is_pinned: bool
+
+@router.delete("/summary/")
+async def delete_chat_route(
+    id: str, 
+    user=Depends(get_current_user)
+):
+    """API Endpoint to delete a summary."""
+    # Pass the clean data to the controller
+    return await delete_summary_by_id(
+        chat_id=id, 
+        user_id=str(user["user_id"])
+    )
+
+
+@router.patch("/summary/{chat_id}/pin")
+async def toggle_pin_chat_route(
+    chat_id: str, 
+    request: PinRequest, 
+    user=Depends(get_current_user)
+):
+    """API Endpoint to pin or unpin a summary."""
+    # Pass the clean data to the controller
+    return await toggle_chat_pin(
+        chat_id=chat_id, 
+        user_id=str(user["user_id"]), 
+        is_pinned=request.is_pinned
+    )

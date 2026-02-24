@@ -25,18 +25,21 @@ const Navbar: React.FC<NavbarProps> = ({ component }) => {
 
     return (
         <>
-
-            <div className='flex justify-between relative items-center max-w-6xl mx-auto py-4 border-b-2 border-secondary' >
+            {/* 🌟 Added light mode border: border-slate-200 */}
+            <div className='flex justify-between relative items-center max-w-6xl mx-auto py-4 border-b border-slate-200 dark:border-secondary transition-colors duration-300'>
 
                 {/* LEFT: Sidebar trigger (Only visible if logged in) */}
-                {isLoggedIn && <div className="flex-1 flex justify-start">
-                    {component}
-                </div>}
+                {isLoggedIn && (
+                    <div className="flex-1 flex justify-start">
+                        {component}
+                    </div>
+                )}
 
                 {/* CENTER: Logo */}
-                {/* <div className="flex-1 flex justify-center"> */}
-                <img src="/logo.png" alt="Logo" className='w-40 h-auto' />
-                {/* </div> */}
+                {/* Note: If your logo is pure black text, you might want to add 'dark:invert' to this img tag so it turns white in dark mode! */}
+                <div className="flex-1 flex justify-center lg:justify-start">
+                    <img src="/logo.png" alt="Logo" className='w-32 md:w-40 h-auto' />
+                </div>
 
                 {/* RIGHT: User Menu or Auth Buttons */}
                 <div className="flex-1 flex justify-end gap-3 items-center">
@@ -44,7 +47,9 @@ const Navbar: React.FC<NavbarProps> = ({ component }) => {
                         <>
                             <button
                                 onClick={() => setOpen(true)}
-                                className="text-tertiary bg-primary p-3 rounded-full flex gap-2 items-center text-lg"
+                                className="p-2.5 rounded-full flex gap-2 items-center text-lg transition-colors
+                                    bg-slate-100 text-slate-700 hover:bg-slate-200
+                                    dark:bg-primary dark:text-tertiary dark:hover:bg-primary/90"
                             >
                                 <User size="20" />
                             </button>
@@ -54,13 +59,17 @@ const Navbar: React.FC<NavbarProps> = ({ component }) => {
                         <>
                             <Link
                                 href="/account/login"
-                                className="px-5 py-2 font-semibold text-primary hover:bg-white/5 rounded-full transition-colors"
+                                className="px-5 py-2 font-semibold rounded-full transition-colors
+                                    text-slate-600 hover:bg-slate-100 hover:text-slate-900
+                                    dark:text-primary dark:hover:bg-white/5"
                             >
                                 Login
                             </Link>
                             <Link
                                 href="/account/signup"
-                                className="px-5 py-2 font-semibold bg-primary text-tertiary rounded-full hover:bg-primary/90 transition-colors shadow-sm"
+                                className="px-5 py-2 font-semibold rounded-full shadow-sm transition-colors
+                                    bg-slate-900 text-white hover:bg-slate-800
+                                    dark:bg-primary dark:text-tertiary dark:hover:bg-primary/90"
                             >
                                 Signup
                             </Link>
@@ -73,4 +82,4 @@ const Navbar: React.FC<NavbarProps> = ({ component }) => {
     )
 }
 
-export default Navbar
+export default Navbar;

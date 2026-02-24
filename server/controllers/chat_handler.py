@@ -6,6 +6,7 @@ from langchain_core.messages import HumanMessage
 from agent.agent_factory import  run_agent , generate_chat_title , extract_sources , extract_memory , stream_agent
 from controllers.memory_handler import get_user_memories, save_user_memories
 from controllers.file_handler import process_files
+from fastapi import HTTPException
 import traceback
 import os
 import json
@@ -28,11 +29,9 @@ async def run_guard(text: str):
         score = float(raw)
     except:
         return True, raw
-    print("score",score)
     THRESHOLD = 0.1
 
     is_safe = score < THRESHOLD
-    print(is_safe,"issafe")
     return is_safe
 
 
@@ -48,7 +47,8 @@ def get_or_create_chat(chat_id, user_id):
         "queries": [],
         "timestamp": datetime.now(timezone.utc),
         "title": "New Chat",
-        "thought": ""
+        "thought": "",
+        "is_pinned":False
     }
 
     res = summary_collection.insert_one(doc)
@@ -196,11 +196,10 @@ def get_last_50_chats(id: str):
         raise e
     
 def get_chats_by_user(user_id: str):
-    print(user_id)
     summaries = list(
         summary_collection.find(
             {"user_id": user_id},
-            {"_id": 1, "title": 1, "timestamp": 1, "url": 1, "queries": 1, "type": 1, "thumbnail": 1},
+            {"_id": 1, "title": 1, "timestamp": 1, "url": 1, "queries": 1, "type": 1, "thumbnail": 1,"is_pinned":1},
         )
     )
     result = []
@@ -210,7 +209,52 @@ def get_chats_by_user(user_id: str):
             "title": summary["title"],
             "timestamp": summary["timestamp"],
             "queries": len(summary.get("queries", [])),
+            "is_pinned":summary["is_pinned"]
         })
     
 
     return result
+
+
+async def delete_summary_by_id(chat_id: str, user_id: str):
+    """Handles the database logic for deleting a chat summary."""
+    try:
+        result = summary_collection.delete_one({
+            "_id": ObjectId(chat_id),
+            "user_id": user_id
+        })
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Chat not found or unauthorized")
+            
+        return {"status": "success", "message": "Chat deleted permanently"}
+        
+    except Exception as e:
+        print(f"Delete Error: {e}")
+        # Re-raise HTTPExceptions so they don't get swallowed as 500s
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+async def toggle_chat_pin(chat_id: str, user_id: str, is_pinned: bool):
+    """Handles the database logic for pinning/unpinning a chat."""
+    try:
+        result = summary_collection.update_one(
+            {
+                "_id": ObjectId(chat_id),
+                "user_id": user_id
+            },
+            {"$set": {"is_pinned": is_pinned}}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Chat not found or unauthorized")
+            
+        return {"status": "success", "is_pinned": is_pinned}
+        
+    except Exception as e:
+        print(f"Pin Error: {e}")
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=500, detail="Internal Server Error")

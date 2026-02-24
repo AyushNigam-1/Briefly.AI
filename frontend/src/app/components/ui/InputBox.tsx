@@ -13,7 +13,6 @@ const options = [
     { label: "Kimi K2", value: "moonshotai/kimi-k2-instruct-0905", icon: "/kimi.webp" },
 ]
 
-
 const InputBox = ({ query, setQuery, send, isPending, files, setFiles, stop, handleFileChange }: {
     query: string, setQuery: (value: string) => void, send: (value: string, files: File[], model: string) => void, files: File[], setFiles: ((file: File) => void), isPending: boolean, stop: () => void, handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>
 }) => {
@@ -38,14 +37,20 @@ const InputBox = ({ query, setQuery, send, isPending, files, setFiles, stop, han
     return (
         <div className="flex gap-4 items-end">
             <div className="w-full space-y-4">
+                {/* 🌟 File Upload Previews */}
                 {
-                    files?.length != 0 &&
-                    <div className="flex gap-3 overflow-x-auto  scrollbar-none animate-in fade-in slide-in-from-bottom-2 font-mono">
+                    files?.length != 0 && files !== undefined &&
+                    <div className="flex gap-3 overflow-x-auto scrollbar-none animate-in fade-in slide-in-from-bottom-2 font-mono">
                         {files?.map((file, index) => (
                             <div key={`${file.name}-${index}`} className="relative group flex-shrink-0">
-                                <div className='p-2 pr-6 flex gap-2 bg-white/5 rounded-xl relative border border-secondary text-primary'>
-                                    {/* Icon based on file type */}
-                                    <div className='p-3 rounded-full bg-primary my-auto text-tertiary'>
+                                <div className='p-2 pr-6 flex gap-2 rounded-xl relative border transition-colors
+                                    bg-slate-50 border-slate-200 text-slate-800 
+                                    dark:bg-white/5 dark:border-secondary dark:text-primary'
+                                >
+                                    <div className='p-3 rounded-full my-auto transition-colors
+                                        bg-slate-200 text-slate-700 
+                                        dark:bg-primary dark:text-tertiary'
+                                    >
                                         {file.type.startsWith('image/') ? <ImageIcon size={20} /> : <FileText size={20} />}
                                     </div>
 
@@ -53,28 +58,28 @@ const InputBox = ({ query, setQuery, send, isPending, files, setFiles, stop, han
                                         <h1 className='font-semibold truncate'>
                                             {file.name.slice(0, 14)}
                                         </h1>
-                                        <p className='text-sm text-start'>
+                                        <p className='text-sm text-start opacity-70'>
                                             {file.size >= 1048576
                                                 ? (file.size / 1048576).toFixed(2) + ' MB'
                                                 : (file.size / 1024).toFixed(2) + ' KB'}
                                         </p>
                                     </div>
                                 </div>
-
-                                {/* Remove Button (X) */}
-                                {/* <button
-                                    onClick={() => setFiles(prev => prev.filter((_, _index) => _index !== index))}
-                                    className="absolute -top-2 -right-2 bg-gray-700 text-white rounded-full p-1 shadow-md hover:bg-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                                >
-                                    <X size={14} />
-                                </button> */}
                             </div>
                         ))}
                     </div>
                 }
-                <div className="flex bg-white/5 rounded-full border border-secondary">
+
+                {/* 🌟 Main Input Container */}
+                <div className="flex rounded-full border transition-colors
+                    bg-white border-slate-300 
+                    dark:bg-white/5 dark:border-secondary"
+                >
+                    {/* Attachment Button */}
                     <button
-                        className="bg-primary rounded-full  p-4 flex items-center justify-center text-tertiary"
+                        className="rounded-full p-4 flex items-center justify-center transition-colors
+                            bg-slate-100 text-slate-600 hover:bg-slate-200
+                            dark:bg-primary dark:text-tertiary dark:hover:bg-primary/90"
                         onClick={() => doc.current?.click()}
                     >
                         <input
@@ -87,30 +92,41 @@ const InputBox = ({ query, setQuery, send, isPending, files, setFiles, stop, han
                         <Paperclip size={20} />
                     </button>
 
+                    {/* Text Input */}
                     <input
                         value={query}
                         onChange={e => setQuery(e.target.value)}
                         onKeyDown={e => e.key === "Enter" && query && send(query, files, selected.value)}
-                        className="bg-transparent w-full outline-none pl-2 text-lg text-primary"
+                        className="bg-transparent w-full outline-none pl-2 text-lg transition-colors
+                            text-slate-900 placeholder:text-slate-400 
+                            dark:text-primary dark:placeholder:text-gray-500"
                         placeholder="Ask AI..."
                     />
-                    <Menu
-                        as="div" className="relative">
-                        <MenuButton className="flex w-fit text-nowrap items-center gap-2 p-3.5 bg-white/5 border border-secondary rounded-full  text-slate-300  ">
+
+                    {/* Model Selector Menu */}
+                    <Menu as="div" className="relative">
+                        <MenuButton className="flex w-fit text-nowrap items-center gap-2 p-3.5 rounded-full border transition-colors
+                            bg-slate-50 border-slate-300 text-slate-600 hover:bg-slate-100
+                            dark:bg-white/5 dark:border-secondary dark:text-slate-300 dark:hover:bg-white/10"
+                        >
                             <Package size={20} />
                         </MenuButton>
 
                         <MenuItems
                             transition className={clsx(
-                                "absolute right-0 bottom-full mb-4 bg-tertiary text-primary border border-secondary rounded-xl p-2 z-50 min-w-[220px] space-y-2",
+                                "absolute right-0 bottom-full mb-4 rounded-xl p-2 z-50 min-w-[220px] space-y-2 border shadow-lg",
+                                "bg-white border-slate-200 text-slate-800",
+                                "dark:bg-tertiary dark:border-secondary dark:text-primary dark:shadow-none",
                                 "origin-bottom-right transition duration-200 ease-out",
                                 "data-[closed]:scale-95 data-[closed]:opacity-0 data-[closed]:translate-y-2"
                             )}
                         >
-                            <div className=" text-slate-400 px-2 flex gap-2 items-center uppercase font-semibold">
-                                <Package size={18} /> Modals
+                            <div className="px-2 flex gap-2 items-center uppercase font-semibold
+                                text-slate-500 dark:text-slate-400"
+                            >
+                                <Package size={18} /> Models
                             </div>
-                            <hr className="border border-secondary" />
+                            <hr className="border transition-colors border-slate-200 dark:border-secondary" />
 
                             {options.map((item) => (
                                 <MenuItem key={item.value}>
@@ -118,8 +134,9 @@ const InputBox = ({ query, setQuery, send, isPending, files, setFiles, stop, han
                                         <button
                                             onClick={() => handleModelChange(item)}
                                             className={clsx(
-                                                "w-full text-left flex gap-2 p-2 hover:bg-white/5 text-lg rounded-lg items-center cursor-pointer ",
-                                                selected.label == item.label && "bg-white/5"
+                                                "w-full text-left flex gap-2 p-2 text-lg rounded-lg items-center cursor-pointer transition-colors",
+                                                "hover:bg-slate-100 dark:hover:bg-white/5",
+                                                selected.label === item.label && "bg-slate-100 dark:bg-white/5 font-medium"
                                             )}
                                         >
                                             <img src={item.icon} className='size-5' alt={item.label} />
@@ -133,9 +150,12 @@ const InputBox = ({ query, setQuery, send, isPending, files, setFiles, stop, han
                 </div>
             </div>
 
+            {/* 🌟 Send / Stop Button */}
             <button
                 onClick={() => isPending ? stop() : query && send(query, files, selected.value)}
-                className="p-4  bg-primary rounded-full text-tertiary"
+                className="p-4 rounded-full transition-colors shadow-sm
+                    bg-slate-900 text-white hover:bg-slate-800
+                    dark:bg-primary dark:text-tertiary dark:hover:bg-primary/90 dark:shadow-none"
             >
                 {isPending ? (
                     <PauseCircle size={20} />
@@ -147,4 +167,4 @@ const InputBox = ({ query, setQuery, send, isPending, files, setFiles, stop, han
     )
 }
 
-export default InputBox
+export default InputBox;

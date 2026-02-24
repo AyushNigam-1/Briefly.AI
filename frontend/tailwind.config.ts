@@ -1,7 +1,6 @@
 import type { Config } from "tailwindcss";
 import colors from "tailwindcss/colors"; // 1. Import default colors
 export default {
-  darkMode: ["class"],
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",

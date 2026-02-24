@@ -33,3 +33,78 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.1);
 }
+
+.llm-wrapper {
+  width: 100%;
+}
+
+.llm-markdown {
+  position: relative;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Cursor anchor */
+.llm-markdown.streaming>*:last-child::after {
+  content: '';
+  display: inline-block;
+
+  width: 6px;
+  height: 14px;
+  margin-left: 6px;
+
+  background: white;
+  border-radius: 4px;
+
+  vertical-align: -2px;
+
+  animation: geminiCursor 0.8s ease-in-out infinite;
+
+  box-shadow:
+    0 0 6px rgba(255, 255, 255, 0.4),
+    0 0 12px rgba(255, 255, 255, 0.2);
+}
+
+/* Cursor physics */
+
+@keyframes geminiCursor {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Markdown hygiene */
+
+/* .llm-markdown p {
+  margin: 0.4rem 0;
+}
+
+.llm-markdown ul,
+.llm-markdown ol {
+  margin-left: 1.2rem;
+} */
+
+/* .llm-markdown pre {
+  padding: 12px;
+  border-radius: 10px;
+  background: #111;
+  overflow-x: auto;
+}
+
+.llm-markdown code {
+  background: #1a1a1a;
+  padding: 2px 6px;
+  border-radius: 6px;
+} */

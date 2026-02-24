@@ -19,9 +19,9 @@ import {
     LogOut,
 } from "lucide-react"
 import clsx from "clsx"
-import Memory from "./tabs/Memory"
-import CustomInstructions from "./tabs/Preference"
-import Profile from "./tabs/Profile"
+import Memory from "../tabs/Memory"
+import CustomInstructions from "../tabs/Preference"
+import Profile from "../tabs/Profile"
 import Link from "next/link";
 
 const tabs = [
@@ -39,104 +39,94 @@ export default function SettingsDialog({
     const [activeTab, setActiveTab] = useState(0)
 
     return (
-        <Transition appear show={isOpen} as={Fragment}>
-            <Dialog onClose={() => setIsOpen(false)} className="relative z-50">
-                <TransitionChild
-                    as={Fragment}
-                    enter="ease-out duration-200"
-                    enterFrom="opacity-0"
-                    enterTo="opacity-100"
-                    leave="ease-in duration-150"
-                    leaveFrom="opacity-100"
-                    leaveTo="opacity-0"
+        <Dialog
+            open={isOpen}
+            onClose={() => setIsOpen(false)}
+            className="relative z-[60] font-mono"
+        >
+            {/* 🌟 Animated Backdrop */}
+            <DialogBackdrop
+                transition
+                className="fixed inset-0 backdrop-blur-sm transition-opacity duration-300 ease-out data-[closed]:opacity-0
+                    bg-black/30 dark:bg-black/60"
+            />
+
+            <div className="fixed inset-0 flex items-center justify-center p-4">
+                {/* 🌟 Animated Panel */}
+                <DialogPanel
+                    transition
+                    className="w-full max-w-3xl h-[70vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden transition duration-300 ease-out data-[closed]:scale-95 data-[closed]:opacity-0 data-[closed]:translate-y-4
+                        bg-white border-slate-200 shadow-slate-200/50
+                        dark:bg-[#0b0b0b] dark:border-secondary dark:shadow-black/50"
                 >
-                    <DialogBackdrop className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
-                </TransitionChild>
+                    <TabGroup selectedIndex={activeTab} onChange={setActiveTab} className="flex h-full">
 
-                <div className="fixed inset-0 flex items-center justify-center font-mono">
-                    <TransitionChild
-                        as={Fragment}
-                        enter="ease-out duration-200"
-                        enterFrom="opacity-0 scale-95"
-                        enterTo="opacity-100 scale-100"
-                        leave="ease-in duration-150"
-                        leaveFrom="opacity-100 scale-100"
-                        leaveTo="opacity-0 scale-95"
-                    >
-                        <DialogPanel className="w-full max-w-3xl h-[70vh] bg-[#0b0b0b] border border-secondary rounded-xl overflow-hidden">
+                        {/* LEFT SIDEBAR */}
+                        <div className="w-48 sm:w-56 flex flex-col border-r p-4 transition-colors
+                            bg-slate-50 border-slate-200
+                            dark:bg-tertiary dark:border-secondary"
+                        >
+                            <TabList className="space-y-2 flex-1">
+                                {tabs.map((tab) => (
+                                    <Tab
+                                        key={tab.name}
+                                        className={({ selected }) =>
+                                            clsx(
+                                                "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl outline-none font-medium transition-all duration-200",
+                                                selected
+                                                    ? "bg-white text-slate-900 shadow-sm border border-slate-200/60 dark:bg-white/10 dark:text-white dark:border-transparent dark:shadow-none"
+                                                    : "text-slate-500 hover:bg-slate-200/60 hover:text-slate-800 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-white"
+                                            )
+                                        }
+                                    >
+                                        <tab.icon size={18} />
+                                        {tab.name}
+                                    </Tab>
+                                ))}
+                            </TabList>
 
-                            <TabGroup selectedIndex={activeTab} onChange={setActiveTab} className="h-full">
-                                <div className="flex h-full ">
-                                    <div className="w-52 border-r border-secondary bg-tertiary text-primary p-4 flex flex-col h-full">
-                                        <TabList className=" space-y-3 h-full">
-                                            {tabs.map((tab) => (
-                                                <Tab
-                                                    key={tab.name}
-                                                    className={({ selected }) =>
-                                                        clsx(
-                                                            "w-full flex items-center gap-3 px-3 py-2 rounded-lg outline-none",
-                                                            selected
-                                                                ? "bg-white/5 text-white"
-                                                                : "text-gray-400 hover:bg-white/5"
-                                                        )
-                                                    }
-                                                >
-                                                    <tab.icon size={16} />
-                                                    {tab.name}
-                                                </Tab>
-                                            ))}
-                                        </TabList>
-                                        <Link
-                                            href="/account/logout"
-                                            className="mt-auto w-full flex text-center justify-center items-center gap-3 p-2 rounded-lg outline-none text-red-400/90 bg-red-500/10 font-medium"
-                                        >
-                                            <LogOut size={14} />
-                                            Logout
-                                        </Link>
-                                    </div>
-                                    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-                                        <Transition
-                                            key={activeTab}
-                                            appear
-                                            show
-                                            enter="transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
-                                            enterFrom="opacity-0 translate-y-3 scale-[0.98]"
-                                            enterTo="opacity-100 translate-y-0 scale-100"
-                                            leave="transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]"
-                                            leaveFrom="opacity-100 translate-y-0 scale-100"
-                                            leaveTo="opacity-0 translate-y-2 scale-[0.98]"
-                                        >
-                                            <TabPanels className="p-4 overflow-y-auto custom-scrollbar"
-                                            >
+                            {/* Logout Button */}
+                            <Link
+                                href="/account/logout"
+                                className="mt-auto w-full flex justify-center items-center gap-2 p-2.5 rounded-xl outline-none font-semibold transition-colors
+                                    bg-red-50 text-red-600 hover:bg-red-100
+                                    dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
+                            >
+                                <LogOut size={16} />
+                                Logout
+                            </Link>
+                        </div>
 
-                                                <TabPanel className="space-y-4">
-                                                    <Profile />
-                                                </TabPanel>
+                        {/* RIGHT CONTENT AREA */}
+                        <div className="flex-1 flex flex-col min-w-0 bg-transparent">
+                            <TabPanels className="flex-1 overflow-y-auto custom-scrollbar p-6">
 
-                                                <TabPanel className="space-y-4">
-                                                    <CustomInstructions />
-                                                </TabPanel>
+                                {/* 🌟 Native CSS Animations replace the heavy Transition wrapper */}
+                                <TabPanel className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out">
+                                    <Profile />
+                                </TabPanel>
 
-                                                <TabPanel>
-                                                    <p className="text-slate-400">
-                                                        Manage Notion, APIs, MCP servers.
-                                                    </p>
-                                                </TabPanel>
+                                <TabPanel className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out">
+                                    <CustomInstructions />
+                                </TabPanel>
 
-                                                <TabPanel className="space-y-6">
-                                                    <Memory />
-                                                </TabPanel>
+                                <TabPanel className="animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out">
+                                    <p className="text-slate-500 dark:text-slate-400">
+                                        Manage Notion, APIs, MCP servers.
+                                    </p>
+                                </TabPanel>
 
-                                            </TabPanels>
-                                        </Transition>
-                                    </div>
-                                </div>
-                            </TabGroup>
-                        </DialogPanel>
-                    </TransitionChild>
-                </div>
-            </Dialog>
-        </Transition>
+                                <TabPanel className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out">
+                                    <Memory />
+                                </TabPanel>
+
+                            </TabPanels>
+                        </div>
+
+                    </TabGroup>
+                </DialogPanel>
+            </div>
+        </Dialog>
     )
 }
 

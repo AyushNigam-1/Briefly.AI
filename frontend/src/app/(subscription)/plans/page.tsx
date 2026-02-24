@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Check, Sparkles, Zap, Shield, Loader2 } from 'lucide-react';
 import Cookies from 'js-cookie';
-import Navbar from '../../../components/ui/Navbar';
+import Navbar from '@/app/components/ui/Navbar';
 
 export default function PricingPage() {
     const [loadingTier, setLoadingTier] = useState<string | null>(null);

@@ -2,9 +2,6 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import { metadata, query } from "../../../types";
-import Chats from "../../../components/ui/Chats";
-import { useMutations } from "../../../hooks/useMutations";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Cookies from "js-cookie";
@@ -12,6 +9,9 @@ import Navbar from "@/app/components/ui/Navbar";
 import InputBox from "@/app/components/ui/InputBox";
 import Sidebar from "@/app/components/ui/panels/Sidebar";
 import { fetchEventSource } from '@microsoft/fetch-event-source';
+import Chats from "@/app/components/ui/Chats";
+import { metadata, query } from "@/app/types";
+import { useMutations } from "@/app/hooks/useMutations";
 
 const Page = () => {
   const { id } = useParams();
@@ -82,7 +82,6 @@ const Page = () => {
       },
       { sender: "llm", content: "", sources: [] }
     ]);
-
     try {
       const form = new FormData();
       form.append("query", query);
@@ -90,56 +89,42 @@ const Page = () => {
       form.append("modal_name", modal);
       files.forEach(file => form.append("files", file));
 
-      let displayedText = "";
-      let textQueue = "";
+      abortControllerRef.current = new AbortController();
 
-      let isNetworkDone = false;
       let finalMetadata: any = null;
 
-      const typeWriterInterval = setInterval(() => {
-        if (textQueue.length > 0) {
-          const char = textQueue.charAt(0);
-          textQueue = textQueue.slice(1);
-          displayedText += char;
-
-          setQueries(prev => {
-            const updated = [...prev];
-            updated[updated.length - 1].content = displayedText;
-            return updated;
-          });
-        } else if (isNetworkDone) {
-          clearInterval(typeWriterInterval);
-          setPending(false);
-
-          if (finalMetadata && finalMetadata.sources) {
-            setQueries(prev => {
-              const updated = [...prev];
-              updated[updated.length - 1].sources = finalMetadata.sources || [];
-              return updated;
-            });
-          }
-        }
-      }, 15);
-      abortControllerRef.current = new AbortController();
       await fetchEventSource("http://localhost:8000/query", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: form,
-        signal: abortControllerRef!.current.signal,
+        signal: abortControllerRef.current.signal,
 
         async onopen(response) {
-          if (response.ok) return;
-          throw new Error(`Failed to connect: ${response.status}`);
+          if (!response.ok) throw new Error(`Failed to connect: ${response.status}`);
         },
 
         onmessage(msg) {
           const parsed = JSON.parse(msg.data);
+
           if (parsed.type === "token") {
-            textQueue += parsed.data;
+            setQueries(prev => {
+              const updated = [...prev];
+              updated[updated.length - 1].content += parsed.data;
+              return updated;
+            });
           }
+
           if (parsed.type === "done") {
-            isNetworkDone = true;
+            setPending(false);
             finalMetadata = parsed;
+
+            if (parsed.sources) {
+              setQueries(prev => {
+                const updated = [...prev];
+                updated[updated.length - 1].sources = parsed.sources;
+                return updated;
+              });
+            }
 
             if (!activeId && parsed.id) {
               setActiveId(parsed.id);
@@ -148,7 +133,6 @@ const Page = () => {
           }
 
           if (parsed.type === "blocked") {
-            clearInterval(typeWriterInterval);
             setPending(false);
             setQueries(prev => {
               const updated = [...prev];
@@ -161,8 +145,8 @@ const Page = () => {
             });
           }
         },
+
         onerror(err) {
-          clearInterval(typeWriterInterval);
           setPending(false);
           console.error("Stream error:", err);
           throw err;
@@ -174,6 +158,7 @@ const Page = () => {
       console.error("Streaming failed", err);
     }
   };
+
   const handleStop = () => {
     console.log("stopped")
     if (abortControllerRef.current) {
@@ -213,14 +198,33 @@ const Page = () => {
             initial={{ opacity: 0, scale: 0.95, x: "-50%", y: "-50%" }}
             animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
             exit={{ opacity: 0, scale: 0.95, x: "-50%", y: "-50%" }}
-            className="fixed top-1/2 left-1/2 w-full max-w-3xl px-4 text-white">
-            <div className="flex flex-col gap-10 font-mono">
-              <div className="text-center space-y-4">
-                <h3 className="text-2xl md:text-4xl font-bold">How can I help you today?</h3>
-                <p className="text-gray-400">
+            className="fixed top-1/2 left-1/2 w-full max-w-3xl px-4 sm:px-6 transition-colors duration-300
+    text-slate-800 
+    dark:text-white"
+          >
+            <div className="flex flex-col gap-6 md:gap-10 font-mono">
+              <div className="text-center space-y-3 md:space-y-4">
+                {/* 🌟 Added tracking-tight for a cleaner, modern heading look */}
+                <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
+                  How can I help you today?
+                </h3>
+
+                {/* 🌟 Subtitle colors seamlessly shift based on the theme */}
+                <p className="text-sm sm:text-base transition-colors
+        text-slate-500 
+        dark:text-gray-400"
+                >
                   Ask anything, upload docs, brainstorm, or chat.
                 </p>
-                <InputBox query={query} setQuery={setQuery} send={handleSend} isPending={sendQuery.isPending} handleFileChange={handleFileChange} files={files} setFiles={setFiles} />
+                <InputBox
+                  query={query}
+                  setQuery={setQuery}
+                  send={handleSend}
+                  isPending={sendQuery.isPending}
+                  handleFileChange={handleFileChange}
+                  files={files}
+                  setFiles={setFiles}
+                />
               </div>
             </div>
           </motion.div>
