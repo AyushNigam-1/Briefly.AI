@@ -23,6 +23,7 @@ import Memory from "../tabs/Memory"
 import CustomInstructions from "../tabs/Preference"
 import Profile from "../tabs/Profile"
 import Link from "next/link";
+import Integrations from "../tabs/Integrations"
 
 const tabs = [
     { name: "Profile", icon: User },
@@ -111,9 +112,7 @@ export default function SettingsDialog({
                                 </TabPanel>
 
                                 <TabPanel className="animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out">
-                                    <p className="text-slate-500 dark:text-slate-400">
-                                        Manage Notion, APIs, MCP servers.
-                                    </p>
+                                    <Integrations />
                                 </TabPanel>
 
                                 <TabPanel className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out">
