@@ -4,9 +4,11 @@ from utils.auth import get_current_user
 from pydantic import BaseModel
 from controllers.chat_handler import chat_stream , get_chats_by_user , delete_summary_by_id , toggle_chat_pin
 from typing import Optional
-from controllers.chat_handler import get_last_50_chats
+from controllers.chat_handler import get_chat_history
 from fastapi import UploadFile, File
-
+from typing import Optional
+from datetime import datetime
+from fastapi import Query
 router = APIRouter()    
 
 @router.post("/query")
@@ -30,8 +32,21 @@ async def query_handler(
     return StreamingResponse(generator, media_type="text/event-stream")
 
 @router.get("/history/{id}")
-async def history(id: str):
-    return {"id": id, "history": get_last_50_chats(id)}
+async def get_history(
+    id: str,
+    limit: int = Query(default=5, ge=1, le=100, description="Chats per page"),
+    before: Optional[datetime] = Query(
+        default=None, 
+        description="ISO datetime to load chats BEFORE (for infinite scroll)"
+    )
+):
+    """Get paginated chat history - perfect for infinite scroll up"""
+    history = await get_chat_history(id, limit, before)
+    return {
+        "id": id,
+        "history": history,
+        "has_more": len(history) == limit   # ← very useful for frontend
+    }
 
 
 @router.get("/chats/")

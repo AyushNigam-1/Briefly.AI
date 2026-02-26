@@ -54,8 +54,7 @@ async def signup(user: User, response: Response):
         value=access_token,
         secure=False,
         samesite="Lax",
-        httponly=True,
-        path="/"
+        httponly=False,
     )
 
     return {
@@ -94,8 +93,7 @@ async def login(user: User, response: Response):
         value=access_token,
         secure=False,
         samesite="Lax",
-        httponly=True,
-        path="/"
+        httponly=False,
     )
 
     return {

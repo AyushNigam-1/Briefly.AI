@@ -1,7 +1,7 @@
 "use client"
 import React, { useEffect, useState } from 'react'
 import { NavbarProps } from '../../types';
-import { User } from 'lucide-react';
+import { User, UserPlus } from 'lucide-react';
 import SettingsDialog from './modals/Settings';
 import Cookies from 'js-cookie';
 import Link from 'next/link';
@@ -59,18 +59,20 @@ const Navbar: React.FC<NavbarProps> = ({ component }) => {
                         <>
                             <Link
                                 href="/account/login"
-                                className="px-5 py-2 font-semibold rounded-full transition-colors
-                                    text-slate-600 hover:bg-slate-100 hover:text-slate-900
+                                className="px-5 py-2 font-semibold flex items-center gap-2 rounded-full transition-colors text-lg
+                                    text-slate-600 bg-tertiary border border-secondary hover:bg-slate-100 hover:text-slate-200
                                     dark:text-primary dark:hover:bg-white/5"
                             >
+                                <User size={20} />
                                 Login
                             </Link>
                             <Link
                                 href="/account/signup"
-                                className="px-5 py-2 font-semibold rounded-full shadow-sm transition-colors
-                                    bg-slate-900 text-white hover:bg-slate-800
+                                className="px-5 py-2 font-semibold flex items-center gap-2 rounded-full shadow-sm transition-colors
+                                    bg-slate-900 text-white hover:bg-slate-800 text-lg
                                     dark:bg-primary dark:text-tertiary dark:hover:bg-primary/90"
                             >
+                                <UserPlus size={20} />
                                 Signup
                             </Link>
                         </>

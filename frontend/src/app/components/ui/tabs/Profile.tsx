@@ -1,9 +1,10 @@
 "use client"
 
 import api from "@/app/api"
-import React, { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 interface UserProfile {
+    username?: string
     nickname?: string
     occupation?: string
     about?: string
@@ -58,15 +59,20 @@ export default function ProfilePanel() {
                 </div>
                 <div>
                     <p className="font-bold text-lg text-slate-900 dark:text-white">
-                        {"Ayush"}
+                        {profile.username}
                     </p>
                     <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                        {profile.email || "ayu@briefly.ai"}
+                        {profile.email}
                     </p>
                 </div>
             </div>
 
             <div className="space-y-5">
+                <Field
+                    label="Username"
+                    value={profile.username}
+                    onChange={(v) => updateField("username", v)}
+                />
                 <Field
                     label="Email"
                     value={profile.email}

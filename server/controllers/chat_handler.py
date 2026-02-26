@@ -3,6 +3,9 @@ from datetime import datetime, timezone
 from controllers.mongo import summary_collection
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage
+from typing import Optional
+import asyncio
+
 from agent.agent_factory import  run_agent , generate_chat_title , extract_sources , extract_memory , stream_agent
 from controllers.memory_handler import get_user_memories, save_user_memories
 from controllers.file_handler import process_files
@@ -78,12 +81,14 @@ def build_messages(chat, user_input, file_context):
 
 
 def save_chat_turn(chat_id, user_input, assistant_text, files, sources, title=None):
+    now = datetime.now(timezone.utc)
+
     payload = {
         "$push": {
             "queries": {
                 "$each": [
-                    {"sender": "user", "content": user_input, "files": files},
-                    {"sender": "llm", "content": assistant_text, "sources": sources},
+                    {"sender": "user", "content": user_input, "files": files ,"created_at": now},
+                    {"sender": "llm", "content": assistant_text, "sources": sources,"created_at": now},
                 ]
             }
         },
@@ -174,22 +179,48 @@ async def chat_stream(user_input, user_id, chat_id=None, files=None, modal_name=
         # ⚠️ FIX: Add 'data: ' prefix and '\n\n' suffix
         yield f"data: {json.dumps({'type': 'error'})}\n\n"
 
-def get_last_50_chats(id: str):
+async def get_chat_history(
+    id: str, 
+    limit: int = 50, 
+    before: Optional[datetime] = None
+):
     try:
+        await asyncio.sleep(1.5)   # 1.5 seconds delay
+
         if ObjectId.is_valid(id):
             query = {"_id": ObjectId(id)}
         else:
-            query = {"id": id}  # Fallback for custom string IDs
+            query = {"id": id}
 
-        result = summary_collection.find_one(
-            query,
-            {"queries": {"$slice": -50}, "_id": 0} 
-        )
+        if before is None:
+            # First load → most recent chats
+            result = summary_collection.find_one(
+                query,
+                {"queries": {"$slice": -limit}, "_id": 0}
+            )
+        else:
+            # Scroll up → older chats before the given timestamp
+            pipeline = [
+                {"$match": query},
+                {"$project": {
+                    "queries": {
+                        "$slice": [
+                            {
+                                "$filter": {
+                                    "input": "$queries",
+                                    "as": "chat",
+                                    "cond": {"$lt": ["$$chat.created_at", before]}
+                                }
+                            },
+                            -limit          # take the newest 'limit' among older chats
+                        ]
+                    }
+                }}
+            ]
+            result_list = list(summary_collection.aggregate(pipeline))
+            result = result_list[0] if result_list else None
 
-        if result:
-            return result["queries"]
-        
-        return []
+        return result.get("queries", []) if result else []
 
     except Exception as e:
         print(f"Error fetching history: {e}")

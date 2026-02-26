@@ -13,8 +13,8 @@ const options = [
     { label: "Kimi K2", value: "moonshotai/kimi-k2-instruct-0905", icon: "/kimi.webp" },
 ]
 
-const InputBox = ({ query, setQuery, send, isPending, files, setFiles, stop, handleFileChange }: {
-    query: string, setQuery: (value: string) => void, send: (value: string, files: File[], model: string) => void, files: File[], setFiles: ((file: File) => void), isPending: boolean, stop: () => void, handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>
+const InputBox = ({ query, setQuery, send, isPending, files, stop, handleFileChange }: {
+    query: string, setQuery: (value: string) => void, send: (value: string, files: File[], model: string) => void, files: File[], isPending: boolean, stop: () => void, handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>
 }) => {
     const doc = useRef<HTMLInputElement | null>(null);
     const [selected, setSelected] = useState(options[0])

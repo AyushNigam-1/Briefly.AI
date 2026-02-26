@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -18,52 +18,89 @@ const Page = () => {
   const router = useRouter();
   const token = Cookies.get("access_token");
   const rawId = Array.isArray(id) ? id[0] : id;
+
   const [query, setQuery] = useState<string>("");
   const [metadata, setMetadata] = useState<metadata | null>(null);
   const { sendQuery } = useMutations();
   const [queries, setQueries] = useState<query[]>([]);
   const [activeId, setActiveId] = useState<string | undefined>();
-  const [isPending, setPending] = useState(false)
+  const [isPending, setPending] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
+
+  // ── Infinite scroll states ─────────────────────────────────────
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
+  const [oldestCreatedAt, setOldestCreatedAt] = useState<string | null>(null);
+
   const abortControllerRef = useRef<AbortController | null>(null);
-  // Load history when query id changes
+
+  // Reusable history fetcher
+  const fetchHistory = useCallback(async (before?: string) => {
+    if (!rawId) return;
+
+    const params = new URLSearchParams({ limit: before ? "10" : "10" });
+    if (before) params.append("before", before);
+
+    try {
+      const res = await axios.get(
+        `http://localhost:8000/history/${rawId}?${params}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const newHistory: query[] = res.data?.history || [];
+      const serverHasMore = res.data?.has_more ?? (newHistory.length === 30);
+
+      if (before) {
+        // Prepend older messages
+        setQueries((prev) => [...newHistory, ...prev]);
+        if (newHistory.length > 0) {
+          setOldestCreatedAt(newHistory[0].created_at);
+        }
+        setHasMore(serverHasMore);
+      } else {
+        // Initial load
+        setQueries(newHistory);
+        setHasMore(serverHasMore);
+        setOldestCreatedAt(newHistory.length > 0 ? newHistory[0].created_at : null);
+      }
+    } catch (e) {
+      console.error("History load failed", e);
+    } finally {
+      if (before) setIsLoadingOlder(false);
+    }
+  }, [rawId, token]);
+
+  // Load history when conversation ID changes
   useEffect(() => {
     if (!rawId) {
       setQueries([]);
       setActiveId(undefined);
+      setHasMore(true);
+      setOldestCreatedAt(null);
       return;
     }
 
     setQueries([]);
     setActiveId(rawId);
+    setHasMore(true);
+    setOldestCreatedAt(null);
 
+    fetchHistory(); // initial load (no "before")
+  }, [rawId, fetchHistory]);
 
+  // Load older chats when user scrolls up
+  const loadOlderChats = useCallback(async () => {
+    if (!oldestCreatedAt || !hasMore || isLoadingOlder) return;
 
-    const fetchHistory = async () => {
-      try {
-        const token = Cookies.get("access_token");
-        const res = await axios.get(`http://localhost:8000/history/${rawId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.data?.history) {
-          setQueries(res.data.history);
-        }
-      } catch (e) {
-        console.error("History load failed", e);
-      }
-    };
-
-    fetchHistory();
-  }, [rawId]);
-
+    setIsLoadingOlder(true);
+    await fetchHistory(oldestCreatedAt);
+  }, [oldestCreatedAt, hasMore, isLoadingOlder, fetchHistory]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    // setLoading(true);
     if (e.target.files?.length) {
-      setFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+      setFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
     }
     e.target.value = "";
-    // setLoading(false);
   };
 
   const handleSend = async (query: string, files: File[], modal: string) => {
@@ -78,9 +115,10 @@ const Page = () => {
       {
         sender: "user",
         content: query,
-        files: files.map(file => ({ name: file.name, size: file.size, type: file.type, url: "" }))
+        files: files.map(file => ({ name: file.name, size: file.size, type: file.type, url: "" })),
+        created_at: ""
       },
-      { sender: "llm", content: "", sources: [] }
+      { sender: "llm", content: "", sources: [], created_at: "" }
     ]);
     try {
       const form = new FormData();
@@ -139,7 +177,8 @@ const Page = () => {
               updated[updated.length - 1] = {
                 sender: "llm",
                 content: "Sorry — I can’t help with that request.",
-                blocked: true
+                blocked: true,
+                created_at: ''
               };
               return updated;
             });
@@ -160,13 +199,13 @@ const Page = () => {
   };
 
   const handleStop = () => {
-    console.log("stopped")
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
     setPending(false);
   };
+
   return (
     <>
       <Navbar component={<Sidebar />} />
@@ -190,9 +229,14 @@ const Page = () => {
               setFiles={setFiles}
               handleStop={handleStop}
               handleFileChange={handleFileChange}
+              // ── NEW PROPS FOR INFINITE SCROLL ──
+              loadOlderChats={loadOlderChats}
+              isLoadingOlder={isLoadingOlder}
+              hasMore={hasMore}
             />
           </motion.div>
         ) : (
+          /* your intro screen stays exactly the same */
           <motion.div
             key="intro"
             initial={{ opacity: 0, scale: 0.95, x: "-50%", y: "-50%" }}
@@ -223,7 +267,7 @@ const Page = () => {
                   isPending={sendQuery.isPending}
                   handleFileChange={handleFileChange}
                   files={files}
-                  setFiles={setFiles}
+                  stop={stop}
                 />
               </div>
             </div>

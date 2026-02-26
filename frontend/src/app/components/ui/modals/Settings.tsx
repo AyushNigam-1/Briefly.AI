@@ -67,20 +67,20 @@ export default function SettingsDialog({
                             bg-slate-50 border-slate-200
                             dark:bg-tertiary dark:border-secondary"
                         >
-                            <TabList className="space-y-2 flex-1">
+                            <TabList className=" space-y-3 h-full">
                                 {tabs.map((tab) => (
                                     <Tab
                                         key={tab.name}
                                         className={({ selected }) =>
                                             clsx(
-                                                "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl outline-none font-medium transition-all duration-200",
+                                                "w-full flex items-center gap-3 px-3 py-2 rounded-xl outline-none",
                                                 selected
-                                                    ? "bg-white text-slate-900 shadow-sm border border-slate-200/60 dark:bg-white/10 dark:text-white dark:border-transparent dark:shadow-none"
-                                                    : "text-slate-500 hover:bg-slate-200/60 hover:text-slate-800 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-white"
+                                                    ? "bg-white/5 text-white"
+                                                    : "text-gray-400 hover:bg-white/5"
                                             )
                                         }
                                     >
-                                        <tab.icon size={18} />
+                                        <tab.icon size={16} />
                                         {tab.name}
                                     </Tab>
                                 ))}

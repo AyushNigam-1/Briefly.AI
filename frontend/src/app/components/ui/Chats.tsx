@@ -1,180 +1,204 @@
-"use client"
-import React, { Dispatch, KeyboardEvent, SetStateAction, useEffect, useRef, useState } from 'react'
-import { useParams, useSearchParams } from "next/navigation";
-import axios from 'axios';
-import Cookies from 'js-cookie';
-import { Metadata, ProgressResponse, query, webRecommendations, ytRecommendations } from '@/app/types';
-import { setupWebSocketListeners } from '@/websocket/webEvent';
-import HashLoader from "react-spinners/HashLoader"
+import React, { Dispatch, SetStateAction, useState, useRef, useEffect, useLayoutEffect } from "react";
 import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm'
-import { useQuery } from "@tanstack/react-query";
-import { Copy, Ellipsis, FileText, ImageIcon, Link, Loader2, Paperclip, RefreshCw, SendHorizontal, VideoIcon, X } from 'lucide-react';
-import { motion, AnimatePresence } from "framer-motion";
-import InputBox from './InputBox';
-import SourcesSidebar from './panels/SourcesPanel';
-import Messages from './Messages';
-
-const getChats = async (summaryId: string) => {
-    try {
-        const token = Cookies.get("access_token");
-        const response = await axios.get(`http://localhost:8000/summary/?id=${summaryId}`, {
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
-        });
-        return response.data.summary;
-    } catch (error) {
-        if (axios.isAxiosError(error)) {
-            throw new Error(error.response?.data?.message || error.message);
-        } else {
-            throw new Error(String(error));
-        }
-    }
-};
-
-export const previewFile = async (file_url: string) => {
-    if (file_url) {
-        try {
-            const response = await fetch(`http://localhost:8000/${file_url}`, {
-                method: 'GET',
-            });
-
-            if (!response.ok) {
-                throw new Error(`File not found with id ${file_url}`);
-            }
-
-            const fileBlob = await response.blob();
-            const fileUrl = URL.createObjectURL(fileBlob);
-            console.log(fileUrl)
-            return fileUrl;
-        } catch (error) {
-            console.error('Error fetching file:', error);
-            throw error;
-        }
-    };
-    return ""
-}
+import { motion } from "framer-motion";
+import { VList, VListHandle } from 'virtua';
+import InputBox from "./InputBox";
+import SourcesSidebar from "./panels/SourcesPanel";
+import { query } from "@/app/types";
+import { Copy, FileText, ImageIcon, RefreshCw } from "lucide-react";
+import remarkGfm from "remark-gfm";
 
 interface ChatsProps {
     queries: query[];
     setQueries: Dispatch<SetStateAction<query[]>>;
-    isPending: boolean; // Using this to detect if we are waiting/streaming
+    isPending: boolean;
     handleSend: (query: string, files: File[], modal: string) => Promise<void>;
     query: string;
-    setQuery: (value: string) => void
-    handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>
-    handleStop: () => void
-    files: File[],
-    setFiles: (e: File) => void
+    setQuery: (value: string) => void;
+    handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
+    handleStop: () => void;
+    files: File[];
+    setFiles: (files: File[]) => void;
+    loadOlderChats: () => Promise<void>;
+    isLoadingOlder: boolean;
+    hasMore: boolean;
 }
 
-const Chats = ({ queries, setQueries, isPending, handleSend, query, setQuery, files, handleFileChange, handleStop, setFiles }: ChatsProps) => {
-    const [isLoading, setLoading] = useState<boolean>(false);
-    const [summaryId, setSummaryId] = useState<string | undefined>(undefined);
-    const [progress, setProgress] = useState<ProgressResponse>();
-    const [metadata, setMetadata] = useState<Metadata | undefined>(undefined)
-    const searchParams = useSearchParams();
-    const title = searchParams.get('title') as string;
-    const language = searchParams.get('language') as string
-    const format = searchParams.get('format') as string;
-    const icon = searchParams.get('icon') as string;
-    const [text, setText] = useState('Copy')
-    const [text2, setText2] = useState('Regenrate')
-    const [ytRecommendations, setytRecommendations] = useState<ytRecommendations[] | undefined>(undefined);
-    const [webRecommendations, setWebRecommendations] = useState<webRecommendations[] | undefined>(undefined);
-    const [recommendationLoader, setRecommendationLoader] = useState<boolean>(false);
-    const queriesContainerRef = useRef<HTMLDivElement | null>(null);
-    const [state, setState] = useState<string | undefined>(undefined);
-    const [favourites, setFavourites] = useState<string[]>([]);
-    const inputRef = useRef<HTMLInputElement>(null);
-    const { id } = useParams();
-    const [messages, setMessages] = useState([]);
-    const [loadingHistory, setLoadingHistory] = useState(false);
+const Chats = ({
+    queries,
+    isPending,
+    handleSend,
+    query: searchInput,
+    setQuery,
+    files,
+    handleFileChange,
+    handleStop,
+    setFiles,
+    loadOlderChats,
+    isLoadingOlder,
+    hasMore,
+}: ChatsProps) => {
     const [sourcesOpen, setSourcesOpen] = useState(false);
-    const [sources, setSources] = useState<any[]>([]);
+    const [sources] = useState<any[]>([]);
+
+    const vlistRef = useRef<VListHandle>(null);
+    const atBottomRef = useRef(true);
+    const prevQueriesRef = useRef<query[]>(queries);
+    const initialScrollDone = useRef(false);
+
+    useLayoutEffect(() => {
+        if (!initialScrollDone.current && queries.length > 0 && vlistRef.current) {
+            vlistRef.current.scrollToIndex(queries.length - 1, { align: 'end' });
+            initialScrollDone.current = true;
+        }
+    }, [queries.length]);
+
+    const handleScroll = (offset: number) => {
+        if (!vlistRef.current) return;
+
+        // Logic for loading older chats when reaching top
+        if (offset < 10 && hasMore && !isLoadingOlder) {
+            loadOlderChats();
+        }
+
+        const scrollSize = vlistRef.current.scrollSize;
+        const viewportSize = vlistRef.current.viewportSize;
+        // Stick to bottom if we are within 100px of the end
+        atBottomRef.current = scrollSize - (offset + viewportSize) < 100;
+    };
 
     useEffect(() => {
-        if (queriesContainerRef.current) {
-            queriesContainerRef.current.scrollTo({
-                top: queriesContainerRef.current.scrollHeight,
-                behavior: "smooth",
-            });
+        // Auto-scroll when new messages arrive or while streaming, but only if user is already at bottom
+        if (queries.length > prevQueriesRef.current.length || isPending) {
+            if (atBottomRef.current) {
+                // 'smooth' can be used here for new messages, but 'instant' is better for streaming
+                vlistRef.current?.scrollToIndex(queries.length - 1, { align: 'end' });
+            }
         }
+        prevQueriesRef.current = queries;
     }, [queries, isPending]);
 
-    useEffect(() => {
-        setupWebSocketListeners({
-            onOpen: () => console.log("WebSocket connection established"),
-            onMessage: (data) => setProgress(data),
-            onClose: () => console.log("WebSocket connection closed"),
-            onError: (error) => console.error("WebSocket error:", error),
-        });
-    }, []);
+    const copyToClipboard = async (text?: string) => {
+        if (text) {
+            try { await navigator.clipboard.writeText(text); }
+            catch (err) { console.error('Failed to copy:', err); }
+        }
+    };
 
-    if (isLoading) return (
-        <div className='h-screen w-max-lg flex flex-col items-center justify-center' >
-            <div className='flex flex-col gap-3'>
-                <HashLoader color={"#ffffff"} loading={isLoading} size="100" />
-            </div>
-        </div>
-    );
+    return (
+        <>
+            <div className="flex flex-col items-center w-full h-[calc(100vh-140px)] relative">
+                <div className="w-full max-w-6xl h-full relative">
+                    <VList
+                        ref={vlistRef}
+                        data={queries}
+                        onScroll={handleScroll}
+                        shift={queries.length > prevQueriesRef.current.length && queries[0]?.content !== prevQueriesRef.current[0]?.content}
+                        className="scrollbar-none h-full w-full py-4"
+                    >
+                        {(q, index) => {
+                            const isLastItem = index === queries.length - 1;
+                            const isStreaming = isPending && isLastItem && q.sender === "llm";
+                            if (!q.content && !isStreaming && (!q.files || q.files.length === 0)) {
+                                return <div key={index} className="h-0" />;
+                            }
 
-    return <>
-        <div className='flex flex-col items-center w-full h-[calc(100vh-140px)]'>
-            <div ref={queriesContainerRef} className='w-full overflow-y-auto scrollbar-none max-w-6xl'>
-                <div className="flex flex-col gap-6 py-4">
-
-                    <AnimatePresence mode='popLayout'>
-                        {queries?.map((q, index: number) => {
-                            const isLastAI = index === queries.length - 1 && q.sender !== 'user';
-                            const isStreaming = isLastAI && isPending;
-                            if (!q.content) return;
                             return (
-                                <motion.div
+                                <div
                                     key={index}
-                                    layout="position"
-                                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    transition={{
-                                        opacity: { duration: 0.3 },
-                                        y: { duration: 0.3 },
-                                        layout: {
-                                            type: "spring",
-                                            bounce: 0.15,
-                                            duration: 0.5
-                                        }
-                                    }}
-                                    className={`flex w-full ${q.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                                    className={`flex w-full ${q.sender === "user" ? "justify-end" : "justify-start"}`}
                                 >
-                                    <Messages q={q} isStreaming={isStreaming} />
-                                </motion.div>
+                                    <div className={`flex flex-col gap-1 max-w-[85%] group ${q.sender === "user" ? "items-end" : "items-start"}`}>
+
+                                        {/* Files badges */}
+                                        {q?.files && q.files.length > 0 && (
+                                            <div className="flex gap-2 flex-wrap mb-1">
+                                                {q.files.map((file, idx) => (
+                                                    <div key={idx} className="flex items-center gap-2 p-2 rounded-xl border bg-white dark:bg-tertiary dark:border-secondary shadow-sm">
+                                                        <div className="p-2 bg-slate-100 dark:bg-primary rounded-lg text-slate-600 dark:text-tertiary">
+                                                            {file.type.startsWith("image/") ? <ImageIcon size={18} /> : <FileText size={18} />}
+                                                        </div>
+                                                        <div className="text-xs">
+                                                            <p className="font-semibold truncate max-w-[120px] text-slate-800 dark:text-white">{file.name}</p>
+                                                            <p className="opacity-60 dark:text-gray-400">{(file.size / 1024).toFixed(0)} KB</p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        <div className={` rounded-2xl transition-all duration-200 ${q.sender === "user"
+                                            ? "bg-slate-50 border border-slate-200 dark:bg-tertiary dark:border-secondary dark:text-white shadow-sm"
+                                            : "bg-transparent"
+                                            }`}>
+                                            {q.sender === "user" ? (
+                                                <p className="text-[18px] leading-relaxed p-4">{q.content}</p>
+                                            ) : (
+                                                <div className="prose dark:prose-invert max-w-none">
+                                                    <ReactMarkdown
+                                                        remarkPlugins={[remarkGfm]}
+                                                        components={{
+                                                            p: ({ children }) => <p className="mb-4 last:mb-0 text-[18px] leading-[1.8] text-slate-700 dark:text-zinc-200">{children}</p>
+                                                        }}
+                                                    >
+                                                        {q.content || ""}
+                                                    </ReactMarkdown>
+
+
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Bottom Actions */}
+                                        {!isStreaming && q.content && (
+                                            <div className="flex gap-4 group-hover:opacity-100 transition-opacity duration-200">
+                                                <button onClick={() => copyToClipboard(q.content)} className="text-slate-400 hover:text-slate-900 dark:hover:text-white p-1">
+                                                    <Copy size={16} />
+                                                </button>
+                                                {q.sender !== 'user' && (
+                                                    <button className="text-slate-400 hover:text-slate-900 dark:hover:text-white p-1">
+                                                        <RefreshCw size={16} />
+                                                    </button>
+                                                )}
+                                            </div>)}
+                                        {isStreaming && (
+                                            <div className="flex gap-1.5 mt-4">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" />
+                                                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:0.2s]" />
+                                                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:0.4s]" />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             );
-                        })}
+                        }}
+                    </VList>
 
-                    </AnimatePresence>
-
-                    {/* 🌟 Pending Loader */}
-                    <AnimatePresence>
-                        {isPending && !queries[queries.length - 1]?.content && (
-                            <div className="p-4 rounded-2xl flex items-center gap-1.5 mt-2">
-                                <div className="w-1.5 h-1.5 rounded-full animate-bounce [animation-delay:-0.3s] bg-slate-400 dark:bg-gray-400"></div>
-                                <div className="w-1.5 h-1.5 rounded-full animate-bounce [animation-delay:-0.15s] bg-slate-400 dark:bg-gray-400"></div>
-                                <div className="w-1.5 h-1.5 rounded-full animate-bounce bg-slate-400 dark:bg-gray-400"></div>
+                    {isLoadingOlder && (
+                        <div className="absolute top-0 left-0 w-full z-10">
+                            <div className="h-1 w-full bg-slate-100 dark:bg-secondary overflow-hidden">
+                                <motion.div
+                                    className="h-full bg-primary w-1/3"
+                                    animate={{ x: ["-100%", "300%"] }}
+                                    transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                                />
                             </div>
-                        )}
-                    </AnimatePresence>
-
+                        </div>
+                    )}
                 </div>
             </div>
-        </div>
 
-        <div className='max-w-6xl mx-auto'>
-            <InputBox query={query} setQuery={setQuery} send={handleSend} isPending={isPending} files={files} setFiles={setFiles} handleFileChange={handleFileChange} stop={handleStop} />
-        </div>
+            <div className="max-w-6xl mx-auto">
+                <InputBox
+                    query={searchInput} setQuery={setQuery} send={handleSend}
+                    isPending={isPending} files={files}
+                    handleFileChange={handleFileChange} stop={handleStop}
+                />
+            </div>
 
-        <SourcesSidebar isOpen={sourcesOpen} onClose={() => setSourcesOpen(false)} sources={sources} />
-    </>
-}
+            <SourcesSidebar isOpen={sourcesOpen} onClose={() => setSourcesOpen(false)} sources={sources} />
+        </>
+    );
+};
 
-export default Chats
+export default Chats;

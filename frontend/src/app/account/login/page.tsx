@@ -74,7 +74,7 @@ const LoginPage: React.FC = () => {
 
             {/* Main Card */}
             <div className="relative z-10 w-full max-w-md p-1">
-                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
+                <div className="bg-tertiary backdrop-blur-xl border border-secondary rounded-2xl p-8 shadow-2xl">
 
                     {/* Header Section */}
                     <div className="flex flex-col items-center gap-4 mb-8">
@@ -153,7 +153,7 @@ const LoginPage: React.FC = () => {
 
                         <Link
                             href='/account/signup'
-                            className="w-full bg-white/5 border border-white/10 text-white font-medium rounded-xl py-3.5 hover:bg-white/10 transition-colors text-center text-sm"
+                            className="w-full bg-white/5 border border-secondary text-white font-medium rounded-xl py-3.5 hover:bg-white/10 transition-colors text-center text-sm"
                         >
                             Create New Account
                         </Link>

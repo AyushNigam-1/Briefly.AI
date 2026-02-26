@@ -3,37 +3,38 @@
 import React, { useEffect, useState } from "react"
 import api from "@/app/api"
 import { useRouter, useSearchParams } from "next/navigation"
-import { CheckCircle2, Cloud, FileText, Loader2, MessageCircle, Send, Unplug, Blocks } from "lucide-react"
-import clsx from "clsx"
-import Cookies from 'js-cookie' // Make sure this is imported
+import { CheckCircle2, Loader2, Unplug, Blocks } from "lucide-react"
+import { RiNotionFill } from "react-icons/ri";
+import { FaGoogleDrive } from "react-icons/fa";
+import { FaDiscord } from "react-icons/fa";
+import { FaSlack } from "react-icons/fa";
+
+import Cookies from 'js-cookie'
+
 const INTEGRATIONS = [
     {
         id: "notion",
         name: "Notion",
         description: "Read and write to your Notion workspaces.",
-        icon: FileText,
-        color: "text-slate-800 dark:text-white"
+        icon: RiNotionFill,
     },
     {
         id: "google_drive",
         name: "Google Drive",
         description: "Access and analyze Docs, Sheets, and Slides.",
-        icon: Cloud,
-        color: "text-blue-500 dark:text-blue-400"
+        icon: FaGoogleDrive,
     },
     {
         id: "discord",
         name: "Discord",
         description: "Read server history and interact via bots.",
-        icon: MessageCircle,
-        color: "text-indigo-500 dark:text-indigo-400"
+        icon: FaDiscord,
     },
     {
         id: "slack",
         name: "Slack",
         description: "Connect to Slack bots and groups.",
-        icon: Send,
-        color: "text-sky-500 dark:text-sky-400"
+        icon: FaSlack,
     }
 ]
 
@@ -45,7 +46,6 @@ export default function Integrations() {
     const searchParams = useSearchParams()
     const router = useRouter()
 
-    // 1. Fetch tokens and check for successful OAuth redirect
     const fetchTokens = async () => {
         try {
             const res = await api.get("/tokens")
@@ -59,33 +59,24 @@ export default function Integrations() {
 
     useEffect(() => {
         fetchTokens()
-
-        // If the URL has ?success=true (from your FastAPI redirect), clear the params
         if (searchParams.get('success') === 'true') {
-            router.replace('/settings?tab=integrations') // or wherever this modal lives
+            router.replace('/settings?tab=integrations')
         }
     }, [searchParams])
 
-    // 2. REAL OAUTH CONNECT: Redirects browser to backend
     const handleConnect = (appId: string) => {
         setConnectingTo(appId)
-
-        // Construct backend OAuth trigger URL
-        // Replace with your actual backend production URL if needed
         const backendBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
         const token = Cookies.get('access_token')
-        // This initiates the "Notion Login" dance
         window.location.href = `${backendBaseUrl}/${appId}/login?token=${token}`
     }
 
-    // 3. Handle Disconnect
     const handleDisconnect = async (appId: string) => {
         try {
             await api.post("/tokens", {
                 app_name: appId,
                 token: ""
             })
-
             setConnectedApps(prev => {
                 const updated = { ...prev }
                 delete updated[appId]
@@ -142,7 +133,7 @@ export default function Integrations() {
                                 >
                                     <div className="flex items-center gap-4 flex-1 min-w-0">
                                         <div className="p-3 rounded-xl transition-colors bg-slate-50 dark:bg-white/10 shrink-0">
-                                            <Icon size={24} className={app.color} />
+                                            <Icon size={24} />
                                         </div>
 
                                         <div className="flex-1 min-w-0">
@@ -204,40 +195,46 @@ export default function Integrations() {
                             return (
                                 <div
                                     key={app.id}
-                                    className="flex items-center justify-between p-4 rounded-xl border transition-colors
-                                        bg-white border-slate-200 shadow-sm
-                                        dark:bg-white/5 dark:border-secondary dark:shadow-none"
+                                    className="flex items-start justify-between p-4 rounded-xl border gap-4
+             bg-white border-slate-200 shadow-sm
+             dark:bg-white/5 dark:border-secondary dark:shadow-none"
                                 >
-                                    <div className="flex items-center gap-4">
-                                        <div className="p-3 rounded-xl transition-colors bg-slate-100 dark:bg-[#0b0b0b]">
-                                            <Icon size={24} className={app.color} />
+                                    {/* LEFT SIDE */}
+                                    <div className="flex items-start gap-4 flex-1 min-w-0">
+                                        <div className="p-3 rounded-xl bg-slate-100 dark:bg-[#0b0b0b] shrink-0">
+                                            <Icon size={24} />
                                         </div>
-                                        <div>
-                                            <h4 className="font-bold text-lg text-slate-900 dark:text-slate-200">
+
+                                        <div className="flex flex-col min-w-0">
+                                            <h4 className="font-bold text-lg text-slate-900 dark:text-slate-200 truncate">
                                                 {app.name}
                                             </h4>
-                                            <p className="text-sm mt-0.5 text-slate-500 dark:text-slate-400">
+
+                                            <p className="text-sm mt-1 text-slate-500 dark:text-slate-400 break-words">
                                                 {app.description}
                                             </p>
                                         </div>
                                     </div>
 
-                                    <button
-                                        onClick={() => handleConnect(app.id)}
-                                        disabled={isConnecting}
-                                        className="flex items-center gap-2 px-5 py-2 text-sm font-bold rounded-lg transition-colors disabled:opacity-70
-                                            bg-slate-900 text-white hover:bg-slate-800 shadow-sm
-                                            dark:bg-primary dark:text-tertiary dark:hover:bg-primary/90 dark:shadow-none"
-                                    >
-                                        {isConnecting ? (
-                                            <>
-                                                <Loader2 size={16} className="animate-spin" />
-                                                Connecting...
-                                            </>
-                                        ) : (
-                                            "Connect"
-                                        )}
-                                    </button>
+                                    {/* RIGHT SIDE */}
+                                    <div className="shrink-0">
+                                        <button
+                                            onClick={() => handleConnect(app.id)}
+                                            disabled={isConnecting}
+                                            className="flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg
+                 bg-slate-900 text-white hover:bg-slate-800
+                 dark:bg-primary dark:text-tertiary dark:hover:bg-primary/90"
+                                        >
+                                            {isConnecting ? (
+                                                <>
+                                                    <Loader2 size={16} className="animate-spin" />
+                                                    Connecting...
+                                                </>
+                                            ) : (
+                                                "Connect"
+                                            )}
+                                        </button>
+                                    </div>
                                 </div>
                             )
                         })}
