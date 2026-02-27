@@ -1,9 +1,9 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import api from "@/app/api"
 import { useRouter, useSearchParams } from "next/navigation"
-import { CheckCircle2, Loader2, Unplug, Blocks } from "lucide-react"
+import { CheckCircle2, Loader2, Blocks, Unplug, Plug } from "lucide-react"
 import { RiNotionFill } from "react-icons/ri";
 import { FaGoogleDrive } from "react-icons/fa";
 import { FaDiscord } from "react-icons/fa";
@@ -15,26 +15,14 @@ const INTEGRATIONS = [
     {
         id: "notion",
         name: "Notion",
-        description: "Read and write to your Notion workspaces.",
+        company: "Notion Labs Inc.",
         icon: RiNotionFill,
     },
     {
         id: "google_drive",
         name: "Google Drive",
-        description: "Access and analyze Docs, Sheets, and Slides.",
+        company: "Google",
         icon: FaGoogleDrive,
-    },
-    {
-        id: "discord",
-        name: "Discord",
-        description: "Read server history and interact via bots.",
-        icon: FaDiscord,
-    },
-    {
-        id: "slack",
-        name: "Slack",
-        description: "Connect to Slack bots and groups.",
-        icon: FaSlack,
     }
 ]
 
@@ -137,17 +125,12 @@ export default function Integrations() {
                                         </div>
 
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                                <h4 className="font-bold text-lg text-slate-900 dark:text-slate-200 truncate">
-                                                    {app.name}
-                                                </h4>
-                                                <span className="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400 shrink-0">
-                                                    <CheckCircle2 size={12} />
-                                                    Connected
-                                                </span>
-                                            </div>
+                                            <h4 className="font-bold text-lg text-slate-900 dark:text-slate-200 truncate">
+                                                {app.name}
+                                            </h4>
+
                                             <p className="text-sm mt-0.5 text-slate-500 dark:text-slate-400 truncate">
-                                                {app.description}
+                                                {app.company}
                                             </p>
                                         </div>
                                     </div>
@@ -195,52 +178,46 @@ export default function Integrations() {
                             return (
                                 <div
                                     key={app.id}
-                                    className="flex items-start justify-between p-4 rounded-xl border gap-4
-             bg-white border-slate-200 shadow-sm
-             dark:bg-white/5 dark:border-secondary dark:shadow-none"
+                                    className="flex items-center justify-between p-4 rounded-xl border gap-4
+                                        bg-white border-slate-200 shadow-sm
+                                        dark:bg-white/5 dark:border-secondary dark:shadow-none"
                                 >
-                                    {/* LEFT SIDE */}
-                                    <div className="flex items-start gap-4 flex-1 min-w-0">
-                                        <div className="p-3 rounded-xl bg-slate-100 dark:bg-[#0b0b0b] shrink-0">
-                                            <Icon size={24} />
-                                        </div>
-
-                                        <div className="flex flex-col min-w-0">
-                                            <h4 className="font-bold text-lg text-slate-900 dark:text-slate-200 truncate">
-                                                {app.name}
-                                            </h4>
-
-                                            <p className="text-sm mt-1 text-slate-500 dark:text-slate-400 break-words">
-                                                {app.description}
-                                            </p>
-                                        </div>
+                                    <div className="p-3 rounded-xl bg-slate-100 dark:bg-[#0b0b0b] shrink-0">
+                                        <Icon size={24} />
                                     </div>
-
-                                    {/* RIGHT SIDE */}
-                                    <div className="shrink-0">
-                                        <button
-                                            onClick={() => handleConnect(app.id)}
-                                            disabled={isConnecting}
-                                            className="flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg
+                                    <div className="flex justify-between flex-col w-full">
+                                        <h4 className="font-bold text-lg text-slate-900 dark:text-slate-200 truncate">
+                                            {app.name}
+                                        </h4>
+                                        <p className="text-sm mt-0.5 text-slate-500 dark:text-slate-400 truncate">
+                                            {app.company}
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => handleConnect(app.id)}
+                                        disabled={isConnecting}
+                                        className="flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg
                  bg-slate-900 text-white hover:bg-slate-800
                  dark:bg-primary dark:text-tertiary dark:hover:bg-primary/90"
-                                        >
-                                            {isConnecting ? (
-                                                <>
-                                                    <Loader2 size={16} className="animate-spin" />
-                                                    Connecting...
-                                                </>
-                                            ) : (
-                                                "Connect"
-                                            )}
-                                        </button>
-                                    </div>
+                                    >
+                                        {isConnecting ? (
+                                            <>
+                                                <Loader2 size={16} className="animate-spin" />
+                                                Connecting...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Plug size={16} />
+                                                Connect
+                                            </>
+                                        )}
+                                    </button>
                                 </div>
                             )
                         })}
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     )
 }

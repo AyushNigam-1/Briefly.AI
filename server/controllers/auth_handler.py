@@ -24,9 +24,6 @@ class Token(BaseModel):
     token_type: str
     favorites: List[str]
 
-class AppTokenPayload(BaseModel):
-    app_name: str
-    token: str
 
 async def signup(user: User, response: Response):
     """Sign up a new user."""
@@ -103,48 +100,5 @@ async def login(user: User, response: Response):
         "status_code": 201
     }
 
-async def save_app_token(payload: AppTokenPayload, current_username: str):
-    """
-    Saves or updates a token for a specific app (e.g., Notion, Google Drive).
-    Requires the current logged-in user's username.
-    """
-    # Uses dot notation to update a specific key within the app_tokens dictionary
-    result = users_collection.update_one(
-        {"username": current_username},
-        {"$set": {f"app_tokens.{payload.app_name}": payload.token}}
-    )
-    
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="User not found")
-        
-    return {"message": f"Token for {payload.app_name} saved successfully", "status_code": 200}
-
-
-async def get_all_app_tokens(current_username: str):
-    """
-    Retrieves all connected app tokens for the current user.
-    """
-    user = users_collection.find_one({"username": current_username}, {"app_tokens": 1, "_id": 0})
-    
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-        
-    return {"app_tokens": user.get("app_tokens", {}), "status_code": 200}
-
-
-async def get_specific_app_token(app_name: str, current_username: str):
-    """
-    Retrieves the token for one specific app.
-    """
-    user = users_collection.find_one({"username": current_username}, {f"app_tokens.{app_name}": 1, "_id": 0})
-    
-    if not user or "app_tokens" not in user or app_name not in user["app_tokens"]:
-        raise HTTPException(status_code=404, detail=f"Token for '{app_name}' not found")
-        
-    return {
-        "app_name": app_name, 
-        "token": user["app_tokens"][app_name], 
-        "status_code": 200
-    }
 
 

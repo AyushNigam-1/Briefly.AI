@@ -4,9 +4,8 @@ from controllers.mongo import summary_collection
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage
 from typing import Optional
-import asyncio
 
-from agent.agent_factory import  run_agent , generate_chat_title , extract_sources , extract_memory , stream_agent
+from agent.agent_factory import  run_agent , generate_chat_title , extract_sources , extract_memory , stream_agent , route_tools
 from controllers.memory_handler import get_user_memories, save_user_memories
 from controllers.file_handler import process_files
 from fastapi import HTTPException
@@ -64,8 +63,11 @@ def build_messages(chat, user_input, file_context):
         (
             "system",
             f"""
-                You are an advanced AI assistant.
-
+                You are Briefly AI, an intelligent personal assistant.
+                You have been granted secure, direct access to the user's private data via external tools (Discord, Google Drive, Notion, Slack).
+                If a user asks about their servers, channels, files, or messages, YOU MUST USE YOUR TOOLS to fetch the data.
+                NEVER tell the user you cannot access their account. You CAN access it.
+                NEVER give generic tutorials. Execute the tools and provide the actual data.
                 Uploaded files:
                 {file_context if file_context else "None"}
             """
@@ -100,57 +102,12 @@ def save_chat_turn(chat_id, user_input, assistant_text, files, sources, title=No
 
     summary_collection.update_one({"_id": chat_id}, payload)
 
-
-async def chat_stream(user_input, user_id, chat_id=None, files=None, modal_name=None):
-
-    chat_doc, chat_oid, is_new = get_or_create_chat(chat_id, user_id)
-    file_context, uploaded_files = await process_files(files, user_id)
-
-    safe_input, _ = await run_guard(user_input)
-    if not safe_input:
-        yield json.dumps({"type": "blocked"}) + "\n"
-        return
-
-    messages = build_messages(chat_doc, user_input, file_context)
-
-    assistant_text = ""
-
-    try:
-        async for chunk in stream_agent(messages):
-            assistant_text += chunk
-            yield json.dumps({"type": "token", "data": chunk}) + "\n"
-
-        # post moderation
-        safe_output, _ = await run_guard(assistant_text)
-        if not safe_output:
-            yield json.dumps({"type": "blocked"}) + "\n"
-            return
-
-        sources = []
-        title = None
-        if is_new:
-            title = await generate_chat_title(user_input)
-
-        save_chat_turn(chat_oid, user_input, assistant_text, uploaded_files, sources, title)
-
-        yield json.dumps({
-            "type": "done",
-            "id": str(chat_oid),
-            "title": title,
-            "sources": sources
-        }) + "\n"
-
-    except Exception:
-        traceback.print_exc()
-        yield json.dumps({"type": "error"}) + "\n"
-
 async def chat_stream(user_input, user_id, chat_id=None, files=None, modal_name=None):
     chat_doc, chat_oid, is_new = get_or_create_chat(chat_id, user_id)
     file_context, uploaded_files = await process_files(files, user_id)
 
     safe_input = await run_guard(user_input)
     if not safe_input:
-        # ⚠️ FIX: Add 'data: ' prefix and '\n\n' suffix
         yield f"data: {json.dumps({'type': 'blocked'})}\n\n"
         return
 
@@ -158,11 +115,43 @@ async def chat_stream(user_input, user_id, chat_id=None, files=None, modal_name=
     assistant_text = ""
 
     try:
-        async for chunk in stream_agent(messages):
+        # 1. Fetch the user's connected app tokens from MongoDB
+        from controllers.mongo import users_collection # Adjust import path as needed
+        user = users_collection.find_one({"_id": ObjectId(user_id)})
+        app_tokens = user.get("app_tokens", {}) if user else {}
+
+        notion_token = app_tokens.get("notion")
+        gdrive_token = app_tokens.get("google_drive")
+        discord_token = app_tokens.get("discord")
+        slack_token = app_tokens.get("slack")
+        n8n_connected = True # Assuming n8n is always available, or toggle this
+
+        # 2. Build the list of available apps
+        available_apps = []
+        if notion_token: available_apps.append("notion")
+        if gdrive_token: available_apps.append("google_drive")
+        if discord_token: available_apps.append("discord")
+        if slack_token: available_apps.append("slack")
+        if n8n_connected: available_apps.append("n8n")
+
+        # 3. Call the Router to see what we actually need
+        needed_apps = await route_tools(user_input, available_apps)
+        print(f"🚦 Router decided we need: {needed_apps}")
+
+        # 4. Stream the agent with ONLY the required apps enabled
+        async for chunk in stream_agent(
+            messages,
+            modal_name=modal_name,
+            notion_token=notion_token, enable_notion="notion" in needed_apps,
+            gdrive_token=gdrive_token, enable_gdrive="google_drive" in needed_apps,
+            discord_token=discord_token, enable_discord="discord" in needed_apps,
+            slack_token=slack_token, enable_slack="slack" in needed_apps,
+            enable_n8n="n8n" in needed_apps
+        ):
             assistant_text += chunk
-            # ⚠️ FIX: Add 'data: ' prefix and '\n\n' suffix
             yield f"data: {json.dumps({'type': 'token', 'data': chunk})}\n\n"
 
+        # 5. Save the chat
         sources = []
         title = None
         if is_new:
@@ -170,23 +159,19 @@ async def chat_stream(user_input, user_id, chat_id=None, files=None, modal_name=
 
         save_chat_turn(chat_oid, user_input, assistant_text, uploaded_files, sources, title)
 
-        # ⚠️ FIX: Add 'data: ' prefix and '\n\n' suffix
         yield f"data: {json.dumps({'type': 'done', 'id': str(chat_oid), 'title': title, 'sources': sources})}\n\n"
 
     except Exception:
         import traceback
         traceback.print_exc()
-        # ⚠️ FIX: Add 'data: ' prefix and '\n\n' suffix
         yield f"data: {json.dumps({'type': 'error'})}\n\n"
 
-async def get_chat_history(
+def get_chat_history(
     id: str, 
     limit: int = 50, 
     before: Optional[datetime] = None
 ):
     try:
-        await asyncio.sleep(1.5)   # 1.5 seconds delay
-
         if ObjectId.is_valid(id):
             query = {"_id": ObjectId(id)}
         else:

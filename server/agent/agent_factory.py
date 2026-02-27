@@ -2,11 +2,15 @@ from langchain.agents import create_agent
 from agent.tools.notion_tools import get_notion_tools
 from agent.tools.search_tools import get_search_tools
 from agent.tools.n8n_tools import get_n8n_tools
-import asyncio
+from agent.tools.gdrive_tools import get_gdrive_tools
+from agent.tools.slack_tools import get_slack_tools
+from agent.tools.discord_tools import get_discord_tools
 from agent.tool_cache import *
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from groq import Groq
+import re   
+import ast
 import os
 import json
 
@@ -14,67 +18,149 @@ load_dotenv()
 api_key = os.getenv("groq_api_key")
 groq_client = Groq(api_key=api_key)
 
+async def route_tools(user_prompt: str, available_apps: list) -> list:
+    """
+    Uses a fast, cheap model to determine which apps are needed for the prompt.
+    Bulletproof parsing handles single quotes, markdown, and conversational filler.
+    """
+    if not available_apps:
+        return []
+
+    router_llm = ChatGroq(model="llama-3.1-8b-instant", groq_api_key=api_key, temperature=0)
+
+    system_prompt = f"""
+    Analyze the user's prompt. Which of these apps are required to answer it?
+    Available apps: {available_apps}
+    
+    Rules:
+    - Return ONLY a JSON list of app names. 
+    - Use DOUBLE QUOTES only. Example: ["notion", "slack"]
+    - If no apps are needed, return []
+    """
+
+    try:
+        response = await router_llm.ainvoke([
+            ("system", system_prompt),
+            ("human", user_prompt)
+        ])
+        
+        raw_content = response.content.strip()
+        
+        match = re.search(r'\[.*\]', raw_content, re.DOTALL)
+        if match:
+            clean_str = match.group(0)
+        else:
+            clean_str = "[]"
+
+        try:
+            apps_needed = json.loads(clean_str)
+        except json.JSONDecodeError:
+            try:
+                apps_needed = ast.literal_eval(clean_str)
+            except Exception:
+                apps_needed = []
+        
+        if isinstance(apps_needed, list):
+            return [str(app) for app in apps_needed if app in available_apps]
+            
+        return []
+        
+    except Exception as e:
+        print(f"⚠️ Router failed to parse. Error: {e}")
+        if 'raw_content' in locals():
+            print(f"⚠️ Raw LLM Output was: {raw_content}")
+        return []
+
 async def get_agent(
     modal_name: str = "meta-llama/llama-4-scout-17b-16e-instruct", 
-    user_notion_token: str = None,
-    enable_notion: bool = False,
+    user_notion_token: str = None, enable_notion: bool = False,
+    user_gdrive_token: str = None, enable_gdrive: bool = False,
+    user_discord_token: str = None, enable_discord: bool = False,
+    user_slack_token: str = None, enable_slack: bool = False,
     enable_n8n: bool = False,
 ):
-    print("modal_name",modal_name)
-    llm = ChatGroq(model=modal_name, groq_api_key=api_key,streaming=True)
+    print(f"\n⚙️ Initializing Agent | Model: {modal_name}")
+    llm = ChatGroq(model=modal_name, groq_api_key=api_key, streaming=True)
     tools = []
-    cached_search = get_cached_search_tools()
+    
+    cached_search = get_cached_tools("search")
     if not cached_search:
+        print("⏳ Cache miss. Fetching Search tools...")
         cached_search = get_search_tools()
-        set_cached_search_tools(cached_search)
+        set_cached_tools("search", cached_search)
+        print("✅ Search tools loaded.")
+    else:
+        print("⚡ Loaded Search tools from cache.")
+    
+    if cached_search:
+        tools.extend(cached_search)
 
-    tools.extend(cached_search)
+    mcp_configs = [
+        ("n8n", enable_n8n, "default", get_n8n_tools, False),
+        ("notion", enable_notion, user_notion_token, get_notion_tools, True),
+        ("gdrive", enable_gdrive, user_gdrive_token, get_gdrive_tools, True),
+        ("discord", enable_discord, user_discord_token, get_discord_tools, True),
+        ("slack", enable_slack, user_slack_token, get_slack_tools, True),
+    ]
 
-    if enable_n8n:
-        cached_n8n = get_cached_n8n_tools()
-
-        if not cached_n8n:
+    for name, is_enabled, token, fetch_func, requires_token in mcp_configs:
+        print(f"🔍 Checking {name.capitalize()} tools...")
+        
+        if not is_enabled:
+            print(f"⏭️ Skipping {name.capitalize()} tools (Flag disabled).")
+            continue
+            
+        if requires_token and not token:
+            print(f"⏭️ Skipping {name.capitalize()} tools (Missing token).")
+            continue
+            
+        cache_key_token = token if token else "default"
+        cached_tool = get_cached_tools(name, cache_key_token)
+        
+        if not cached_tool:
+            print(f"   ⏳ Cache miss. Fetching {name.capitalize()} MCP tools...")
             try:
-                cached_n8n = await get_n8n_tools()
-                set_cached_n8n_tools(cached_n8n)
-                print("✅ n8n MCP cached")
+                if requires_token:
+                    cached_tool = await fetch_func(token)
+                else:
+                    cached_tool = await fetch_func()
+                set_cached_tools(name, cached_tool, cache_key_token)
+                print(f"   ✅ {name.capitalize()} MCP tools loaded & cached.")
             except Exception as e:
-                print("⚠️ n8n MCP unavailable:", e)
-
-        if cached_n8n:
-            tools.extend(cached_n8n)
-
-    if enable_notion and user_notion_token:
-        cached_notion = get_cached_notion_tools(user_notion_token)
-
-        if not cached_notion:
-            try:
-                cached_notion = await get_notion_tools(user_notion_token)
-                set_cached_notion_tools(user_notion_token, cached_notion)
-                print("✅ Notion MCP cached")
-            except Exception as e:
-                print("⚠️ Notion MCP unavailable:", e)
-
-        if cached_notion:
-            tools.extend(cached_notion)
-
-    print(f"Total tools active: {len(tools)} | Model: {modal_name}")
-
+                print(f"   ⚠️ {name.capitalize()} MCP unavailable: {e}")
+                cached_tool = []
+        else:
+            print(f"⚡ Loaded {name.capitalize()} tools from cache.")
+            
+        if cached_tool:
+            tools.extend(cached_tool)
+    
     return create_agent(llm, tools=tools)
 
-async def stream_agent(messages):
-    print("\n================ STREAM AGENT START ================")
-    
-    agent = await get_agent()
+async def stream_agent(
+    messages, 
+    modal_name="meta-llama/llama-4-scout-17b-16e-instruct", 
+    notion_token=None, enable_notion=False,
+    gdrive_token=None, enable_gdrive=False,
+    discord_token=None, enable_discord=False,
+    slack_token=None, enable_slack=False,
+    enable_n8n=False
+):  
+    agent = await get_agent(
+        modal_name=modal_name,
+        user_notion_token=notion_token, enable_notion=enable_notion,
+        user_gdrive_token=gdrive_token, enable_gdrive=enable_gdrive,
+        user_discord_token=discord_token, enable_discord=enable_discord,
+        user_slack_token=slack_token, enable_slack=enable_slack,
+        enable_n8n=enable_n8n
+    )
     print("✅ Agent created")
 
     async for event in agent.astream_events({"messages": messages}, version="v2"):
-        
         kind = event["event"]
         
         if kind == "on_chat_model_stream":
             chunk = event["data"]["chunk"]
-            
             if hasattr(chunk, "content") and chunk.content:
                 yield chunk.content
                 

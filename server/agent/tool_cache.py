@@ -1,33 +1,20 @@
-from typing import Dict, List
+from typing import Dict, List, Any
 
-_search_tools = None
-_n8n_tools = None
-_notion_tools: Dict[str, List] = {}
+# Single global dictionary to hold all tools
+# Key format will be "tool_name:token" (e.g., "search:default" or "notion:secret_123")
+_TOOL_CACHE: Dict[str, List[Any]] = {}
 
+def get_cached_tools(tool_type: str, token: str = "default") -> List[Any]:
+    """
+    Retrieve tools from the global cache.
+    Uses 'default' for tools that don't require user-specific tokens.
+    """
+    cache_key = f"{tool_type}:{token}"
+    return _TOOL_CACHE.get(cache_key)
 
-def get_cached_search_tools():
-    global _search_tools
-    return _search_tools
-
-
-def set_cached_search_tools(tools):
-    global _search_tools
-    _search_tools = tools
-
-
-def get_cached_n8n_tools():
-    global _n8n_tools
-    return _n8n_tools
-
-
-def set_cached_n8n_tools(tools):
-    global _n8n_tools
-    _n8n_tools = tools
-
-
-def get_cached_notion_tools(token: str):
-    return _notion_tools.get(token)
-
-
-def set_cached_notion_tools(token: str, tools):
-    _notion_tools[token] = tools
+def set_cached_tools(tool_type: str, tools: List[Any], token: str = "default"):
+    """
+    Store tools in the global cache.
+    """
+    cache_key = f"{tool_type}:{token}"
+    _TOOL_CACHE[cache_key] = tools

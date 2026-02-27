@@ -267,7 +267,7 @@ const Page = () => {
                   isPending={sendQuery.isPending}
                   handleFileChange={handleFileChange}
                   files={files}
-                  stop={stop}
+                  stop={handleStop}
                 />
               </div>
             </div>

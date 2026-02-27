@@ -41,7 +41,7 @@ async def get_history(
     )
 ):
     """Get paginated chat history - perfect for infinite scroll up"""
-    history = await get_chat_history(id, limit, before)
+    history = get_chat_history(id, limit, before)
     return {
         "id": id,
         "history": history,

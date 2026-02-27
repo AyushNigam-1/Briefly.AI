@@ -57,3 +57,24 @@ def get_user_by_username(username: str):
 
 def create_user(user_data: dict):
     users_collection.insert_one(user_data)
+
+def get_valid_username(current_user: dict) -> str:
+    """Extracts and validates username from the current user dependency."""
+    username = current_user.get("username")
+    if not username:
+        raise HTTPException(status_code=401, detail="Invalid user token")
+    return username
+
+def verify_state_token(state: str) -> str:
+    """Decodes the JWT state token and returns the username."""
+    if not state:
+        raise HTTPException(status_code=401, detail="Authentication state missing")
+    try:
+        payload = jwt.decode(state, SECRET_KEY, algorithms=[ALGORITHM])
+        username = payload.get("username")
+        if not username:
+            raise HTTPException(status_code=401, detail="Invalid token payload")
+        return username
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
