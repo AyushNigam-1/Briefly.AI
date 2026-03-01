@@ -5,8 +5,9 @@ import { VList, VListHandle } from 'virtua';
 import InputBox from "./InputBox";
 import SourcesSidebar from "./panels/SourcesPanel";
 import { query } from "@/app/types";
-import { Copy, FileText, ImageIcon, RefreshCw } from "lucide-react";
+import { ChevronDown, Copy, FileText, ImageIcon, RefreshCw } from "lucide-react";
 import remarkGfm from "remark-gfm";
+import { Disclosure, DisclosureButton, DisclosurePanel } from "@headlessui/react";
 
 interface ChatsProps {
     queries: query[];
@@ -68,15 +69,18 @@ const Chats = ({
     };
 
     useEffect(() => {
-        // Auto-scroll when new messages arrive or while streaming, but only if user is already at bottom
-        if (queries.length > prevQueriesRef.current.length || isPending) {
-            if (atBottomRef.current) {
-                // 'smooth' can be used here for new messages, but 'instant' is better for streaming
-                vlistRef.current?.scrollToIndex(queries.length - 1, { align: 'end' });
-            }
+        const prev = prevQueriesRef.current;
+        const isNewMessageAppended =
+            queries.length > prev.length &&
+            queries[queries.length - 1]?.content !== prev[prev.length - 1]?.content;
+
+        if (isNewMessageAppended && atBottomRef.current) {
+            requestAnimationFrame(() => {
+                vlistRef.current?.scrollToIndex(queries.length - 1, { align: "end" });
+            });
         }
         prevQueriesRef.current = queries;
-    }, [queries, isPending]);
+    }, [queries]);
 
     const copyToClipboard = async (text?: string) => {
         if (text) {
@@ -104,8 +108,11 @@ const Chats = ({
                             }
 
                             return (
-                                <div
-                                    key={index}
+                                <motion.div
+                                    key={`${index}-${q.content?.length}`}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.25, ease: "easeOut" }}
                                     className={`flex w-full ${q.sender === "user" ? "justify-end" : "justify-start"}`}
                                 >
                                     <div className={`flex flex-col gap-1 max-w-[85%] group ${q.sender === "user" ? "items-end" : "items-start"}`}>
@@ -135,16 +142,89 @@ const Chats = ({
                                                 <p className="text-[18px] leading-relaxed p-4">{q.content}</p>
                                             ) : (
                                                 <div className="prose dark:prose-invert max-w-none">
+                                                    {
+                                                        q.sender === "llm" && q.thinking && (
+                                                            <Disclosure as="div" className="">
+                                                                {({ open }) => (
+                                                                    <div className="rounded-xl overflow-hidden transition-colors space-y-2">
+                                                                        <DisclosureButton className="flex w-min items-center justify-between text-md font-semibold gap-1 text-slate-500 hover:text-slate-100 transition-colors select-none">
+                                                                            <span>Thought</span>
+                                                                            <ChevronDown
+                                                                                size={16}
+                                                                                className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+                                                                            />
+                                                                        </DisclosureButton>
+                                                                        <DisclosurePanel
+                                                                            transition
+                                                                            className="text-base font-mono whitespace-pre-wrap text-slate-200 opacity-80 transition duration-200 ease-out data-[closed]:-translate-y-2 data-[closed]:opacity-0"
+                                                                        >
+                                                                            {q.thinking}
+                                                                        </DisclosurePanel>
+                                                                    </div>
+                                                                )}
+                                                            </Disclosure>
+                                                        )
+                                                    }
                                                     <ReactMarkdown
                                                         remarkPlugins={[remarkGfm]}
                                                         components={{
-                                                            p: ({ children }) => <p className="mb-4 last:mb-0 text-[18px] leading-[1.8] text-slate-700 dark:text-zinc-200">{children}</p>
+                                                            h1: ({ children }) => (
+                                                                <h1 className="text-3xl font-semibold mb-4 text-slate-900 dark:text-zinc-100">
+                                                                    {children}
+                                                                </h1>
+                                                            ),
+                                                            h2: ({ children }) => (
+                                                                <h2 className="text-2xl font-semibold mt-6 mb-3 text-slate-900 dark:text-zinc-100">
+                                                                    {children}
+                                                                </h2>
+                                                            ),
+                                                            h3: ({ children }) => (
+                                                                <h3 className="text-xl font-semibold mt-5 mb-3 text-slate-900 dark:text-zinc-100">
+                                                                    {children}
+                                                                </h3>
+                                                            ),
+                                                            p: ({ children }) => (
+                                                                <p className="text-[18px] leading-[1.8] text-slate-700 dark:text-zinc-200 mb-4">
+                                                                    {children}
+                                                                </p>
+                                                            ),
+                                                            ul: ({ children }) => (
+                                                                <ul className="ml-6 mb-4 list-disc space-y-2 text-[18px] leading-[1.8] text-slate-700 dark:text-zinc-200">
+                                                                    {children}
+                                                                </ul>
+                                                            ),
+                                                            ol: ({ children }) => (
+                                                                <ol className="ml-6 mb-4 list-decimal space-y-2 text-[18px] leading-[1.8] text-slate-700 dark:text-zinc-200">
+                                                                    {children}
+                                                                </ol>
+                                                            ),
+                                                            li: ({ children }) => <li>{children}</li>,
+                                                            blockquote: ({ children }) => (
+                                                                <blockquote className="border-l-2 pl-4 my-5 italic text-[18px] leading-[1.8]
+                                                                border-slate-300 text-slate-500 
+                                                                dark:border-zinc-600 dark:text-zinc-400"
+                                                                >
+                                                                    {children}
+                                                                </blockquote>
+                                                            ),
+                                                            code: ({ children }) =>
+                                                            (
+                                                                <pre className="rounded-xl p-5 my-5 overflow-x-auto border
+                                                                    bg-slate-50 border-slate-200 
+                                                                    dark:bg-zinc-900 dark:border-transparent"
+                                                                >
+                                                                    <code className="text-[15px] leading-7 text-slate-800 dark:text-zinc-200">
+                                                                        {children}
+                                                                    </code>
+                                                                </pre>
+                                                            ),
+                                                            strong: ({ children }) => (
+                                                                <strong className="font-semibold text-slate-900 dark:text-zinc-50">{children}</strong>
+                                                            )
                                                         }}
                                                     >
                                                         {q.content || ""}
                                                     </ReactMarkdown>
-
-
                                                 </div>
                                             )}
                                         </div>
@@ -169,7 +249,7 @@ const Chats = ({
                                             </div>
                                         )}
                                     </div>
-                                </div>
+                                </motion.div>
                             );
                         }}
                     </VList>

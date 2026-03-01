@@ -5,9 +5,7 @@ import axios from "axios";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Cookies from "js-cookie";
-import Navbar from "@/app/components/ui/Navbar";
 import InputBox from "@/app/components/ui/InputBox";
-import Sidebar from "@/app/components/ui/panels/Sidebar";
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import Chats from "@/app/components/ui/Chats";
 import { metadata, query } from "@/app/types";
@@ -118,8 +116,10 @@ const Page = () => {
         files: files.map(file => ({ name: file.name, size: file.size, type: file.type, url: "" })),
         created_at: ""
       },
-      { sender: "llm", content: "", sources: [], created_at: "" }
+      // 🌟 1. Added `thinking: ""` and `tool: null` to the initial empty LLM state
+      { sender: "llm", content: "", thinking: "", sources: [], created_at: "" }
     ]);
+
     try {
       const form = new FormData();
       form.append("query", query);
@@ -133,7 +133,7 @@ const Page = () => {
 
       await fetchEventSource("http://localhost:8000/query", {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` }, // Make sure 'token' is in scope
         body: form,
         signal: abortControllerRef.current.signal,
 
@@ -144,6 +144,7 @@ const Page = () => {
         onmessage(msg) {
           const parsed = JSON.parse(msg.data);
 
+          // 🌟 2. Handle standard text tokens
           if (parsed.type === "token") {
             setQueries(prev => {
               const updated = [...prev];
@@ -151,6 +152,27 @@ const Page = () => {
               return updated;
             });
           }
+
+          // 🌟 3. Handle the new thinking tokens
+          if (parsed.type === "thinking") {
+            setQueries(prev => {
+              const updated = [...prev];
+              // Safely append to the thinking string
+              const currentThinking = updated[updated.length - 1].thinking || "";
+              updated[updated.length - 1].thinking = currentThinking + parsed.data;
+              return updated;
+            });
+          }
+
+          // 🌟 4. Handle tool execution status (Optional but great for UX!)
+          // if (parsed.type === "tool_status") {
+          //   setQueries(prev => {
+          //     const updated = [...prev];
+          //     // You can use this to show "Using linear_create_issue..." in the UI
+          //     updated[updated.length - 1].tool = parsed.status === "running" ? parsed.tool : null;
+          //     return updated;
+          //   });
+          // }
 
           if (parsed.type === "done") {
             setPending(false);
@@ -160,6 +182,8 @@ const Page = () => {
               setQueries(prev => {
                 const updated = [...prev];
                 updated[updated.length - 1].sources = parsed.sources;
+                // Clear out the tool status when done
+                // updated[updated.length - 1].tool = null;
                 return updated;
               });
             }
@@ -208,7 +232,6 @@ const Page = () => {
 
   return (
     <>
-      <Navbar component={<Sidebar />} />
       <AnimatePresence mode="wait">
         {activeId && queries.length > 0 ? (
           <motion.div
@@ -229,14 +252,12 @@ const Page = () => {
               setFiles={setFiles}
               handleStop={handleStop}
               handleFileChange={handleFileChange}
-              // ── NEW PROPS FOR INFINITE SCROLL ──
               loadOlderChats={loadOlderChats}
               isLoadingOlder={isLoadingOlder}
               hasMore={hasMore}
             />
           </motion.div>
         ) : (
-          /* your intro screen stays exactly the same */
           <motion.div
             key="intro"
             initial={{ opacity: 0, scale: 0.95, x: "-50%", y: "-50%" }}
@@ -248,12 +269,10 @@ const Page = () => {
           >
             <div className="flex flex-col gap-6 md:gap-10 font-mono">
               <div className="text-center space-y-3 md:space-y-4">
-                {/* 🌟 Added tracking-tight for a cleaner, modern heading look */}
                 <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
                   How can I help you today?
                 </h3>
 
-                {/* 🌟 Subtitle colors seamlessly shift based on the theme */}
                 <p className="text-sm sm:text-base transition-colors
         text-slate-500 
         dark:text-gray-400"

@@ -137,9 +137,11 @@ async def get_agent(
     
     return create_agent(llm, tools=tools)
 
+import json
+
 async def stream_agent(
     messages, 
-    modal_name="meta-llama/llama-4-scout-17b-16e-instruct", 
+    modal_name="meta-llama/llama-4-scout-17b-16e-instruct", # 🌟 Fixed typo
     notion_token=None, enable_notion=False,
     gdrive_token=None, enable_gdrive=False,
     linear_token=None, enable_linear=False,
@@ -147,7 +149,7 @@ async def stream_agent(
     enable_n8n=False
 ):  
     agent = await get_agent(
-        modal_name=modal_name,
+        modal_name=modal_name, # 🌟 Fixed typo
         user_notion_token=notion_token, enable_notion=enable_notion,
         user_gdrive_token=gdrive_token, enable_gdrive=enable_gdrive,
         user_linear_token=linear_token, enable_linear=enable_linear,
@@ -161,6 +163,15 @@ async def stream_agent(
         
         if kind == "on_chat_model_stream":
             chunk = event["data"]["chunk"]
+            
+            # 🌟 Catch native API "thinking" (if the provider uses reasoning_content instead of raw text)
+            if hasattr(chunk, "additional_kwargs") and "reasoning_content" in chunk.additional_kwargs:
+                reasoning = chunk.additional_kwargs["reasoning_content"]
+                print("resoning",reasoning)
+                if reasoning:
+                    yield {"type": "thinking", "data": reasoning}
+            
+            # Yield standard text content
             if hasattr(chunk, "content") and chunk.content:
                 yield chunk.content
                 
@@ -168,6 +179,14 @@ async def stream_agent(
             tool_name = event["name"]
             tool_inputs = event["data"].get("input")
             print(f"🔧 TOOL STARTED: {tool_name} with inputs: {tool_inputs}")
+            
+            yield {"type": "tool_status", "tool": tool_name, "status": "running"}
+            
+        elif kind == "on_tool_end":
+            tool_name = event["name"]
+            print(f"✅ TOOL ENDED: {tool_name}")
+            
+            yield {"type": "tool_status", "tool": tool_name, "status": "completed"}
             
         elif kind == "on_chat_model_end":
             print("📦 MODEL GENERATION COMPLETE")

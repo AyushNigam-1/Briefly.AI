@@ -4,7 +4,7 @@ from controllers.mongo import summary_collection
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage
 from typing import Optional
-
+import re
 from agent.agent_factory import  run_agent , generate_chat_title , extract_sources , extract_memory , stream_agent , route_tools
 from controllers.memory_handler import get_user_memories, save_user_memories
 from controllers.file_handler import process_files
@@ -82,15 +82,23 @@ def build_messages(chat, user_input, file_context):
     return messages
 
 
-def save_chat_turn(chat_id, user_input, assistant_text, files, sources, title=None):
+def save_chat_turn(chat_id, user_input, assistant_text, files, sources, title=None, thinking_text=None):
     now = datetime.now(timezone.utc)
+    llm_turn = {
+        "sender": "llm", 
+        "content": assistant_text, 
+        "sources": sources,
+        "created_at": now
+    }
+    if thinking_text:
+        llm_turn["thinking"] = thinking_text
 
     payload = {
         "$push": {
             "queries": {
                 "$each": [
-                    {"sender": "user", "content": user_input, "files": files ,"created_at": now},
-                    {"sender": "llm", "content": assistant_text, "sources": sources,"created_at": now},
+                    {"sender": "user", "content": user_input, "files": files, "created_at": now},
+                    llm_turn
                 ]
             }
         },
@@ -112,11 +120,13 @@ async def chat_stream(user_input, user_id, chat_id=None, files=None, modal_name=
         return
 
     messages = build_messages(chat_doc, user_input, file_context)
+    
+    # 🌟 Initialize both text accumulators
     assistant_text = ""
+    thinking_text = ""
 
     try:
-        # 1. Fetch the user's connected app tokens from MongoDB
-        from controllers.mongo import users_collection # Adjust import path as needed
+        from controllers.mongo import users_collection 
         user = users_collection.find_one({"_id": ObjectId(user_id)})
         app_tokens = user.get("app_tokens", {}) if user else {}
 
@@ -124,7 +134,7 @@ async def chat_stream(user_input, user_id, chat_id=None, files=None, modal_name=
         gdrive_token = app_tokens.get("google_drive")
         linear_token = app_tokens.get("linear")
         slack_token = app_tokens.get("slack")
-        n8n_connected = True # Assuming n8n is always available, or toggle this
+        n8n_connected = True 
 
         available_apps = []
         if notion_token: available_apps.append("notion")
@@ -133,11 +143,9 @@ async def chat_stream(user_input, user_id, chat_id=None, files=None, modal_name=
         if slack_token: available_apps.append("slack")
         if n8n_connected: available_apps.append("n8n")
 
-        # 3. Call the Router to see what we actually need
         needed_apps = await route_tools(user_input, available_apps)
-        print(f"🚦 Router decided we need: {needed_apps}",linear_token)
+        print(f"🚦 Router decided we need: {needed_apps}")
 
-        # 4. Stream the agent with ONLY the required apps enabled
         async for chunk in stream_agent(
             messages,
             modal_name=modal_name,
@@ -147,16 +155,48 @@ async def chat_stream(user_input, user_id, chat_id=None, files=None, modal_name=
             slack_token=slack_token, enable_slack="slack" in needed_apps,
             enable_n8n="n8n" in needed_apps
         ):
-            assistant_text += chunk
-            yield f"data: {json.dumps({'type': 'token', 'data': chunk})}\n\n"
+            # 🌟 THE FIX: Differentiate between dictionaries (tools/thinking) and strings
+            if isinstance(chunk, dict):
+                chunk_type = chunk.get("type")
+                if chunk_type == "thinking":
+                    thinking_text += chunk.get("data", "")
+                    yield f"data: {json.dumps(chunk)}\n\n"
+                elif chunk_type == "tool_status":
+                    yield f"data: {json.dumps(chunk)}\n\n"
+            
+            elif isinstance(chunk, str):
+                assistant_text += chunk
+                yield f"data: {json.dumps({'type': 'token', 'data': chunk})}\n\n"
 
-        # 5. Save the chat
+        # --- POST-PROCESSING ---
+        # Fallback: Check for raw <think> tags from models that don't output native reasoning dicts
+        think_match = re.search(r"<think>(.*?)</think>", assistant_text, flags=re.DOTALL | re.IGNORECASE)
+        
+        if think_match:
+            extracted_think = think_match.group(1).strip()
+            # Append to whatever native thinking text we already grabbed
+            thinking_text = (thinking_text + "\n" + extracted_think).strip()
+            # Strip the tags out of the final display text
+            assistant_text = re.sub(r"<think>.*?</think>", "", assistant_text, flags=re.DOTALL | re.IGNORECASE).strip()
+
+        # If thinking_text is completely empty, set to None so we don't save empty strings in the DB
+        if not thinking_text:
+            thinking_text = None
+
         sources = []
         title = None
         if is_new:
             title = await generate_chat_title(user_input)
 
-        save_chat_turn(chat_oid, user_input, assistant_text, uploaded_files, sources, title)
+        save_chat_turn(
+            chat_id=chat_oid, 
+            user_input=user_input, 
+            assistant_text=assistant_text, 
+            files=uploaded_files, 
+            sources=sources, 
+            title=title,
+            thinking_text=thinking_text # 🌟 Safely passes combined thinking
+        )
 
         yield f"data: {json.dumps({'type': 'done', 'id': str(chat_oid), 'title': title, 'sources': sources})}\n\n"
 

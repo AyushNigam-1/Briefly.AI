@@ -1,3 +1,5 @@
+"use client"
+
 import { useState, useEffect } from "react";
 import Cookies from "js-cookie";
 import axios from "axios";
@@ -12,12 +14,29 @@ import {
     MenuItems,
     DialogBackdrop,
 } from "@headlessui/react";
-import { Delete, EllipsisVertical, MessageSquare, PanelLeft, PanelLeftDashed, Pin, Plus, Search, Share, Share2, Stars, Trash, X } from "lucide-react";
+import {
+    ChevronLeft,
+    ChevronRight,
+    Delete,
+    EllipsisVertical,
+    MessageSquare,
+    PanelLeft,
+    PanelLeftDashed,
+    Pin,
+    Plus,
+    Search,
+    Share,
+    Share2,
+    Stars,
+    Trash,
+    X
+} from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { SummaryHistoryResponse } from "@/app/types";
 import TaskManagerModal from "../modals/Tasks";
 import ShareModal from "../modals/ShareModal";
+import DeleteChatDialog from "../modals/DeleteChatModal";
 
 const groupSummariesByDate = (summaries: SummaryHistoryResponse[]) => {
     const grouped = {
@@ -151,7 +170,7 @@ const Sidebar: React.FC = () => {
             label: 'Delete',
             icon: (<Trash size={20} />),
             action: (e: React.MouseEvent) => {
-                e.preventDefault(); // Stop Link navigation
+                e.preventDefault();
                 setSummaryId(chat.id);
                 setDialogOpen(true);
             }
@@ -159,27 +178,25 @@ const Sidebar: React.FC = () => {
     ]
     return (
         <>
-            {/* Toggle Button */}
-            <button
-                onClick={toggleSidebar}
-                className="p-3 rounded-full transition-colors shadow-sm
-                    bg-slate-100 text-slate-700 hover:bg-slate-200
-                    dark:bg-primary dark:text-tertiary dark:hover:bg-primary/90"
-            >
-                <PanelLeft size={20} />
-            </button>
             <div
                 className={`fixed top-0 left-0 h-full w-72 border-r font-mono shadow-lg transform transition-all duration-300 z-50 
                     bg-white border-slate-200 text-slate-800
                     dark:bg-tertiary dark:border-secondary dark:text-white
                     ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
             >
+                <button
+                    onClick={toggleSidebar}
+                    className="absolute top-1/2 -right-5 flex h-16 w-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded-r-lg border border-l-0 border-slate-200 bg-white text-slate-500 shadow-md transition-colors hover:text-slate-800 dark:border-secondary dark:bg-tertiary dark:text-gray-400 dark:hover:text-white"
+                >
+                    {isOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+                </button>
+
                 <div className="p-4 space-y-4 h-full flex flex-col">
                     <div className="flex items-center justify-between">
                         <h2 className="text-xl font-bold">Chats</h2>
-                        <button onClick={toggleSidebar}>
+                        {/* <button onClick={toggleSidebar}>
                             <X size={20} className="transition-colors text-slate-400 hover:text-slate-800 dark:text-gray-400 dark:hover:text-white" />
-                        </button>
+                        </button> */}
                     </div>
                     <hr className="border transition-colors border-slate-200 dark:border-secondary" />
 
@@ -277,63 +294,11 @@ const Sidebar: React.FC = () => {
                 chatId={shareChatInfo.id}
                 chatTitle={shareChatInfo.title}
             />
-
-            {/* Delete Dialog */}
-            <Dialog
-                open={dialogOpen}
+            <DeleteChatDialog
+                isOpen={dialogOpen}
                 onClose={() => setDialogOpen(false)}
-                className="relative z-[60] font-mono"
-            >
-                {/* Animated Backdrop with Blur */}
-                <DialogBackdrop
-                    transition
-                    className="fixed inset-0 backdrop-blur-sm transition-opacity duration-300 ease-out data-[closed]:opacity-0
-                        bg-black/30 dark:bg-black/60"
-                />
-
-                <div className="fixed inset-0 flex items-center justify-center p-4">
-                    {/* Animated Panel */}
-                    <DialogPanel
-                        transition
-                        className="w-full max-w-sm rounded-2xl border p-6 shadow-2xl transition duration-300 ease-out data-[closed]:scale-95 data-[closed]:opacity-0 data-[closed]:translate-y-4
-                            bg-white border-slate-200 shadow-slate-200/50
-                            dark:bg-tertiary dark:border-secondary dark:shadow-black/50"
-                    >
-                        <DialogTitle className="text-xl font-bold text-center
-                            text-slate-900 dark:text-white"
-                        >
-                            Delete chat?
-                        </DialogTitle>
-
-                        <Description className="mt-3 text-sm leading-relaxed text-center
-                            text-slate-500 dark:text-slate-400"
-                        >
-                            This action cannot be undone. It will permanently delete this conversation from your history.
-                        </Description>
-
-                        <div className="flex justify-center gap-3 mt-8">
-                            <button
-                                onClick={() => setDialogOpen(false)}
-                                className="px-4 py-2.5 rounded-xl font-semibold transition-colors
-                                    text-slate-600 hover:text-slate-900 hover:bg-slate-100
-                                    dark:text-slate-300 bg-white/5 dark:hover:text-white dark:hover:bg-white/10"
-                            >
-                                Cancel
-                            </button>
-
-                            <button
-                                onClick={() => {
-                                    handleDelete();
-                                    setDialogOpen(false);
-                                }}
-                                className="px-5 py-2.5 rounded-xl font-semibold bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all duration-200"
-                            >
-                                Delete
-                            </button>
-                        </div>
-                    </DialogPanel>
-                </div>
-            </Dialog>
+                onConfirm={handleDelete}
+            />
         </>
     );
 };

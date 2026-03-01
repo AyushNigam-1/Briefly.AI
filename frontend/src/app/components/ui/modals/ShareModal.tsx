@@ -1,3 +1,4 @@
+"use client"
 import { useState } from "react";
 import { Dialog, DialogPanel, DialogTitle, DialogBackdrop } from "@headlessui/react";
 import { Link2, Copy, Check, X, Twitter, Linkedin, Facebook, MessageCircle, Mail } from "lucide-react";
@@ -94,9 +95,9 @@ export default function ShareModal({ isOpen, onClose, chatId, chatTitle }: Share
                         </div>
                         <button
                             onClick={onClose}
-                            className="p-1 rounded-md transition-colors
-                                text-slate-500 hover:text-slate-900 hover:bg-slate-100
-                                dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/5"
+                            className="rounded-md transition-colors
+                                text-slate-500 hover:text-slate-900 
+                                dark:text-slate-400 dark:hover:text-white"
                         >
                             <X size={20} />
                         </button>

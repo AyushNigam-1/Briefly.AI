@@ -15,7 +15,8 @@ export type query = {
     thought?: string;
     sources?: [];
     files?: FileMetadata[]
-    created_at: string
+    created_at: string;
+    thinking?: string;
 };
 
 export type FileMetadata = {

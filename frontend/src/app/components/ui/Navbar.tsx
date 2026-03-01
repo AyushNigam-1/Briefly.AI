@@ -26,22 +26,11 @@ const Navbar: React.FC<NavbarProps> = ({ component }) => {
     return (
         <>
             {/* 🌟 Added light mode border: border-slate-200 */}
-            <div className='flex justify-between relative items-center max-w-6xl mx-auto py-4 border-b border-slate-200 dark:border-secondary transition-colors duration-300'>
-
-                {/* LEFT: Sidebar trigger (Only visible if logged in) */}
-                {isLoggedIn && (
-                    <div className="flex-1 flex justify-start">
-                        {component}
-                    </div>
-                )}
-
-                {/* CENTER: Logo */}
-                {/* Note: If your logo is pure black text, you might want to add 'dark:invert' to this img tag so it turns white in dark mode! */}
+            <div className='flex justify-between relative  items-center  py-4 border-b border-slate-200 dark:border-secondary transition-colors duration-300'>
                 <div className="flex-1 flex justify-center lg:justify-start">
                     <img src="/logo.png" alt="Logo" className='w-32 md:w-40 h-auto' />
                 </div>
 
-                {/* RIGHT: User Menu or Auth Buttons */}
                 <div className="flex-1 flex justify-end gap-3 items-center">
                     {isLoggedIn ? (
                         <>

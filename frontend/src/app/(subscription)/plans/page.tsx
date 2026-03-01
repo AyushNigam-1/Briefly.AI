@@ -91,9 +91,7 @@ export default function PricingPage() {
 
     return (
         <>
-            <Navbar />
-
-            <div className="min-h-screen bg-[#0b0b0b] text-slate-200 py-20 px-4 font-mono flex flex-col items-center">
+            <div className="bg-[#0b0b0b] text-slate-200 py-20 px-4 font-mono flex flex-col items-center">
 
                 {/* Header section */}
                 <div className="text-center max-w-2xl mb-16 space-y-4">
