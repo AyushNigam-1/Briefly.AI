@@ -4,7 +4,7 @@ from agent.tools.search_tools import get_search_tools
 from agent.tools.n8n_tools import get_n8n_tools
 from agent.tools.gdrive_tools import get_gdrive_tools
 from agent.tools.slack_tools import get_slack_tools
-from agent.tools.discord_tools import get_discord_tools
+from agent.tools.linear_tools import get_linear_tools
 from agent.tool_cache import *
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
@@ -26,7 +26,7 @@ async def route_tools(user_prompt: str, available_apps: list) -> list:
     if not available_apps:
         return []
 
-    router_llm = ChatGroq(model="llama-3.1-8b-instant", groq_api_key=api_key, temperature=0)
+    router_llm = ChatGroq(model="meta-llama/llama-4-maverick-17b-128e-instruct", groq_api_key=api_key, temperature=0)
 
     system_prompt = f"""
     Analyze the user's prompt. Which of these apps are required to answer it?
@@ -45,7 +45,7 @@ async def route_tools(user_prompt: str, available_apps: list) -> list:
         ])
         
         raw_content = response.content.strip()
-        
+        print("raw_content",raw_content)
         match = re.search(r'\[.*\]', raw_content, re.DOTALL)
         if match:
             clean_str = match.group(0)
@@ -75,7 +75,7 @@ async def get_agent(
     modal_name: str = "meta-llama/llama-4-scout-17b-16e-instruct", 
     user_notion_token: str = None, enable_notion: bool = False,
     user_gdrive_token: str = None, enable_gdrive: bool = False,
-    user_discord_token: str = None, enable_discord: bool = False,
+    user_linear_token: str = None, enable_linear: bool = False,
     user_slack_token: str = None, enable_slack: bool = False,
     enable_n8n: bool = False,
 ):
@@ -99,7 +99,7 @@ async def get_agent(
         ("n8n", enable_n8n, "default", get_n8n_tools, False),
         ("notion", enable_notion, user_notion_token, get_notion_tools, True),
         ("gdrive", enable_gdrive, user_gdrive_token, get_gdrive_tools, True),
-        ("discord", enable_discord, user_discord_token, get_discord_tools, True),
+        ("linear", enable_linear, user_linear_token, get_linear_tools, True),
         ("slack", enable_slack, user_slack_token, get_slack_tools, True),
     ]
 
@@ -142,7 +142,7 @@ async def stream_agent(
     modal_name="meta-llama/llama-4-scout-17b-16e-instruct", 
     notion_token=None, enable_notion=False,
     gdrive_token=None, enable_gdrive=False,
-    discord_token=None, enable_discord=False,
+    linear_token=None, enable_linear=False,
     slack_token=None, enable_slack=False,
     enable_n8n=False
 ):  
@@ -150,7 +150,7 @@ async def stream_agent(
         modal_name=modal_name,
         user_notion_token=notion_token, enable_notion=enable_notion,
         user_gdrive_token=gdrive_token, enable_gdrive=enable_gdrive,
-        user_discord_token=discord_token, enable_discord=enable_discord,
+        user_linear_token=linear_token, enable_linear=enable_linear,
         user_slack_token=slack_token, enable_slack=enable_slack,
         enable_n8n=enable_n8n
     )

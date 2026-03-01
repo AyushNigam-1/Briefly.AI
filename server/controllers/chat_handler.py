@@ -64,7 +64,7 @@ def build_messages(chat, user_input, file_context):
             "system",
             f"""
                 You are Briefly AI, an intelligent personal assistant.
-                You have been granted secure, direct access to the user's private data via external tools (Discord, Google Drive, Notion, Slack).
+                You have been granted secure, direct access to the user's private data via external tools (Google Drive, Notion).
                 If a user asks about their servers, channels, files, or messages, YOU MUST USE YOUR TOOLS to fetch the data.
                 NEVER tell the user you cannot access their account. You CAN access it.
                 NEVER give generic tutorials. Execute the tools and provide the actual data.
@@ -122,21 +122,20 @@ async def chat_stream(user_input, user_id, chat_id=None, files=None, modal_name=
 
         notion_token = app_tokens.get("notion")
         gdrive_token = app_tokens.get("google_drive")
-        discord_token = app_tokens.get("discord")
+        linear_token = app_tokens.get("linear")
         slack_token = app_tokens.get("slack")
         n8n_connected = True # Assuming n8n is always available, or toggle this
 
-        # 2. Build the list of available apps
         available_apps = []
         if notion_token: available_apps.append("notion")
         if gdrive_token: available_apps.append("google_drive")
-        if discord_token: available_apps.append("discord")
+        if linear_token: available_apps.append("linear")
         if slack_token: available_apps.append("slack")
         if n8n_connected: available_apps.append("n8n")
 
         # 3. Call the Router to see what we actually need
         needed_apps = await route_tools(user_input, available_apps)
-        print(f"🚦 Router decided we need: {needed_apps}")
+        print(f"🚦 Router decided we need: {needed_apps}",linear_token)
 
         # 4. Stream the agent with ONLY the required apps enabled
         async for chunk in stream_agent(
@@ -144,7 +143,7 @@ async def chat_stream(user_input, user_id, chat_id=None, files=None, modal_name=
             modal_name=modal_name,
             notion_token=notion_token, enable_notion="notion" in needed_apps,
             gdrive_token=gdrive_token, enable_gdrive="google_drive" in needed_apps,
-            discord_token=discord_token, enable_discord="discord" in needed_apps,
+            linear_token=linear_token, enable_linear="linear" in needed_apps,
             slack_token=slack_token, enable_slack="slack" in needed_apps,
             enable_n8n="n8n" in needed_apps
         ):

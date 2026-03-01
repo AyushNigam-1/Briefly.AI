@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react"
 import api from "@/app/api"
 import { useRouter, useSearchParams } from "next/navigation"
-import { CheckCircle2, Loader2, Blocks, Unplug, Plug } from "lucide-react"
+import { Loader2, Blocks, Unplug, Plug } from "lucide-react"
 import { RiNotionFill } from "react-icons/ri";
 import { FaGoogleDrive } from "react-icons/fa";
-import { FaDiscord } from "react-icons/fa";
 import { FaSlack } from "react-icons/fa";
+import { CgLinear } from "react-icons/cg";
 
 import Cookies from 'js-cookie'
 
@@ -15,14 +15,26 @@ const INTEGRATIONS = [
     {
         id: "notion",
         name: "Notion",
-        company: "Notion Labs Inc.",
+        company: "Notion Labs, Inc.",
         icon: RiNotionFill,
     },
     {
-        id: "google_drive",
+        id: "google",
         name: "Google Drive",
-        company: "Google",
+        company: "Google LLC",
         icon: FaGoogleDrive,
+    },
+    {
+        id: "linear",
+        name: "Linear",
+        company: "Linear Orbit, Inc.",
+        icon: CgLinear,
+    },
+    {
+        id: "slack",
+        name: "Slack",
+        company: "Salesforce, Inc.",
+        icon: FaSlack,
     }
 ]
 

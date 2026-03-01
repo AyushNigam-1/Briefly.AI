@@ -312,17 +312,15 @@ const Sidebar: React.FC = () => {
                         </Description>
 
                         <div className="flex justify-center gap-3 mt-8">
-                            {/* Cancel Button */}
                             <button
                                 onClick={() => setDialogOpen(false)}
                                 className="px-4 py-2.5 rounded-xl font-semibold transition-colors
                                     text-slate-600 hover:text-slate-900 hover:bg-slate-100
-                                    dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/10"
+                                    dark:text-slate-300 bg-white/5 dark:hover:text-white dark:hover:bg-white/10"
                             >
                                 Cancel
                             </button>
 
-                            {/* Confirm Button */}
                             <button
                                 onClick={() => {
                                     handleDelete();

@@ -23,35 +23,14 @@ OAUTH_CONFIG = {
             "auth": (os.getenv("NOTION_CLIENT_ID"), "secret_43gxzrplC0ATp55aDmYU5h84dBoU3YfYiLQxz0NhJKF"),
             "json": {"grant_type": "authorization_code", "code": code, "redirect_uri": cfg["auth_params"]["redirect_uri"]}
         }
-    },
-    "discord": {
-        "auth_url": "https://discord.com/api/oauth2/authorize",
-        "token_url": "https://discord.com/api/oauth2/token",
-        "auth_params": {
-            "client_id": os.getenv("DISCORD_CLIENT_ID"),
-            "response_type": "code",
-            "scope": "identify email",
-            "redirect_uri": "http://localhost:8000/discord/callback",
         },
-        # Discord uses form-urlencoded data
-        "get_token_kwargs": lambda code, cfg: {
-            "headers": {"Content-Type": "application/x-www-form-urlencoded"},
-            "data": {
-                "client_id": cfg["auth_params"]["client_id"],
-                "client_secret": os.getenv("DISCORD_CLIENT_SECRET"),
-                "grant_type": "authorization_code",
-                "code": code,
-                "redirect_uri": cfg["auth_params"]["redirect_uri"]
-            }
-        }
-    },
-    "google_drive": {
+    "google": {
         "auth_url": "https://accounts.google.com/o/oauth2/v2/auth",
         "token_url": "https://oauth2.googleapis.com/token",
         "auth_params": {
             "client_id": os.getenv("GOOGLE_CLIENT_ID"),
             "response_type": "code",
-            "scope": "https://www.googleapis.com/auth/drive.readonly",
+            "scope": "https://www.googleapis.com/auth/drive",
             "redirect_uri": "http://localhost:8000/google/callback",
             "access_type": "offline",
             "prompt": "consent",
@@ -67,12 +46,37 @@ OAUTH_CONFIG = {
             }
         }
     },
-    "slack": {
+"linear": {
+        "auth_url": "https://linear.app/oauth/authorize",
+        "token_url": "https://api.linear.app/oauth/token",
+        "auth_params": {
+            "client_id": os.getenv("LINEAR_CLIENT_ID"),
+            "response_type": "code",
+            # Linear uses comma-separated scopes. 'read,write' gives full access to their workspace.
+            # You can downgrade this to just 'read' if you only want the AI to fetch data, not create issues.
+            "scope": "read,write", 
+            "redirect_uri": "http://localhost:8000/linear/callback",
+            "prompt": "consent"
+        },
+        "get_token_kwargs": lambda code, cfg: {
+            "headers": {
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            "data": {
+                "client_id": cfg["auth_params"]["client_id"],
+                "client_secret": os.getenv("LINEAR_CLIENT_SECRET"),
+                "grant_type": "authorization_code",
+                "code": code,
+                "redirect_uri": cfg["auth_params"]["redirect_uri"]
+            }
+        }
+    },
+      "slack": {
         "auth_url": "https://slack.com/oauth/v2/authorize",
         "token_url": "https://slack.com/api/oauth.v2.access",
         "auth_params": {
             "client_id": os.getenv("SLACK_CLIENT_ID"),
-            "scope": "channels:read users:read chat:write",
+            "scope": "channels:read,groups:read,users:read,users.profile:read,chat:write,reactions:write,channels:history,groups:history",
             "redirect_uri": "http://localhost:8000/slack/callback",
         },
         "get_token_kwargs": lambda code, cfg: {
