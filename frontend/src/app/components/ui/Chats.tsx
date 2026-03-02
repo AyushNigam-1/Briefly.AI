@@ -91,14 +91,29 @@ const Chats = ({
 
     return (
         <>
+            <style>{`
+                .hide-virtua-scrollbar::-webkit-scrollbar {
+                    display: none !important;
+                    width: 0px !important;
+                    background: transparent !important;
+                }
+                .hide-virtua-scrollbar {
+                    scrollbar-width: none !important;
+                    -ms-overflow-style: none !important;
+                }
+            `}</style>
             <div className="flex flex-col items-center w-full h-[calc(100vh-140px)] relative">
-                <div className="w-full max-w-6xl h-full relative">
+                {/* Added overflow-hidden to the wrapper to clip any awkward layout bursts */}
+                <div className="w-full max-w-6xl h-full relative overflow-hidden">
+
                     <VList
                         ref={vlistRef}
                         data={queries}
                         onScroll={handleScroll}
                         shift={queries.length > prevQueriesRef.current.length && queries[0]?.content !== prevQueriesRef.current[0]?.content}
-                        className="scrollbar-none h-full w-full py-4"
+                        // Enforced standard cross-browser scrollbar hiding and prevented horizontal flashing
+                        className="hide-virtua-scrollbar h-full w-full py-4 scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                        style={{ overflowX: "hidden" }}
                     >
                         {(q, index) => {
                             const isLastItem = index === queries.length - 1;

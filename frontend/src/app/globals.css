@@ -8,6 +8,11 @@
   }
 }
 
+/* Prevent scrollbar layout flicker */
+html {
+  scrollbar-gutter: stable;
+}
+
 .custom-scrollbar {
   scrollbar-width: thin;
   /* Firefox */

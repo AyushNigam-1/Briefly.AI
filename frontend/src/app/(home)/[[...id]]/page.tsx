@@ -25,6 +25,9 @@ const Page = () => {
   const [isPending, setPending] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
 
+  // 🌟 NEW: State to track if we are fetching history on page load
+  const [isInitialLoad, setIsInitialLoad] = useState<boolean>(!!rawId);
+
   // ── Infinite scroll states ─────────────────────────────────────
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingOlder, setIsLoadingOlder] = useState(false);
@@ -65,6 +68,8 @@ const Page = () => {
       console.error("History load failed", e);
     } finally {
       if (before) setIsLoadingOlder(false);
+      // 🌟 NEW: Turn off initial loading once fetch is complete
+      setIsInitialLoad(false);
     }
   }, [rawId, token]);
 
@@ -75,6 +80,7 @@ const Page = () => {
       setActiveId(undefined);
       setHasMore(true);
       setOldestCreatedAt(null);
+      setIsInitialLoad(false); // Ensure loading is off if there's no ID
       return;
     }
 
@@ -82,6 +88,7 @@ const Page = () => {
     setActiveId(rawId);
     setHasMore(true);
     setOldestCreatedAt(null);
+    setIsInitialLoad(true); // 🌟 Trigger loading state when ID changes
 
     fetchHistory(); // initial load (no "before")
   }, [rawId, fetchHistory]);
@@ -116,7 +123,6 @@ const Page = () => {
         files: files.map(file => ({ name: file.name, size: file.size, type: file.type, url: "" })),
         created_at: ""
       },
-      // 🌟 1. Added `thinking: ""` and `tool: null` to the initial empty LLM state
       { sender: "llm", content: "", thinking: "", sources: [], created_at: "" }
     ]);
 
@@ -133,7 +139,7 @@ const Page = () => {
 
       await fetchEventSource("http://localhost:8000/query", {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` }, // Make sure 'token' is in scope
+        headers: { Authorization: `Bearer ${token}` },
         body: form,
         signal: abortControllerRef.current.signal,
 
@@ -144,7 +150,6 @@ const Page = () => {
         onmessage(msg) {
           const parsed = JSON.parse(msg.data);
 
-          // 🌟 2. Handle standard text tokens
           if (parsed.type === "token") {
             setQueries(prev => {
               const updated = [...prev];
@@ -153,26 +158,14 @@ const Page = () => {
             });
           }
 
-          // 🌟 3. Handle the new thinking tokens
           if (parsed.type === "thinking") {
             setQueries(prev => {
               const updated = [...prev];
-              // Safely append to the thinking string
               const currentThinking = updated[updated.length - 1].thinking || "";
               updated[updated.length - 1].thinking = currentThinking + parsed.data;
               return updated;
             });
           }
-
-          // 🌟 4. Handle tool execution status (Optional but great for UX!)
-          // if (parsed.type === "tool_status") {
-          //   setQueries(prev => {
-          //     const updated = [...prev];
-          //     // You can use this to show "Using linear_create_issue..." in the UI
-          //     updated[updated.length - 1].tool = parsed.status === "running" ? parsed.tool : null;
-          //     return updated;
-          //   });
-          // }
 
           if (parsed.type === "done") {
             setPending(false);
@@ -182,8 +175,6 @@ const Page = () => {
               setQueries(prev => {
                 const updated = [...prev];
                 updated[updated.length - 1].sources = parsed.sources;
-                // Clear out the tool status when done
-                // updated[updated.length - 1].tool = null;
                 return updated;
               });
             }
@@ -233,7 +224,20 @@ const Page = () => {
   return (
     <>
       <AnimatePresence mode="wait">
-        {activeId && queries.length > 0 ? (
+        {/* 🌟 NEW: Intercept rendering if it's the initial load for a specific ID */}
+        {isInitialLoad ? (
+          <motion.div
+            key="loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex items-center justify-center w-full h-[80vh]"
+          >
+            <div className="flex space-x-2 items-center text-slate-400 dark:text-gray-500">
+              <span className="animate-pulse">Loading conversation...</span>
+            </div>
+          </motion.div>
+        ) : activeId && queries.length > 0 ? (
           <motion.div
             key="chat"
             initial={{ opacity: 0, y: 20 }}
@@ -273,10 +277,7 @@ const Page = () => {
                   How can I help you today?
                 </h3>
 
-                <p className="text-sm sm:text-base transition-colors
-        text-slate-500 
-        dark:text-gray-400"
-                >
+                <p className="text-sm sm:text-base transition-colors text-slate-500 dark:text-gray-400">
                   Ask anything, upload docs, brainstorm, or chat.
                 </p>
                 <InputBox

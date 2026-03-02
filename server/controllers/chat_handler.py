@@ -1,13 +1,10 @@
 from bson import ObjectId
 from datetime import datetime, timezone
 from controllers.mongo import summary_collection
-from langchain_groq import ChatGroq
-from langchain_core.messages import HumanMessage
 from typing import Optional
-import re
-from agent.agent_factory import  run_agent , generate_chat_title , extract_sources , extract_memory , stream_agent , route_tools
-from controllers.memory_handler import get_user_memories, save_user_memories
+from controllers.mongo import users_collection
 from controllers.file_handler import process_files
+from agent.agent_graph import agent_graph
 from fastapi import HTTPException
 import traceback
 import os
@@ -15,28 +12,6 @@ import json
 from groq import Groq
 
 client = Groq(api_key=os.getenv("groq_api_key"))
-
-GUARD_MODEL = "meta-llama/llama-prompt-guard-2-86m"
-
-async def run_guard(text: str):
-    res = client.chat.completions.create(
-        model=GUARD_MODEL,
-        messages=[{"role": "user", "content": text}],
-        temperature=0,
-    )
-
-    raw = res.choices[0].message.content.strip()
-
-    try:
-        score = float(raw)
-    except:
-        return True, raw
-    THRESHOLD = 0.1
-
-    is_safe = score < THRESHOLD
-    return is_safe
-
-
 
 def get_or_create_chat(chat_id, user_id):
     if chat_id and ObjectId.is_valid(chat_id):
@@ -111,97 +86,93 @@ def save_chat_turn(chat_id, user_input, assistant_text, files, sources, title=No
     summary_collection.update_one({"_id": chat_id}, payload)
 
 async def chat_stream(user_input, user_id, chat_id=None, files=None, modal_name=None):
+
     chat_doc, chat_oid, is_new = get_or_create_chat(chat_id, user_id)
     file_context, uploaded_files = await process_files(files, user_id)
 
-    safe_input = await run_guard(user_input)
-    if not safe_input:
-        yield f"data: {json.dumps({'type': 'blocked'})}\n\n"
-        return
-
     messages = build_messages(chat_doc, user_input, file_context)
-    
-    # 🌟 Initialize both text accumulators
-    assistant_text = ""
-    thinking_text = ""
+
+    from controllers.mongo import users_collection
+    user = users_collection.find_one({"_id": ObjectId(user_id)})
+    app_tokens = user.get("app_tokens", {}) if user else {}
+
+    available_apps = []
+    if app_tokens.get("notion"):
+        available_apps.append("notion")
+    if app_tokens.get("google_drive"):
+        available_apps.append("google_drive")
+    if app_tokens.get("linear"):
+        available_apps.append("linear")
+    if app_tokens.get("slack"):
+        available_apps.append("slack")
+    available_apps.append("n8n")
+
+    initial_state = {
+        "messages": messages,
+        "modal_name": modal_name,
+        "available_apps": available_apps,
+        "selected_apps": [],
+        "blocked": False,
+        "is_new_chat": is_new,
+        "user_input": user_input,
+        "user_id": user_id,
+    }
 
     try:
-        from controllers.mongo import users_collection 
-        user = users_collection.find_one({"_id": ObjectId(user_id)})
-        app_tokens = user.get("app_tokens", {}) if user else {}
+        assistant_text = ""
+        thinking_text = ""
+        final_state = None
 
-        notion_token = app_tokens.get("notion")
-        gdrive_token = app_tokens.get("google_drive")
-        linear_token = app_tokens.get("linear")
-        slack_token = app_tokens.get("slack")
-        n8n_connected = True 
+        async for event in agent_graph.astream_events(initial_state, version="v2"):
 
-        available_apps = []
-        if notion_token: available_apps.append("notion")
-        if gdrive_token: available_apps.append("google_drive")
-        if linear_token: available_apps.append("linear")
-        if slack_token: available_apps.append("slack")
-        if n8n_connected: available_apps.append("n8n")
+            kind = event["event"]
 
-        needed_apps = await route_tools(user_input, available_apps)
-        print(f"🚦 Router decided we need: {needed_apps}")
+            if kind == "on_chat_model_stream":
+                chunk = event["data"]["chunk"]
 
-        async for chunk in stream_agent(
-            messages,
-            modal_name=modal_name,
-            notion_token=notion_token, enable_notion="notion" in needed_apps,
-            gdrive_token=gdrive_token, enable_gdrive="google_drive" in needed_apps,
-            linear_token=linear_token, enable_linear="linear" in needed_apps,
-            slack_token=slack_token, enable_slack="slack" in needed_apps,
-            enable_n8n="n8n" in needed_apps
-        ):
-            # 🌟 THE FIX: Differentiate between dictionaries (tools/thinking) and strings
-            if isinstance(chunk, dict):
-                chunk_type = chunk.get("type")
-                if chunk_type == "thinking":
-                    thinking_text += chunk.get("data", "")
-                    yield f"data: {json.dumps(chunk)}\n\n"
-                elif chunk_type == "tool_status":
-                    yield f"data: {json.dumps(chunk)}\n\n"
-            
-            elif isinstance(chunk, str):
-                assistant_text += chunk
-                yield f"data: {json.dumps({'type': 'token', 'data': chunk})}\n\n"
+                # Thinking stream
+                if hasattr(chunk, "additional_kwargs"):
+                    reasoning = chunk.additional_kwargs.get("reasoning_content")
+                    if reasoning:
+                        thinking_text += reasoning
+                        yield f"data: {json.dumps({'type': 'thinking', 'data': reasoning})}\n\n"
 
-        # --- POST-PROCESSING ---
-        # Fallback: Check for raw <think> tags from models that don't output native reasoning dicts
-        think_match = re.search(r"<think>(.*?)</think>", assistant_text, flags=re.DOTALL | re.IGNORECASE)
-        
-        if think_match:
-            extracted_think = think_match.group(1).strip()
-            # Append to whatever native thinking text we already grabbed
-            thinking_text = (thinking_text + "\n" + extracted_think).strip()
-            # Strip the tags out of the final display text
-            assistant_text = re.sub(r"<think>.*?</think>", "", assistant_text, flags=re.DOTALL | re.IGNORECASE).strip()
+                # Normal tokens
+                if hasattr(chunk, "content") and chunk.content:
+                    assistant_text += chunk.content
+                    yield f"data: {json.dumps({'type': 'token', 'data': chunk.content})}\n\n"
 
-        # If thinking_text is completely empty, set to None so we don't save empty strings in the DB
-        if not thinking_text:
+            elif kind == "on_tool_start":
+                yield f"data: {json.dumps({'type': 'tool_status', 'tool': event['name'], 'status': 'running'})}\n\n"
+
+            elif kind == "on_tool_end":
+                yield f"data: {json.dumps({'type': 'tool_status', 'tool': event['name'], 'status': 'completed'})}\n\n"
+
+            elif kind == "on_chain_end":
+                final_state = event["data"]["output"]
+
+        if not final_state:
+            final_state = {}
+
+        sources = final_state.get("sources", [])
+        title = final_state.get("title")
+
+        if not thinking_text.strip():
             thinking_text = None
 
-        sources = []
-        title = None
-        if is_new:
-            title = await generate_chat_title(user_input)
-
         save_chat_turn(
-            chat_id=chat_oid, 
-            user_input=user_input, 
-            assistant_text=assistant_text, 
-            files=uploaded_files, 
-            sources=sources, 
+            chat_id=chat_oid,
+            user_input=user_input,
+            assistant_text=assistant_text,
+            files=uploaded_files,
+            sources=sources,
             title=title,
-            thinking_text=thinking_text # 🌟 Safely passes combined thinking
+            thinking_text=thinking_text
         )
 
         yield f"data: {json.dumps({'type': 'done', 'id': str(chat_oid), 'title': title, 'sources': sources})}\n\n"
 
     except Exception:
-        import traceback
         traceback.print_exc()
         yield f"data: {json.dumps({'type': 'error'})}\n\n"
 

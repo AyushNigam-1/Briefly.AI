@@ -5,70 +5,106 @@ from agent.tools.n8n_tools import get_n8n_tools
 from agent.tools.gdrive_tools import get_gdrive_tools
 from agent.tools.slack_tools import get_slack_tools
 from agent.tools.linear_tools import get_linear_tools
+import asyncio
+import logging
+from typing import List
+from pydantic import BaseModel, Field
+from langchain_core.output_parsers import PydanticOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableLambda
 from agent.tool_cache import *
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from groq import Groq
-import re   
-import ast
 import os
 import json
-
+import logging
+import hashlib
+import logging
+# from agent_graph import AgentState , agent_graph
 load_dotenv()
+AGENT_CACHE = {}
+logger = logging.getLogger(__name__)
 api_key = os.getenv("groq_api_key")
 groq_client = Groq(api_key=api_key)
 
-async def route_tools(user_prompt: str, available_apps: list) -> list:
+ROUTER_TIMEOUT_SECONDS = 10
+
+GUARD_MODEL = "meta-llama/llama-prompt-guard-2-86m"
+
+async def run_guard(text: str):
+    res = groq_client.chat.completions.create(
+        model=GUARD_MODEL,
+        messages=[{"role": "user", "content": text}],
+        temperature=0,
+    )
+
+    raw = res.choices[0].message.content.strip()
+
+    try:
+        score = float(raw)
+    except:
+        return True, raw
+    THRESHOLD = 0.1
+
+    is_safe = score < THRESHOLD
+    return is_safe
+
+class ToolRouteResponse(BaseModel):
+    apps: List[str] = Field(
+        description="List of required app names. Empty list if none."
+    )
+
+
+async def route_tools(user_prompt: str, available_apps: List[str]) -> List[str]:
     """
-    Uses a fast, cheap model to determine which apps are needed for the prompt.
-    Bulletproof parsing handles single quotes, markdown, and conversational filler.
+    Production-grade tool router using structured output.
+    Deterministic. No regex. No manual JSON parsing.
     """
     if not available_apps:
         return []
 
-    router_llm = ChatGroq(model="meta-llama/llama-4-maverick-17b-128e-instruct", groq_api_key=api_key, temperature=0)
-
-    system_prompt = f"""
-    Analyze the user's prompt. Which of these apps are required to answer it?
-    Available apps: {available_apps}
-    
-    Rules:
-    - Return ONLY a JSON list of app names. 
-    - Use DOUBLE QUOTES only. Example: ["notion", "slack"]
-    - If no apps are needed, return []
-    """
-
     try:
-        response = await router_llm.ainvoke([
-            ("system", system_prompt),
-            ("human", user_prompt)
-        ])
-        
-        raw_content = response.content.strip()
-        print("raw_content",raw_content)
-        match = re.search(r'\[.*\]', raw_content, re.DOTALL)
-        if match:
-            clean_str = match.group(0)
-        else:
-            clean_str = "[]"
+        llm = ChatGroq(
+            model="meta-llama/llama-4-maverick-17b-128e-instruct",
+            groq_api_key=api_key,
+            temperature=0,
+        )
+        structured_llm = llm.with_structured_output(ToolRouteResponse, method="json_mode")
 
-        try:
-            apps_needed = json.loads(clean_str)
-        except json.JSONDecodeError:
-            try:
-                apps_needed = ast.literal_eval(clean_str)
-            except Exception:
-                apps_needed = []
-        
-        if isinstance(apps_needed, list):
-            return [str(app) for app in apps_needed if app in available_apps]
-            
+        prompt = ChatPromptTemplate.from_messages([
+            (
+                "system",
+                """You are a precise routing assistant. 
+                Your task is to select which apps are required to answer the user's prompt.
+                
+                Available apps: {available_apps}
+
+                Rules:
+                - You must respond in valid JSON format ONLY.
+                - The JSON must have a single key "apps" mapping to a list of strings.
+                - No conversational text, no explanations, no markdown blocks.
+                - If no apps are needed, return an empty list: {{"apps": []}}
+                """
+            ),
+            ("human", "{input}")
+        ])
+
+        chain = prompt | structured_llm
+
+        result = await chain.ainvoke({
+            "input": user_prompt,
+            "available_apps": available_apps
+        })
+
+        return [app for app in result.apps if app in available_apps]
+
+    except asyncio.TimeoutError:
+        logger.warning("Router timeout")
         return []
-        
+
     except Exception as e:
-        print(f"⚠️ Router failed to parse. Error: {e}")
-        if 'raw_content' in locals():
-            print(f"⚠️ Raw LLM Output was: {raw_content}")
+        logger.exception(f"Router failure: {e}")
         return []
 
 async def get_agent(
@@ -137,67 +173,119 @@ async def get_agent(
     
     return create_agent(llm, tools=tools)
 
-import json
 
-async def stream_agent(
-    messages, 
-    modal_name="meta-llama/llama-4-scout-17b-16e-instruct", # 🌟 Fixed typo
-    notion_token=None, enable_notion=False,
-    gdrive_token=None, enable_gdrive=False,
-    linear_token=None, enable_linear=False,
-    slack_token=None, enable_slack=False,
-    enable_n8n=False
-):  
-    agent = await get_agent(
-        modal_name=modal_name, # 🌟 Fixed typo
-        user_notion_token=notion_token, enable_notion=enable_notion,
-        user_gdrive_token=gdrive_token, enable_gdrive=enable_gdrive,
-        user_linear_token=linear_token, enable_linear=enable_linear,
-        user_slack_token=slack_token, enable_slack=enable_slack,
-        enable_n8n=enable_n8n
+
+def _build_agent_cache_key(
+    modal_name,
+    enable_notion,
+    enable_gdrive,
+    enable_linear,
+    enable_slack,
+    enable_n8n,
+    notion_token,
+    gdrive_token,
+    linear_token,
+    slack_token,
+):
+    """
+    Create deterministic cache key for agent config.
+    Tokens are hashed to avoid storing raw secrets.
+    """
+    raw = f"""
+    {modal_name}|
+    notion:{enable_notion}:{notion_token}|
+    gdrive:{enable_gdrive}:{gdrive_token}|
+    linear:{enable_linear}:{linear_token}|
+    slack:{enable_slack}:{slack_token}|
+    n8n:{enable_n8n}
+    """
+
+    return hashlib.md5(raw.encode()).hexdigest()
+
+
+async def get_agent(
+    modal_name="meta-llama/llama-4-scout-17b-16e-instruct",
+    user_notion_token=None, enable_notion=False,
+    user_gdrive_token=None, enable_gdrive=False,
+    user_linear_token=None, enable_linear=False,
+    user_slack_token=None, enable_slack=False,
+    enable_n8n=False,
+):
+
+    cache_key = _build_agent_cache_key(
+        modal_name,
+        enable_notion,
+        enable_gdrive,
+        enable_linear,
+        enable_slack,
+        enable_n8n,
+        user_notion_token,
+        user_gdrive_token,
+        user_linear_token,
+        user_slack_token,
     )
-    print("✅ Agent created")
 
-    async for event in agent.astream_events({"messages": messages}, version="v2"):
-        kind = event["event"]
-        
-        if kind == "on_chat_model_stream":
-            chunk = event["data"]["chunk"]
-            
-            # 🌟 Catch native API "thinking" (if the provider uses reasoning_content instead of raw text)
-            if hasattr(chunk, "additional_kwargs") and "reasoning_content" in chunk.additional_kwargs:
-                reasoning = chunk.additional_kwargs["reasoning_content"]
-                print("resoning",reasoning)
-                if reasoning:
-                    yield {"type": "thinking", "data": reasoning}
-            
-            # Yield standard text content
-            if hasattr(chunk, "content") and chunk.content:
-                yield chunk.content
-                
-        elif kind == "on_tool_start":
-            tool_name = event["name"]
-            tool_inputs = event["data"].get("input")
-            print(f"🔧 TOOL STARTED: {tool_name} with inputs: {tool_inputs}")
-            
-            yield {"type": "tool_status", "tool": tool_name, "status": "running"}
-            
-        elif kind == "on_tool_end":
-            tool_name = event["name"]
-            print(f"✅ TOOL ENDED: {tool_name}")
-            
-            yield {"type": "tool_status", "tool": tool_name, "status": "completed"}
-            
-        elif kind == "on_chat_model_end":
-            print("📦 MODEL GENERATION COMPLETE")
+    if cache_key in AGENT_CACHE:
+        logger.info("Reusing cached agent")
+        return AGENT_CACHE[cache_key]
 
-    print("\n================ STREAM AGENT END ================\n")
+    logger.info("Creating new agent instance")
 
+    llm = ChatGroq(
+        model=modal_name,
+        groq_api_key=api_key,
+        streaming=True
+    )
 
-async def run_agent(messages,modal_name):
-    agent = await get_agent(user_notion_token="YOUR_NOTION_TOKEN",modal_name=modal_name)
-    response = await agent.ainvoke({"messages": messages})
-    return response["messages"][-1].content, response["messages"]
+    tools = []
+
+    cached_search = get_cached_tools("search")
+    if not cached_search:
+        cached_search = get_search_tools()
+        set_cached_tools("search", cached_search)
+
+    if cached_search:
+        tools.extend(cached_search)
+
+    mcp_configs = [
+        ("n8n", enable_n8n, "default", get_n8n_tools, False),
+        ("notion", enable_notion, user_notion_token, get_notion_tools, True),
+        ("gdrive", enable_gdrive, user_gdrive_token, get_gdrive_tools, True),
+        ("linear", enable_linear, user_linear_token, get_linear_tools, True),
+        ("slack", enable_slack, user_slack_token, get_slack_tools, True),
+    ]
+
+    for name, is_enabled, token, fetch_func, requires_token in mcp_configs:
+        if not is_enabled:
+            continue
+
+        if requires_token and not token:
+            continue
+
+        cache_key_token = token if token else "default"
+        cached_tool = get_cached_tools(name, cache_key_token)
+
+        if not cached_tool:
+            try:
+                if requires_token:
+                    cached_tool = await fetch_func(token)
+                else:
+                    cached_tool = await fetch_func()
+
+                set_cached_tools(name, cached_tool, cache_key_token)
+            except Exception:
+                cached_tool = []
+
+        if cached_tool:
+            tools.extend(cached_tool)
+
+    agent = create_agent(llm, tools=tools)
+
+    AGENT_CACHE[cache_key] = agent
+
+    logger.info("Agent cached", extra={"cache_key": cache_key})
+
+    return agent
 
 
 async def generate_chat_title(user_input):
