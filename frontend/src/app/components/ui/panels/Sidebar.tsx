@@ -5,31 +5,19 @@ import Cookies from "js-cookie";
 import axios from "axios";
 import {
     Menu,
-    Description,
-    Dialog,
-    DialogPanel,
-    DialogTitle,
     MenuButton,
     MenuItem,
     MenuItems,
-    DialogBackdrop,
 } from "@headlessui/react";
 import {
     ChevronLeft,
     ChevronRight,
-    Delete,
     EllipsisVertical,
-    MessageSquare,
-    PanelLeft,
-    PanelLeftDashed,
     Pin,
     Plus,
     Search,
-    Share,
     Share2,
-    Stars,
     Trash,
-    X
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -68,7 +56,7 @@ const groupSummariesByDate = (summaries: SummaryHistoryResponse[]) => {
 };
 
 const Sidebar: React.FC = () => {
-    const router = useRouter()
+    const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
     const [chats, setChats] = useState<SummaryHistoryResponse[]>([]);
     const [filtered, setFiltered] = useState<SummaryHistoryResponse[]>([]);
@@ -82,16 +70,35 @@ const Sidebar: React.FC = () => {
     const params = useParams();
     const activeId = params?.id;
 
-    const toggleSidebar = () => { setIsOpen((v) => !v); console.log("working") };
+    useEffect(() => {
+        const handleResize = () => {
+            if (window.innerWidth >= 768) {
+                setIsOpen(true);
+            } else {
+                setIsOpen(false);
+            }
+        };
+
+        handleResize();
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
+    const toggleSidebar = () => { setIsOpen((v) => !v); };
+
+    const handleMobileNav = () => {
+        if (window.innerWidth < 768) {
+            setIsOpen(false);
+        }
+    };
 
     const fetchUserSummaries = async () => {
         try {
             const token = Cookies.get("access_token");
-            const res = await axios.get("http://localhost:8000/chats/", {
+            const res = await axios.get("http://10.207.18.43:8000/chats/", {
                 headers: { Authorization: `Bearer ${token}` },
                 withCredentials: true,
             });
-            console.log("summaries", res.data)
             setChats(res.data.chats || []);
         } catch {
             setError("Failed to load summaries");
@@ -115,7 +122,7 @@ const Sidebar: React.FC = () => {
     const handleDelete = async () => {
         try {
             const token = Cookies.get("access_token");
-            await axios.delete(`http://localhost:8000/summary/?id=${summaryId}`, {
+            await axios.delete(`http://10.207.18.43:8000/summary/?id=${summaryId}`, {
                 headers: { Authorization: `Bearer ${token}` },
                 withCredentials: true,
             });
@@ -131,7 +138,7 @@ const Sidebar: React.FC = () => {
         try {
             const token = Cookies.get("access_token");
             const newPinStatus = !currentPinStatus;
-            await axios.patch(`http://localhost:8000/summary/${chatId}/pin`,
+            await axios.patch(`http://10.207.18.43:8000/summary/${chatId}/pin`,
                 { is_pinned: newPinStatus },
                 {
                     headers: { Authorization: `Bearer ${token}` },
@@ -152,8 +159,10 @@ const Sidebar: React.FC = () => {
     const grouped = groupSummariesByDate(filtered);
     const options = (chat: any) => [
         {
-            label: chat.is_pinned ? "Unpin" : "Pin", route: '', icon: (<Pin size={20} className={chat.is_pinned ? "fill-white" : ""} />), action: (e: React.MouseEvent) => {
-                e.preventDefault(); // Stop Link navigation
+            label: chat.is_pinned ? "Unpin" : "Pin",
+            icon: (<Pin size={20} className={chat.is_pinned ? "fill-slate-800 dark:fill-white" : ""} />),
+            action: (e: React.MouseEvent) => {
+                e.preventDefault();
                 handlePin(chat.id, chat.is_pinned || false);
             }
         },
@@ -175,33 +184,38 @@ const Sidebar: React.FC = () => {
                 setDialogOpen(true);
             }
         }
-    ]
+    ];
+
     return (
         <>
+            {isOpen && (
+                <div
+                    className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden transition-opacity"
+                    onClick={() => setIsOpen(false)}
+                />
+            )}
+
             <div
-                className={`fixed top-0 left-0 h-full w-72 border-r font-mono shadow-lg transform transition-all duration-300 z-50 
+                className={`fixed top-0 left-0 h-full w-[80vw] md:w-72 border-r font-mono shadow-2xl md:shadow-lg transform transition-transform duration-300 z-50 
                     bg-white border-slate-200 text-slate-800
                     dark:bg-tertiary dark:border-secondary dark:text-white
                     ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
             >
                 <button
                     onClick={toggleSidebar}
-                    className="absolute top-1/2 -right-5 flex h-16 w-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded-r-lg border border-l-0 border-slate-200 bg-white text-slate-500 shadow-md transition-colors hover:text-slate-800 dark:border-secondary dark:bg-tertiary dark:text-gray-400 dark:hover:text-white"
+                    className="absolute top-1/2 -right-7 md:-right-5 flex h-20 w-7 md:h-16 md:w-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded-r-lg border border-l-0 border-slate-200 bg-white text-slate-500 shadow-md transition-colors hover:text-slate-800 dark:border-secondary dark:bg-tertiary dark:text-gray-400 dark:hover:text-white focus:outline-none"
                 >
-                    {isOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+                    {isOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
                 </button>
 
                 <div className="p-4 space-y-4 h-full flex flex-col">
                     <div className="flex items-center justify-between">
                         <h2 className="text-xl font-bold">Chats</h2>
-                        {/* <button onClick={toggleSidebar}>
-                            <X size={20} className="transition-colors text-slate-400 hover:text-slate-800 dark:text-gray-400 dark:hover:text-white" />
-                        </button> */}
                     </div>
                     <hr className="border transition-colors border-slate-200 dark:border-secondary" />
 
                     <button
-                        onClick={() => router.push("/")}
+                        onClick={() => { router.push("/"); handleMobileNav(); }}
                         className="p-3 flex items-center w-full justify-center gap-2 font-bold rounded-xl transition-colors
                             bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100
                             dark:bg-white/5 dark:border-secondary dark:text-primary dark:hover:bg-white/10"
@@ -209,7 +223,7 @@ const Sidebar: React.FC = () => {
                         <Plus size={18} /> New Chat
                     </button>
                     <button
-                        onClick={() => router.push("/")}
+                        onClick={() => { router.push("/"); handleMobileNav(); }}
                         className="p-3 flex items-center w-full justify-center gap-2 font-bold rounded-xl transition-colors
                             bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100
                             dark:bg-white/5 dark:border-secondary dark:text-primary dark:hover:bg-white/10"
@@ -221,6 +235,7 @@ const Sidebar: React.FC = () => {
                     <div className="overflow-y-auto min-h-0 flex-1 custom-scrollbar pr-2">
                         {loading && <p className="text-slate-500 dark:text-gray-400">Loading…</p>}
                         {error && <p className="text-red-500 dark:text-red-400">{error}</p>}
+
                         <div className="space-y-4 overflow-y-auto">
                             {Object.keys(grouped).map((k) =>
                                 grouped[k].length ? (
@@ -228,19 +243,29 @@ const Sidebar: React.FC = () => {
                                         <h3 className="font-bold text-sm tracking-wide text-slate-500 dark:text-gray-200">{k}</h3>
                                         <div className="space-y-1">
                                             {grouped[k].map((s) => (
-                                                <Link
-                                                    href={`/${s.id}`}
+
+                                                // 🌟 FIX: The wrapper is now a div, so the Menu and Link are siblings
+                                                <div
                                                     key={s.id}
-                                                    className={`p-2 group relative overflow-hidden cursor-pointer flex items-center justify-between transition-colors rounded-xl
-                                                        ${activeId == s.id
+                                                    className={`group relative overflow-hidden flex items-center justify-between transition-colors rounded-xl pr-2
+                                                    ${activeId == s.id
                                                             ? "font-medium bg-slate-100 border border-slate-200 text-slate-900 dark:bg-white/5 dark:border-secondary dark:text-white"
-                                                            : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white dark:hover:bg-transparent"
+                                                            : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-gray-400 border border-transparent dark:hover:text-white dark:hover:bg-white/5"
                                                         }`}
                                                 >
-                                                    <span className="truncate pr-4">{s.title}</span>
-                                                    <Menu>
-                                                        <MenuButton className="p-1 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200
-                                                            bg-white text-slate-600 hover:bg-slate-200 shadow-sm
+                                                    {/* The Link only wraps the text, allowing it to route without interfering with the menu */}
+                                                    <Link
+                                                        href={`/${s.id}`}
+                                                        onClick={handleMobileNav}
+                                                        className="flex-1 outline-none focus:outline-none p-2 truncate"
+                                                    >
+                                                        <span className="truncate pr-2">{s.title}</span>
+                                                    </Link>
+
+                                                    {/* The Menu sits outside the Link */}
+                                                    <Menu as="div" className="flex-shrink-0">
+                                                        <MenuButton className="p-1 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-200
+                                                            bg-white text-slate-600 hover:bg-slate-200 shadow-sm md:shadow-none
                                                             dark:bg-tertiary dark:hover:bg-white/5 dark:shadow-none">
                                                             <EllipsisVertical size={16} />
                                                         </MenuButton>
@@ -251,24 +276,24 @@ const Sidebar: React.FC = () => {
                                                                 bg-white border-slate-200 text-slate-800
                                                                 dark:bg-tertiary dark:border-secondary dark:text-primary dark:shadow-none"
                                                         >
-                                                            {options(s).map(option => {
-                                                                return (
-                                                                    <MenuItem key={Math.random()}>
-                                                                        <button
-                                                                            onClick={option.action}
-                                                                            className="group z-50 flex w-full p-2 items-center gap-3 rounded-lg text-sm font-bold transition-colors
-                                                                                data-[focus]:bg-slate-100 
-                                                                                dark:data-[focus]:bg-white/5"
-                                                                        >
-                                                                            {option.icon}
-                                                                            {option.label}
-                                                                        </button>
-                                                                    </MenuItem>
-                                                                )
-                                                            })}
+                                                            {options(s).map(option => (
+                                                                // 🌟 FIX: Used option.label as the key instead of Math.random()
+                                                                <MenuItem key={option.label}>
+                                                                    <button
+                                                                        onClick={option.action}
+                                                                        className="group z-50 flex w-full p-2 items-center gap-3 rounded-lg text-sm font-bold transition-colors
+                                                                            data-[focus]:bg-slate-100 
+                                                                            dark:data-[focus]:bg-white/5"
+                                                                    >
+                                                                        {option.icon}
+                                                                        {option.label}
+                                                                    </button>
+                                                                </MenuItem>
+                                                            ))}
                                                         </MenuItems>
                                                     </Menu>
-                                                </Link>
+                                                </div>
+
                                             ))}
                                         </div>
                                     </div>
@@ -276,15 +301,6 @@ const Sidebar: React.FC = () => {
                             )}
                         </div>
                     </div>
-                    <Link
-                        href="/plans"
-                        className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold transition-colors disabled:opacity-50 shadow-sm
-                            bg-slate-900 text-white hover:bg-slate-800
-                            dark:bg-primary dark:text-tertiary dark:hover:bg-white/90 dark:shadow-none"
-                    >
-                        <Stars size="20" />
-                        Upgrade to Pro
-                    </Link>
                 </div>
             </div>
 

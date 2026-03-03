@@ -107,74 +107,6 @@ async def route_tools(user_prompt: str, available_apps: List[str]) -> List[str]:
         logger.exception(f"Router failure: {e}")
         return []
 
-async def get_agent(
-    modal_name: str = "meta-llama/llama-4-scout-17b-16e-instruct", 
-    user_notion_token: str = None, enable_notion: bool = False,
-    user_gdrive_token: str = None, enable_gdrive: bool = False,
-    user_linear_token: str = None, enable_linear: bool = False,
-    user_slack_token: str = None, enable_slack: bool = False,
-    enable_n8n: bool = False,
-):
-    print(f"\n⚙️ Initializing Agent | Model: {modal_name}")
-    llm = ChatGroq(model=modal_name, groq_api_key=api_key, streaming=True)
-    tools = []
-    
-    cached_search = get_cached_tools("search")
-    if not cached_search:
-        print("⏳ Cache miss. Fetching Search tools...")
-        cached_search = get_search_tools()
-        set_cached_tools("search", cached_search)
-        print("✅ Search tools loaded.")
-    else:
-        print("⚡ Loaded Search tools from cache.")
-    
-    if cached_search:
-        tools.extend(cached_search)
-
-    mcp_configs = [
-        ("n8n", enable_n8n, "default", get_n8n_tools, False),
-        ("notion", enable_notion, user_notion_token, get_notion_tools, True),
-        ("gdrive", enable_gdrive, user_gdrive_token, get_gdrive_tools, True),
-        ("linear", enable_linear, user_linear_token, get_linear_tools, True),
-        ("slack", enable_slack, user_slack_token, get_slack_tools, True),
-    ]
-
-    for name, is_enabled, token, fetch_func, requires_token in mcp_configs:
-        print(f"🔍 Checking {name.capitalize()} tools...")
-        
-        if not is_enabled:
-            print(f"⏭️ Skipping {name.capitalize()} tools (Flag disabled).")
-            continue
-            
-        if requires_token and not token:
-            print(f"⏭️ Skipping {name.capitalize()} tools (Missing token).")
-            continue
-            
-        cache_key_token = token if token else "default"
-        cached_tool = get_cached_tools(name, cache_key_token)
-        
-        if not cached_tool:
-            print(f"   ⏳ Cache miss. Fetching {name.capitalize()} MCP tools...")
-            try:
-                if requires_token:
-                    cached_tool = await fetch_func(token)
-                else:
-                    cached_tool = await fetch_func()
-                set_cached_tools(name, cached_tool, cache_key_token)
-                print(f"   ✅ {name.capitalize()} MCP tools loaded & cached.")
-            except Exception as e:
-                print(f"   ⚠️ {name.capitalize()} MCP unavailable: {e}")
-                cached_tool = []
-        else:
-            print(f"⚡ Loaded {name.capitalize()} tools from cache.")
-            
-        if cached_tool:
-            tools.extend(cached_tool)
-    
-    return create_agent(llm, tools=tools)
-
-
-
 def _build_agent_cache_key(
     modal_name,
     enable_notion,
@@ -211,7 +143,9 @@ async def get_agent(
     user_slack_token=None, enable_slack=False,
     enable_n8n=False,
 ):
-
+    if not modal_name:
+            modal_name = "meta-llama/llama-4-scout-17b-16e-instruct"
+            
     cache_key = _build_agent_cache_key(
         modal_name,
         enable_notion,
@@ -302,14 +236,21 @@ async def generate_chat_title(user_input):
 
 def extract_sources(messages):
     sources = []
+    if not messages:
+        return sources
 
     for msg in messages:
-        if getattr(msg, "type", None) == "tool":
+        msg_type = msg.get("type") if isinstance(msg, dict) else getattr(msg, "type", None)
+        msg_content = msg.get("content") if isinstance(msg, dict) else getattr(msg, "content", "")
+
+        if msg_type == "tool":
             try:
-                parsed = json.loads(msg.content)
-                if isinstance(parsed, list):
-                    sources.extend(parsed)
-            except Exception:
+                if isinstance(msg_content, str) and msg_content.strip():
+                    parsed = json.loads(msg_content)
+                    if isinstance(parsed, list):
+                        sources.extend(parsed)
+            except Exception as e:
+                print(f"Failed to parse tool JSON: {e}")
                 pass
 
     return sources

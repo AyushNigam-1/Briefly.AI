@@ -31,7 +31,7 @@ export const useMutations = () => {
             });
 
             const { data } = await axios.post(
-                "http://localhost:8000/query",
+                "http://10.207.18.43:8000/query",
                 form,
                 {
                     headers: {

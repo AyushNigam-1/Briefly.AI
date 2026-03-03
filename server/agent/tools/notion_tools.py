@@ -5,7 +5,7 @@ async def get_notion_tools(user_notion_token: str):
         {
             "notion": {
                 "transport": "http",
-                "url": "http://localhost:3333/mcp",
+                "url": "http://10.207.18.43:3333/mcp",
                 "headers": {
                     "Authorization": f"Bearer {user_notion_token}",
                 },

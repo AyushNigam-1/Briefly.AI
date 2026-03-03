@@ -44,7 +44,7 @@ const Page = () => {
 
     try {
       const res = await axios.get(
-        `http://localhost:8000/history/${rawId}?${params}`,
+        `http://10.207.18.43:8000/history/${rawId}?${params}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -108,6 +108,180 @@ const Page = () => {
     e.target.value = "";
   };
 
+  // 🌟 NEW REGENERATE FUNCTION
+  const handleRegenerate = async (targetIndex: number) => {
+    if (isPending || !activeId) return;
+
+    // 🌟 1. Grab the saved model from localStorage before making the request
+    const savedModelValue = localStorage.getItem('selectedModel');
+
+    setPending(true);
+    setQueries((prev) => {
+      const truncated = prev.slice(0, targetIndex);
+      return [
+        ...truncated,
+        { sender: "llm", content: "", thinking: "", sources: [], created_at: "" }
+      ];
+    });
+
+    try {
+      abortControllerRef.current = new AbortController();
+
+      await fetchEventSource(`http://10.207.18.43:8000/chat/${activeId}/regenerate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        // 🌟 2. Add modal_name to the payload alongside target_index
+        body: JSON.stringify({
+          target_index: targetIndex,
+          modal_name: savedModelValue // This sends the string, or null if it doesn't exist
+        }),
+        signal: abortControllerRef.current.signal,
+
+        async onopen(response) {
+          if (!response.ok) throw new Error(`Failed to connect: ${response.status}`);
+        },
+
+        onmessage(msg) {
+          const parsed = JSON.parse(msg.data);
+
+          if (parsed.type === "token") {
+            setQueries((prev) => {
+              const updated = [...prev];
+              updated[updated.length - 1].content += parsed.data;
+              return updated;
+            });
+          }
+
+          if (parsed.type === "thinking") {
+            setQueries((prev) => {
+              const updated = [...prev];
+              const currentThinking = updated[updated.length - 1].thinking || "";
+              updated[updated.length - 1].thinking = currentThinking + parsed.data;
+              return updated;
+            });
+          }
+
+          if (parsed.type === "done") {
+            setPending(false);
+            if (parsed.sources) {
+              setQueries((prev) => {
+                const updated = [...prev];
+                updated[updated.length - 1].sources = parsed.sources;
+                return updated;
+              });
+            }
+          }
+
+          if (parsed.type === "error") {
+            setPending(false);
+            console.error("Backend generation error:", parsed.message);
+          }
+        },
+
+        onerror(err) {
+          setPending(false);
+          console.error("Stream error:", err);
+          throw err;
+        }
+      });
+    } catch (err) {
+      setPending(false);
+      console.error("Regeneration failed", err);
+    }
+  };
+  // 🌟 NEW EDIT FUNCTION
+  const handleEdit = async (targetIndex: number, newContent: string) => {
+    if (isPending || !activeId || !newContent.trim()) return;
+
+    const savedModelValue = localStorage.getItem('selectedModel');
+
+    // Capture the old files before we slice the array
+    const oldFiles = queries[targetIndex]?.files || [];
+
+    setPending(true);
+    setQueries((prev) => {
+      // Keep everything before the edited message
+      const truncated = prev.slice(0, targetIndex);
+      return [
+        ...truncated,
+        // Insert the updated user message
+        { sender: "user", content: newContent, files: oldFiles, created_at: "" },
+        // Insert the blank LLM response for the stream
+        { sender: "llm", content: "", thinking: "", sources: [], created_at: "" }
+      ];
+    });
+
+    try {
+      abortControllerRef.current = new AbortController();
+
+      await fetchEventSource(`http://10.207.18.43:8000/chat/${activeId}/edit`, { // Adjust URL if needed
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          target_index: targetIndex,
+          new_content: newContent,
+          modal_name: savedModelValue
+        }),
+        signal: abortControllerRef.current.signal,
+
+        async onopen(response) {
+          if (!response.ok) throw new Error(`Failed to connect: ${response.status}`);
+        },
+
+        onmessage(msg) {
+          const parsed = JSON.parse(msg.data);
+
+          if (parsed.type === "token") {
+            setQueries((prev) => {
+              const updated = [...prev];
+              updated[updated.length - 1].content += parsed.data;
+              return updated;
+            });
+          }
+
+          if (parsed.type === "thinking") {
+            setQueries((prev) => {
+              const updated = [...prev];
+              const currentThinking = updated[updated.length - 1].thinking || "";
+              updated[updated.length - 1].thinking = currentThinking + parsed.data;
+              return updated;
+            });
+          }
+
+          if (parsed.type === "done") {
+            setPending(false);
+            if (parsed.sources) {
+              setQueries((prev) => {
+                const updated = [...prev];
+                updated[updated.length - 1].sources = parsed.sources;
+                return updated;
+              });
+            }
+          }
+
+          if (parsed.type === "error") {
+            setPending(false);
+            console.error("Backend generation error:", parsed.message);
+          }
+        },
+
+        onerror(err) {
+          setPending(false);
+          console.error("Stream error:", err);
+          throw err;
+        }
+      });
+    } catch (err) {
+      setPending(false);
+      console.error("Edit failed", err);
+    }
+  };
   const handleSend = async (query: string, files: File[], modal: string) => {
     setPending(true);
     if (!query.trim()) return;
@@ -137,7 +311,7 @@ const Page = () => {
 
       let finalMetadata: any = null;
 
-      await fetchEventSource("http://localhost:8000/query", {
+      await fetchEventSource("http://10.207.18.43:8000/query", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: form,
@@ -224,7 +398,6 @@ const Page = () => {
   return (
     <>
       <AnimatePresence mode="wait">
-        {/* 🌟 NEW: Intercept rendering if it's the initial load for a specific ID */}
         {isInitialLoad ? (
           <motion.div
             key="loading"
@@ -243,22 +416,24 @@ const Page = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="w-full h-full"
+            className="w-full h-full overflow-none"
           >
             <Chats
               query={query}
               queries={queries}
-              setQueries={setQueries}
+              files={files}
               isPending={isPending}
+              isLoadingOlder={isLoadingOlder}
+              hasMore={hasMore}
+              setQueries={setQueries}
               handleSend={handleSend}
               setQuery={setQuery}
-              files={files}
               setFiles={setFiles}
               handleStop={handleStop}
               handleFileChange={handleFileChange}
               loadOlderChats={loadOlderChats}
-              isLoadingOlder={isLoadingOlder}
-              hasMore={hasMore}
+              handleRegenerate={handleRegenerate}
+              handleEdit={handleEdit} // 🌟 Added here
             />
           </motion.div>
         ) : (

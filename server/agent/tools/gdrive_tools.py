@@ -20,7 +20,7 @@ async def get_gdrive_tools(token: str):
             "transport": "sse", # Use "http" if your specific LangChain version requires it (like your Notion setup)
             
             # 2. Point to the local multi-tenant server you just built
-            "url": "http://localhost:3334/mcp",
+            "url": "http://10.207.18.43:3334/mcp",
             
             # 3. Securely pass the user's unique token via the Authorization header
             "headers": {

@@ -53,9 +53,10 @@ const LoginPage: React.FC = () => {
             password,
         };
         try {
-            const response = await axios.post('http://localhost:8000/auth', data, {
+            const response = await axios.post('http://10.207.18.43:8000/auth', data, {
                 withCredentials: true,
             });
+            alert(response.data)
             if (response.status === 200) {
                 localStorage.setItem('favourites', JSON.stringify(response.data.favourites));
                 router.push("/")
@@ -63,6 +64,7 @@ const LoginPage: React.FC = () => {
                 toast.error("Something went wrong")
             }
         } catch (err) {
+            alert(err)
             toast.error("Something went wrong")
         } finally {
             setLoading(false);

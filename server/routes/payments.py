@@ -35,8 +35,8 @@ async def create_checkout_session(
                 "user_id": str(user["user_id"]),
                 "plan_type": "pro" if "price_1T3Z7bLIlOqwk7LfWJjRV28L" in request.price_id else "max" # Or pass this from frontend
             },
-            success_url="http://localhost:3000/success?session_id={CHECKOUT_SESSION_ID}",
-            cancel_url="http://localhost:3000/pricing",
+            success_url="http://10.207.18.43:3000/success?session_id={CHECKOUT_SESSION_ID}",
+            cancel_url="http://10.207.18.43:3000/pricing",
         )
         
         return JSONResponse(content={"url": session.url})

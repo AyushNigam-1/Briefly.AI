@@ -1,7 +1,7 @@
 # from langchain_mcp_adapters.client import MultiServerMCPClient
 
 
-# N8N_MCP_URL = "http://localhost:5678/mcp-server/http"
+# N8N_MCP_URL = "http://10.207.18.43:5678/mcp-server/http"
 # N8N_ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4MTQyOTIxNy05MWExLTQzOWYtOGZjMC1iZjBlNmQwY2NmMjEiLCJpc3MiOiJuOG4iLCJhdWQiOiJtY3Atc2VydmVyLWFwaSIsImp0aSI6ImZhMTJkODBjLWM1MDgtNDY5OS04M2UwLWI1YjFjMzliNGM4MCIsImlhdCI6MTc3MTQ3MDE3Nn0.eL00XNMHz5l_lu4qUqTSvxaW4wSmCP_NqwEzTO6vpFM"  # <--- PASTE YOUR KEY
 
 
@@ -57,7 +57,7 @@ async def get_n8n_tools():
                 "MCP_MODE": "stdio",
                 "LOG_LEVEL": "error",
                 "DISABLE_CONSOLE_OUTPUT": "true",
-                "N8N_API_URL": "http://localhost:5678",
+                "N8N_API_URL": "http://10.207.18.43:5678",
                 "N8N_API_KEY": os.getenv("N8N_API_KEY"),
             }
         }

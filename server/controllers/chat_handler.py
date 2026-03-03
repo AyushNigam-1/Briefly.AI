@@ -1,8 +1,11 @@
+from controllers.mongo import users_collection
 from bson import ObjectId
 from datetime import datetime, timezone
 from controllers.mongo import summary_collection
 from typing import Optional
-from controllers.mongo import users_collection
+import os
+from groq import Groq
+from fastapi import HTTPException
 from controllers.file_handler import process_files
 from agent.agent_graph import agent_graph
 from fastapi import HTTPException
@@ -92,7 +95,6 @@ async def chat_stream(user_input, user_id, chat_id=None, files=None, modal_name=
 
     messages = build_messages(chat_doc, user_input, file_context)
 
-    from controllers.mongo import users_collection
     user = users_collection.find_one({"_id": ObjectId(user_id)})
     app_tokens = user.get("app_tokens", {}) if user else {}
 
@@ -121,7 +123,7 @@ async def chat_stream(user_input, user_id, chat_id=None, files=None, modal_name=
     try:
         assistant_text = ""
         thinking_text = ""
-        final_state = None
+        final_state = {}
 
         async for event in agent_graph.astream_events(initial_state, version="v2"):
 
@@ -149,7 +151,9 @@ async def chat_stream(user_input, user_id, chat_id=None, files=None, modal_name=
                 yield f"data: {json.dumps({'type': 'tool_status', 'tool': event['name'], 'status': 'completed'})}\n\n"
 
             elif kind == "on_chain_end":
-                final_state = event["data"]["output"]
+                output = event["data"]["output"]
+                if isinstance(output, dict):
+                    final_state.update(output)
 
         if not final_state:
             final_state = {}
@@ -284,3 +288,132 @@ async def toggle_chat_pin(chat_id: str, user_id: str, is_pinned: bool):
         if isinstance(e, HTTPException):
             raise e
         raise HTTPException(status_code=500, detail="Internal Server Error")
+
+def generate_audio_from_text(text: str, voice: str = "troy") -> bytes:
+    """
+    Takes text and a voice ID, calls the Groq TTS API, 
+    and returns the raw audio bytes.
+    """
+    try:
+        response = client.audio.speech.create(
+            model="canopylabs/orpheus-v1-english",
+            voice=voice,
+            input=text,
+            response_format="wav" 
+        )
+        
+        return response.read()
+
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail=f"Groq API Error: {str(e)}")
+
+async def regenerate_chat_stream(chat_id: str, user_id: str, modal_name: Optional[str] = None):
+    """
+    Regenerates the last AI response for a given chat.
+    It removes the last AI message and the preceding user message from the database,
+    then re-triggers the chat_stream with the extracted user input.
+    """
+    try:
+        # 1. Fetch the chat to validate and get the last messages
+        if not ObjectId.is_valid(chat_id):
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Invalid chat ID'})}\n\n"
+            return
+            
+        chat = summary_collection.find_one({"_id": ObjectId(chat_id), "user_id": user_id})
+        
+        if not chat or not chat.get("queries"):
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Chat not found or is empty'})}\n\n"
+            return
+
+        queries = chat["queries"]
+        last_user_query = None
+        slice_index = len(queries)
+
+        # 2. Identify the last user message and LLM response to pop them off
+        if queries[-1]["sender"] == "llm":
+            if len(queries) >= 2 and queries[-2]["sender"] == "user":
+                last_user_query = queries[-2]
+                slice_index = len(queries) - 2
+            else:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'Malformed chat history'})}\n\n"
+                return
+        elif queries[-1]["sender"] == "user":
+            # Edge case: If the last generation failed and only the user message was saved
+            last_user_query = queries[-1]
+            slice_index = len(queries) - 1
+        else:
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Cannot regenerate from current state'})}\n\n"
+            return
+
+        # 3. Update the database by removing the last turn(s)
+        summary_collection.update_one(
+            {"_id": ObjectId(chat_id), "user_id": user_id},
+            {"$set": {"queries": queries[:slice_index]}}
+        )
+
+        # 4. Extract the original input to feed back into the stream
+        user_input = last_user_query.get("content", "")
+        # NOTE: If your `process_files` requires raw UploadFile objects rather than 
+        # saved file metadata, you might need to handle files differently here.
+        files = last_user_query.get("files", []) 
+
+        # 5. Yield from the existing chat_stream function seamlessly
+        async for event in chat_stream(
+            user_input=user_input,
+            user_id=user_id,
+            chat_id=chat_id,
+            files=files,
+            modal_name=modal_name
+        ):
+            yield event
+
+    except Exception as e:
+        traceback.print_exc()
+        yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+async def edit_chat_stream(chat_id: str, user_id: str, target_index: int, new_content: str, modal_name: Optional[str] = None):
+    """
+    Replaces a user message at a specific index with new text,
+    drops all subsequent messages, and generates a new AI response.
+    """
+    try:
+        # 1. Fetch the parent chat session
+        chat = summary_collection.find_one({"_id": ObjectId(chat_id), "user_id": user_id})
+        
+        if not chat or "queries" not in chat:
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Chat not found'})}\n\n"
+            return
+
+        queries = chat["queries"]
+
+        # 2. Validate the index
+        if target_index >= len(queries) or target_index < 0:
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Invalid index'})}\n\n"
+            return
+            
+        if queries[target_index]["sender"] != "user":
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Target index is not a user message'})}\n\n"
+            return
+
+        old_files = queries[target_index].get("files", [])
+
+        truncated_queries = queries[:target_index]
+
+        summary_collection.update_one(
+            {"_id": ObjectId(chat_id), "user_id": user_id},
+            {"$set": {"queries": truncated_queries}}
+        )
+
+        async for event in chat_stream(
+            user_input=new_content,
+            user_id=user_id,
+            chat_id=chat_id,
+            files=old_files, # Re-attach the old files to the new prompt
+            modal_name=modal_name
+        ):
+            yield event
+
+    except Exception as e:
+        traceback.print_exc()
+        yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"

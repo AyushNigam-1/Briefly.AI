@@ -1,45 +1,53 @@
-from fastapi import APIRouter, HTTPException, Depends, Form, UploadFile, File, Query
+from fastapi import APIRouter, HTTPException, Depends, Form, UploadFile, File, Query, Response , Body
 from fastapi.responses import StreamingResponse
 from utils.auth import get_current_user
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from controllers.chat_handler import (
     chat_stream,
     get_chats_by_user,
     delete_summary_by_id,
     toggle_chat_pin,
-    get_chat_history
+    get_chat_history,
+    generate_audio_from_text,
+    regenerate_chat_stream,
+    edit_chat_stream
 )
-from typing import Optional, List
+from typing import Optional
 from datetime import datetime
 from fastapi_limiter.depends import RateLimiter
 from pyrate_limiter import Limiter, Rate, Duration
 
 router = APIRouter()
 
+class EditMessageRequest(BaseModel):
+    target_index: int
+    new_content: str
+    modal_name: Optional[str] = None
+
 query_limiter = Limiter(Rate(20, Duration.MINUTE))
 read_limiter = Limiter(Rate(60, Duration.MINUTE))
 mutation_limiter = Limiter(Rate(30, Duration.MINUTE))
 
-
-class ChatRequest(BaseModel):
-    messages: List[dict]
-    id: Optional[str] = None
-    modal_name: Optional[str] = None
+class TTSRequest(BaseModel):
+    text: str = Field(..., max_length=200, description="Text to convert to speech (max 200 chars)")
+    voice: str = Field(default="troy", description="Voice persona (e.g., troy, hannah, autumn)")
 
 @router.post("/query")
 async def query_handler(
-    body: ChatRequest,
+    query: str = Form(...),
+    id: Optional[str] = Form(None),
+    files: list[UploadFile] = File(None),
+    modal_name: Optional[str] = Form(None),
     user=Depends(get_current_user)
 ):
     user_id = user["user_id"]
 
-    last_user_message = body.messages[-1]["content"]
-
     generator = chat_stream(
-        user_input=last_user_message,
+        user_input=query,
         user_id=user_id,
-        chat_id=body.id,
-        modal_name=body.modal_name
+        chat_id=id,
+        files=files,
+        modal_name=modal_name
     )
 
     return StreamingResponse(generator, media_type="text/event-stream")
@@ -106,3 +114,63 @@ async def toggle_pin_chat_route(
         user_id=str(user["user_id"]),
         is_pinned=request.is_pinned
     )
+
+
+
+@router.post("/generate-voice", summary="Convert Text to Speech")
+async def generate_voice_route(request: TTSRequest):
+    audio_bytes = generate_audio_from_text(text=request.text, voice=request.voice)
+    
+    return Response(
+        content=audio_bytes, 
+        media_type="audio/wav",
+        headers={
+            "Content-Disposition": 'attachment; filename="output.wav"'
+        }
+    )
+
+class RegenerateRequest(BaseModel):
+    modal_name: Optional[str] = None
+
+@router.post("/chat/{chat_id}/regenerate")
+async def regenerate_chat_route(
+    chat_id: str,
+    payload: RegenerateRequest,
+    user=Depends(get_current_user)
+):
+    """
+    Endpoint to regenerate the last AI response.
+    Returns a stream of tokens just like the standard chat endpoint.
+    """
+    if not chat_id:
+        raise HTTPException(status_code=400, detail="chat_id is required")
+
+    generator = regenerate_chat_stream(
+        chat_id=chat_id,
+        user_id=user["user_id"],
+        modal_name=payload.modal_name
+    )
+
+    return StreamingResponse(generator, media_type="text/event-stream")
+
+@router.post("/chat/{chat_id}/edit")
+async def edit_chat_route(
+    chat_id: str,
+    payload: EditMessageRequest,
+    user=Depends(get_current_user)
+):
+    """
+    Endpoint to edit a user message and stream back a new AI response.
+    """
+    if not chat_id:
+        raise HTTPException(status_code=400, detail="chat_id is required")
+
+    generator = edit_chat_stream(
+        chat_id=chat_id,
+        user_id=user["user_id"],
+        target_index=payload.target_index,
+        new_content=payload.new_content,
+        modal_name=payload.modal_name
+    )
+
+    return StreamingResponse(generator, media_type="text/event-stream")

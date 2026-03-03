@@ -100,7 +100,8 @@ async def title_node(state: AgentState):
     return {"title": title}
 
 def postprocess_node(state: AgentState):
-    sources = extract_sources(state["full_messages"])
+    full_msgs = state.get("full_messages") or []
+    sources = extract_sources(full_msgs)
     return {"sources": sources}
 
 # async def run_agent_with_graph(messages, modal_name, available_apps):

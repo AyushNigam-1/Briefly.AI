@@ -14,7 +14,7 @@ from controllers.integrations_handler import (
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
-FRONTEND_URL = "http://localhost:3000"
+FRONTEND_URL = "http://10.207.18.43:3000"
 
 router = APIRouter()
 

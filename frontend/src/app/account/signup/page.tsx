@@ -26,7 +26,7 @@ const SignupPage: React.FC = () => {
             password,
         };
         try {
-            const response = await axios.post('http://localhost:8000/auth', data, {
+            const response = await axios.post('http://10.207.18.43:8000/auth', data, {
                 withCredentials: true,
             });
             if (response.status === 200) {
