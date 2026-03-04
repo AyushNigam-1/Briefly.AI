@@ -21,10 +21,9 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
     const isStreaming = isPending && isLastItem && q.sender === "llm";
 
     const [isEditing, setIsEditing] = useState(false);
-    const [copied, setCopied] = useState(false); // 🌟 Added copy state
+    const [copied, setCopied] = useState(false);
     const editRef = useRef<HTMLParagraphElement>(null);
 
-    // Focus and move cursor to the end of the text when edit mode opens
     useEffect(() => {
         if (isEditing && editRef.current) {
             editRef.current.focus();
@@ -62,12 +61,11 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
         }
     };
 
-    // 🌟 Handle Copy with visual feedback
     const handleCopy = () => {
         if (!q.content) return;
         onCopy(q.content);
         setCopied(true);
-        setTimeout(() => setCopied(false), 2000); // Revert back to copy icon after 2s
+        setTimeout(() => setCopied(false), 2000);
     };
 
     return (
@@ -77,7 +75,8 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
             transition={{ duration: 0.25, ease: "easeOut" }}
             className={`flex w-full ${q.sender === "user" ? "justify-end" : "justify-start"}`}
         >
-            <div className={`flex flex-col gap-1 mb-6 group ${q.sender === "user"
+            {/* 🌟 Added 'relative' to this wrapper so absolute elements map perfectly to it */}
+            <div className={`relative flex flex-col gap-1 mb-6 group ${q.sender === "user"
                 ? "items-end w-full max-w-[90%] sm:max-w-[85%]"
                 : "items-start w-full max-w-full"
                 }`}>
@@ -99,19 +98,10 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
                     </div>
                 )}
 
-                {/* Main bubble container */}
-                {/* 🌟 FIX 1: Removed w-full, added conditional w-fit for user, w-full for AI */}
                 <div className={`flex flex-col gap-1.5 transition-all duration-200 ${q.sender === "user" ? "items-end w-fit max-w-full" : "items-start w-full"}`}>
 
-                    {isEditing && (
-                        <span className="text-xs sm:text-sm text-slate-400 dark:text-slate-500 font-medium mr-2 motion-safe:animate-pulse">
-                            Editing
-                        </span>
-                    )}
-
-                    {/* 🌟 FIX 2: Applied w-fit so the box naturally hugs the text */}
                     <div className={`transition-all duration-200 ${q.sender === "user"
-                        ? `bg-slate-50 border border-slate-200 dark:bg-tertiary dark:border-secondary dark:text-white shadow-sm rounded-2xl w-fit max-w-full ${isEditing ? 'ring-2 ring-slate-200 dark:ring-slate-600' : ''}`
+                        ? "bg-slate-50 border border-slate-200 dark:bg-tertiary dark:border-secondary dark:text-white shadow-sm rounded-2xl w-fit max-w-full"
                         : "bg-transparent rounded-2xl w-full"
                         }`}>
 
@@ -154,29 +144,28 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
                             </div>
                         )}
                     </div>
-
-                    {/* Check/X Action Buttons */}
-                    {isEditing && (
-                        <div className="flex justify-end gap-2 mt-2">
-                            <button
-                                onClick={() => setIsEditing(false)}
-                                className="p-1.5 sm:p-2 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-secondary dark:text-slate-400 dark:hover:bg-slate-700 transition-colors"
-                            >
-                                <X size={16} strokeWidth={2.5} />
-                            </button>
-                            <button
-                                onClick={handleSaveEdit}
-                                disabled={isPending}
-                                className="p-1.5 sm:p-2 rounded-full bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-40 transition-colors"
-                            >
-                                <Check size={16} strokeWidth={2.5} />
-                            </button>
-                        </div>
-                    )}
                 </div>
 
-                {!isStreaming && q.content && !isEditing && (
-                    <div className="flex gap-4 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity duration-200 mt-1">
+                {isEditing && (
+                    <div className="absolute bottom-0 right-1 flex justify-end gap-3 z-10">
+                        <button
+                            onClick={() => setIsEditing(false)}
+                            className="p-1 text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 transition-colors"
+                        >
+                            <X size={18} strokeWidth={2.5} />
+                        </button>
+                        <button
+                            onClick={handleSaveEdit}
+                            disabled={isPending}
+                            className="p-1 text-slate-400 hover:text-green-500 dark:text-slate-500 dark:hover:text-green-400 disabled:opacity-40 transition-colors"
+                        >
+                            <Check size={18} strokeWidth={2.5} />
+                        </button>
+                    </div>
+                )}
+
+                {!isStreaming && q.content && (
+                    <div className={`flex gap-4 mt-1 transition-opacity duration-200 ${isEditing ? "opacity-0 pointer-events-none" : "opacity-100 md:opacity-0 group-hover:opacity-100"}`}>
                         {q.sender === 'user' && (
                             <button
                                 onClick={() => setIsEditing(true)}
@@ -187,7 +176,6 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
                             </button>
                         )}
 
-                        {/* 🌟 FIX 3: Updated Copy Button with Visual Feedback */}
                         <button
                             onClick={handleCopy}
                             className={`p-1 transition-colors ${copied ? "text-green-500 dark:text-green-400" : "text-slate-400 hover:text-slate-900 dark:hover:text-white"}`}
@@ -215,7 +203,6 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
                     </div>
                 )}
 
-                {/* Typing Indicator */}
                 {isStreaming && (
                     <div className="flex gap-1.5 mt-4">
                         <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" />

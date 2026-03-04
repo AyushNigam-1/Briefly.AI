@@ -5,7 +5,29 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { User, UserRoundPlus } from 'lucide-react';
+import { User } from 'lucide-react';
+import { motion } from 'framer-motion';
+
+// Animation Variants matching the Login page for consistency
+const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1,
+            delayChildren: 0.1,
+        }
+    }
+};
+
+const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: 0.4, ease: "easeOut" }
+    }
+};
 
 const SignupPage: React.FC = () => {
 
@@ -43,87 +65,117 @@ const SignupPage: React.FC = () => {
     };
 
     return (
-        <div className="relative min-h-screen w-full flex items-center justify-center bg-transparent overflow-hidden font-mono text-white">
+        // Added px-4 for safe mobile edge padding
+        <div className="relative min-h-screen w-full flex items-center justify-center bg-transparent overflow-hidden font-mono text-white px-4 sm:px-0">
 
-            <div className="relative z-10 w-full max-w-md p-1">
-                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
+            {/* Main Card */}
+            <motion.div
+                className="relative z-10 w-full max-w-md"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+            >
+                {/* Adjusted padding: p-6 on mobile, p-8 on larger screens */}
+                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 sm:p-8 shadow-2xl">
 
                     {/* Header */}
-                    <div className="flex flex-col items-center gap-4 mb-8">
+                    <motion.div
+                        className="flex flex-col items-center gap-3 sm:gap-4 mb-6 sm:mb-8"
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.2 }}
+                    >
                         <div className="p-3 bg-white/5 rounded-full border border-white/10 shadow-inner">
-                            <User size={35} />
+                            <User size={30} className="sm:w-[35px] sm:h-[35px]" />
                         </div>
                         <div className="text-center">
-                            <h3 className="text-3xl font-bold tracking-tight text-white">Create Account</h3>
-                            <p className="text-sm text-gray-400 mt-1">Join us to start summarizing instantly</p>
+                            {/* Adjusted text size: text-2xl on mobile, text-3xl on larger screens */}
+                            <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Create Account</h3>
+                            <p className="text-xs sm:text-sm text-gray-400 mt-1">Join us to start summarizing instantly</p>
                         </div>
-                    </div>
+                    </motion.div>
 
                     {/* Form */}
-                    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-                        <div className="space-y-4">
-                            <div className="group relative">
+                    <motion.form
+                        onSubmit={handleSubmit}
+                        className="flex flex-col gap-4 sm:gap-5"
+                        variants={containerVariants}
+                        initial="hidden"
+                        animate="visible"
+                    >
+                        <div className="space-y-3 sm:space-y-4">
+                            <motion.div className="group relative" variants={itemVariants}>
                                 <input
                                     type="text"
                                     name="name"
                                     id="name"
                                     placeholder="Choose a Username"
                                     required
-                                    className="w-full bg-black/20 border border-white/10 text-white  rounded-xl px-4 py-3.5 outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all placeholder:text-gray-600"
+                                    className="w-full bg-black/20 border border-white/10 text-white rounded-xl px-4 py-3 sm:py-3.5 outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all placeholder:text-gray-600 text-sm sm:text-base"
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
                                 />
-                            </div>
-                            <div className="group relative">
+                            </motion.div>
+                            <motion.div className="group relative" variants={itemVariants}>
                                 <input
                                     type="password"
                                     name="password"
                                     id="password"
                                     placeholder="Create a Password"
                                     required
-                                    className="w-full bg-black/20 border border-white/10 text-white  rounded-xl px-4 py-3.5 outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all placeholder:text-gray-600"
+                                    className="w-full bg-black/20 border border-white/10 text-white rounded-xl px-4 py-3 sm:py-3.5 outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all placeholder:text-gray-600 text-sm sm:text-base"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                 />
-                            </div>
+                            </motion.div>
                         </div>
 
-                        {/* Terms Text (Optional visual filler) */}
-                        <p className="text-[10px] text-center text-gray-500 px-4">
+                        {/* Terms Text */}
+                        <motion.p className="text-[10px] sm:text-xs text-center text-gray-500 px-2 sm:px-4" variants={itemVariants}>
                             By clicking Sign Up, you agree to our Terms of Service and Privacy Policy.
-                        </p>
+                        </motion.p>
 
-                        <button
+                        <motion.button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-gray-200 text-gray-800 font-bold rounded-xl py-3.5 mt-2 hover:bg-gray-200 transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                            variants={itemVariants}
+                            whileHover={{ scale: loading ? 1 : 1.02 }}
+                            whileTap={{ scale: loading ? 1 : 0.98 }}
+                            className="w-full bg-gray-200 text-gray-800 font-bold rounded-xl py-3 sm:py-3.5 mt-1 sm:mt-2 hover:bg-gray-200 transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center gap-2 text-sm sm:text-base"
                         >
                             {loading ? (
-                                <LoaderIcon className="animate-spin" />
+                                <LoaderIcon className="animate-spin w-5 h-5 sm:w-6 sm:h-6" />
                             ) : (
                                 "Sign Up"
                             )}
-                        </button>
+                        </motion.button>
 
-                        <div className="relative flex py-2 items-center">
+                        <motion.div className="relative flex py-2 items-center" variants={itemVariants}>
                             <div className="flex-grow border-t border-white/10"></div>
-                            <span className="flex-shrink mx-4 text-gray-500 text-xs">Already have an account?</span>
+                            <span className="flex-shrink mx-3 sm:mx-4 text-gray-500 text-[10px] sm:text-xs text-center">Already have an account?</span>
                             <div className="flex-grow border-t border-white/10"></div>
-                        </div>
+                        </motion.div>
 
-                        <Link
-                            href='/account/login'
-                            className="w-full bg-white/5 border border-white/10 text-white font-medium rounded-xl py-3.5 hover:bg-white/10 transition-colors text-center text-sm"
-                        >
-                            Log In
-                        </Link>
-                    </form>
+                        <motion.div variants={itemVariants} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                            <Link
+                                href='/account/login'
+                                className="w-full flex justify-center bg-white/5 border border-white/10 text-white font-medium rounded-xl py-3 sm:py-3.5 hover:bg-white/10 transition-colors text-center text-sm sm:text-base"
+                            >
+                                Log In
+                            </Link>
+                        </motion.div>
+                    </motion.form>
                 </div>
 
-                <p className="text-center text-gray-600 text-xs mt-6">
-                    &copy; 2024 Briefly.AI. All rights reserved.
-                </p>
-            </div>
+                <motion.p
+                    className="text-center text-gray-600 text-[10px] sm:text-xs mt-4 sm:mt-6"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.8, duration: 0.5 }}
+                >
+                    &copy; 2026 Briefly.AI. All rights reserved.
+                </motion.p>
+            </motion.div>
             <ToastContainer position="bottom-right" theme="dark" />
         </div>
     );
@@ -132,8 +184,6 @@ const SignupPage: React.FC = () => {
 const LoaderIcon = ({ className }: { className?: string }) => (
     <svg
         xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="24"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"

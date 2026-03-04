@@ -15,6 +15,7 @@ import {
     Database,
     Settings2,
     LogOut,
+    Stars,
 } from "lucide-react"
 import clsx from "clsx"
 import Memory from "../tabs/Memory"
@@ -89,9 +90,10 @@ export default function SettingsDialog({
                             </TabList>
 
                             {/* Logout Button */}
+
                             <Link
                                 href="/account/logout"
-                                className="mt-auto w-full flex justify-center sm:justify-start items-center gap-0 sm:gap-2 p-3 sm:px-3 sm:py-2.5 rounded-xl outline-none font-semibold transition-colors
+                                className="mt-auto w-full flex justify-center  items-center gap-0 sm:gap-2 p-3 sm:px-3 sm:py-2.5 rounded-xl outline-none transition-colors
                                     bg-red-50 text-red-600 hover:bg-red-100
                                     dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
                                 title="Logout"
@@ -103,7 +105,7 @@ export default function SettingsDialog({
 
                         {/* RIGHT CONTENT AREA */}
                         <div className="flex-1 flex flex-col min-w-0 bg-transparent">
-                            <TabPanels className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6">
+                            <TabPanels className="flex-1 overflow-y-auto scrollbar-none p-4 sm:p-6">
                                 <TabPanel className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out">
                                     <Profile />
                                 </TabPanel>

@@ -13,11 +13,14 @@ import {
     ChevronLeft,
     ChevronRight,
     EllipsisVertical,
+    Ghost,
+    MessageSquareDashed,
     Pin,
     Plus,
     Search,
     Share2,
-    Trash,
+    Stars,
+    Trash
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -196,7 +199,7 @@ const Sidebar: React.FC = () => {
             )}
 
             <div
-                className={`fixed top-0 left-0 h-full w-[80vw] md:w-72 border-r font-mono shadow-2xl md:shadow-lg transform transition-transform duration-300 z-50 
+                className={`fixed top-0 left-0 h-full w-[70vw] md:w-72 border-r font-mono shadow-2xl md:shadow-lg transform transition-transform duration-300 z-50 
                     bg-white border-slate-200 text-slate-800
                     dark:bg-tertiary dark:border-secondary dark:text-white
                     ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
@@ -211,8 +214,15 @@ const Sidebar: React.FC = () => {
                 <div className="p-4 space-y-4 h-full flex flex-col">
                     <div className="flex items-center justify-between">
                         <h2 className="text-xl font-bold">Chats</h2>
+                        {/* 🌟 FIX: Added onClick to route to /private */}
+                        <button
+                            onClick={() => { router.push("/private"); handleMobileNav(); }}
+                            title="Incognito Chat"
+                            className="transition-colors hover:text-slate-600 dark:hover:text-gray-300"
+                        >
+                            <Ghost size={20} />
+                        </button>
                     </div>
-                    <hr className="border transition-colors border-slate-200 dark:border-secondary" />
 
                     <button
                         onClick={() => { router.push("/"); handleMobileNav(); }}
@@ -232,7 +242,7 @@ const Sidebar: React.FC = () => {
                     </button>
                     <TaskManagerModal />
 
-                    <div className="overflow-y-auto min-h-0 flex-1 custom-scrollbar pr-2">
+                    <div className="overflow-y-auto min-h-0 flex-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/5 pr-2">
                         {loading && <p className="text-slate-500 dark:text-gray-400">Loading…</p>}
                         {error && <p className="text-red-500 dark:text-red-400">{error}</p>}
 
@@ -244,7 +254,6 @@ const Sidebar: React.FC = () => {
                                         <div className="space-y-1">
                                             {grouped[k].map((s) => (
 
-                                                // 🌟 FIX: The wrapper is now a div, so the Menu and Link are siblings
                                                 <div
                                                     key={s.id}
                                                     className={`group relative overflow-hidden flex items-center justify-between transition-colors rounded-xl pr-2
@@ -253,7 +262,6 @@ const Sidebar: React.FC = () => {
                                                             : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-gray-400 border border-transparent dark:hover:text-white dark:hover:bg-white/5"
                                                         }`}
                                                 >
-                                                    {/* The Link only wraps the text, allowing it to route without interfering with the menu */}
                                                     <Link
                                                         href={`/${s.id}`}
                                                         onClick={handleMobileNav}
@@ -262,8 +270,7 @@ const Sidebar: React.FC = () => {
                                                         <span className="truncate pr-2">{s.title}</span>
                                                     </Link>
 
-                                                    {/* The Menu sits outside the Link */}
-                                                    <Menu as="div" className="flex-shrink-0">
+                                                    <Menu as="div" className="flex items-center">
                                                         <MenuButton className="p-1 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-200
                                                             bg-white text-slate-600 hover:bg-slate-200 shadow-sm md:shadow-none
                                                             dark:bg-tertiary dark:hover:bg-white/5 dark:shadow-none">
@@ -272,16 +279,15 @@ const Sidebar: React.FC = () => {
                                                         <MenuItems
                                                             transition
                                                             anchor="right"
-                                                            className="w-52 origin-top-left mx-3 rounded-xl border flex flex-col p-2 z-50 text-sm/6 transition duration-100 ease-out focus:outline-none data-[closed]:scale-95 data-[closed]:opacity-0 shadow-xl
+                                                            className="w-44 mx-4 rounded-xl border flex flex-col p-2 z-50 transition duration-100 ease-out focus:outline-none data-[closed]:scale-95 data-[closed]:opacity-0 shadow-xl
                                                                 bg-white border-slate-200 text-slate-800
                                                                 dark:bg-tertiary dark:border-secondary dark:text-primary dark:shadow-none"
                                                         >
                                                             {options(s).map(option => (
-                                                                // 🌟 FIX: Used option.label as the key instead of Math.random()
                                                                 <MenuItem key={option.label}>
                                                                     <button
                                                                         onClick={option.action}
-                                                                        className="group z-50 flex w-full p-2 items-center gap-3 rounded-lg text-sm font-bold transition-colors
+                                                                        className="group z-50 flex w-full p-2 items-center gap-3 rounded-lg text-base font-bold transition-colors
                                                                             data-[focus]:bg-slate-100 
                                                                             dark:data-[focus]:bg-white/5"
                                                                     >
@@ -301,9 +307,10 @@ const Sidebar: React.FC = () => {
                             )}
                         </div>
                     </div>
+
+
                 </div>
             </div>
-
             <ShareModal
                 isOpen={shareModalOpen}
                 onClose={() => setShareModalOpen(false)}

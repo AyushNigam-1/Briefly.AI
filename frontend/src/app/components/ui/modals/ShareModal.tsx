@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react";
 import { Dialog, DialogPanel, DialogTitle, DialogBackdrop } from "@headlessui/react";
-import { Link2, Copy, Check, X, Twitter, Linkedin, Facebook, MessageCircle, Mail } from "lucide-react";
+import { Link2, Copy, Check, X, Twitter, Linkedin, Facebook, MessageCircle, Mail, FileWarning, CircleAlert, Link } from "lucide-react";
 
 interface ShareModalProps {
     isOpen: boolean;
@@ -86,27 +86,22 @@ export default function ShareModal({ isOpen, onClose, chatId, chatTitle }: Share
                         dark:bg-[#121212] dark:border-secondary dark:shadow-black/50"
                 >
                     {/* Header */}
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3 text-slate-900 dark:text-white">
-                            {/* <Link2 size={22} /> */}
-                            <DialogTitle className="text-2xl font-bold">
-                                Share Chat
-                            </DialogTitle>
-                        </div>
+                    <div className="flex items-start justify-between">
+                        <DialogTitle className="text-2xl font-bold text-slate-900 dark:text-primary">
+                            Share Chat
+                        </DialogTitle>
                         <button
                             onClick={onClose}
                             className="rounded-md transition-colors
                                 text-slate-500 hover:text-slate-900 
                                 dark:text-slate-400 dark:hover:text-white"
                         >
-                            <X size={20} />
+                            <X size={24} />
                         </button>
                     </div>
 
                     {/* Link Section */}
-                    <p className="text-lg leading-relaxed text-slate-400 dark:text-slate-400">
-                        Anyone with this link will be able to view this conversation.
-                    </p>
+
 
                     <div className="flex items-center gap-2 p-1.5 rounded-xl transition-colors border
                         bg-slate-50 border-slate-200 focus-within:border-slate-300
@@ -139,6 +134,12 @@ export default function ShareModal({ isOpen, onClose, chatId, chatTitle }: Share
                                 </>
                             )}
                         </button>
+                    </div>
+                    <div className="flex gap-2 text-slate-400 dark:text-slate-400">
+                        <CircleAlert size={30} />
+                        <p className="text-lg leading-relaxed ">
+                            Anyone with this link will be able to view this conversation.
+                        </p>
                     </div>
 
                     {/* Social Media Links */}

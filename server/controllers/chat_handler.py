@@ -417,3 +417,76 @@ async def edit_chat_stream(chat_id: str, user_id: str, target_index: int, new_co
     except Exception as e:
         traceback.print_exc()
         yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+async def private_chat_stream(user_input, user_id, files=None, modal_name=None, chat_history=None):
+    """
+    Streams a chat response without saving anything to the database.
+    Accepts an optional 'chat_history' array from the frontend to maintain 
+    context during a single private session.
+    """
+    
+    # Process files (assuming your process_files extracts text/context safely)
+    file_context, uploaded_files = await process_files(files, user_id)
+
+    mock_chat_doc = {"queries": chat_history if chat_history else []}
+    messages = build_messages(mock_chat_doc, user_input, file_context)
+
+    # Fetch user tokens for tools (we still want them to use their tools in private mode)
+    user = users_collection.find_one({"_id": ObjectId(user_id)})
+    app_tokens = user.get("app_tokens", {}) if user else {}
+
+    available_apps = []
+    if app_tokens.get("notion"): available_apps.append("notion")
+    if app_tokens.get("google_drive"): available_apps.append("google_drive")
+    if app_tokens.get("linear"): available_apps.append("linear")
+    if app_tokens.get("slack"): available_apps.append("slack")
+    available_apps.append("n8n")
+
+    initial_state = {
+        "messages": messages,
+        "modal_name": modal_name,
+        "available_apps": available_apps,
+        "selected_apps": [],
+        "blocked": False,
+        "is_new_chat": False, 
+        "user_input": user_input,
+        "user_id": user_id,
+    }
+
+    try:
+        final_state = {}
+
+        async for event in agent_graph.astream_events(initial_state, version="v2"):
+            kind = event["event"]
+
+            if kind == "on_chat_model_stream":
+                chunk = event["data"]["chunk"]
+
+                # Thinking stream
+                if hasattr(chunk, "additional_kwargs"):
+                    reasoning = chunk.additional_kwargs.get("reasoning_content")
+                    if reasoning:
+                        yield f"data: {json.dumps({'type': 'thinking', 'data': reasoning})}\n\n"
+
+                # Normal tokens
+                if hasattr(chunk, "content") and chunk.content:
+                    yield f"data: {json.dumps({'type': 'token', 'data': chunk.content})}\n\n"
+
+            elif kind == "on_tool_start":
+                yield f"data: {json.dumps({'type': 'tool_status', 'tool': event['name'], 'status': 'running'})}\n\n"
+
+            elif kind == "on_tool_end":
+                yield f"data: {json.dumps({'type': 'tool_status', 'tool': event['name'], 'status': 'completed'})}\n\n"
+
+            elif kind == "on_chain_end":
+                output = event["data"]["output"]
+                if isinstance(output, dict):
+                    final_state.update(output)
+
+        sources = final_state.get("sources", [])
+        
+        yield f"data: {json.dumps({'type': 'done', 'id': 'private', 'sources': sources})}\n\n"
+
+    except Exception as e:
+        traceback.print_exc()
+        yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"

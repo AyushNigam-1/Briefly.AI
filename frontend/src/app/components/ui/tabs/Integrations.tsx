@@ -8,7 +8,6 @@ import { RiNotionFill } from "react-icons/ri";
 import { FaGoogleDrive } from "react-icons/fa";
 import { FaSlack } from "react-icons/fa";
 import { CgLinear } from "react-icons/cg";
-
 import Cookies from 'js-cookie'
 
 const INTEGRATIONS = [
@@ -100,7 +99,6 @@ export default function Integrations() {
 
     return (
         <div className="space-y-8 sm:space-y-10 font-mono">
-            {/* SECTION 1: CONNECTED APPS */}
             <div>
                 <div className="mb-4">
                     <h3 className="text-lg sm:text-xl font-bold transition-colors text-slate-900 dark:text-slate-200">

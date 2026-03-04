@@ -1,19 +1,20 @@
 "use client"
 import { Listbox, ListboxButton, ListboxOption, ListboxOptions, MenuButton, MenuItem, MenuItems, Menu } from '@headlessui/react';
 import clsx from 'clsx';
-import { AlarmClock, AlarmClockCheck, ChevronDown, FileText, Filter, ImageIcon, Loader2, MessageCircle, MessageSquare, Package, Paperclip, PauseCircle, SendHorizontal, SlidersHorizontal, X } from 'lucide-react'; // 🌟 Added X icon
+// 🌟 Added Check icon to the imports
+import { AlarmClock, AlarmClockCheck, ChevronDown, FileText, Filter, ImageIcon, Loader2, MessageCircle, MessageSquare, Package, Paperclip, PauseCircle, SendHorizontal, SlidersHorizontal, X, Lock, Check, CheckCircle } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react'
 
 const options = [
-    { label: "GPT OSS 120B", value: "openai/gpt-oss-120b", icon: "/openai.webp" },
-    { label: "GPT OSS 20B", value: "openai/gpt-oss-20b", icon: "/openai.webp" },
-    { label: "Llama 70B", value: "llama-3.3-70b-versatile", icon: "/meta.webp" },
-    { label: "Llama 4 Scout", value: "meta-llama/llama-4-scout-17b-16e-instruct", icon: "/meta.webp" },
-    { label: "Qwen 3 32B", value: "qwen/qwen3-32b", icon: "/qwen.webp" },
-    { label: "Kimi K2", value: "moonshotai/kimi-k2-instruct-0905", icon: "/kimi.webp" },
+    { label: "GPT OSS 20B", value: "openai/gpt-oss-20b", icon: "/openai.webp", isPremium: false, description: "Fast & efficient for everyday tasks" },
+    { label: "Llama 4 Scout", value: "meta-llama/llama-4-scout-17b-16e-instruct", icon: "/meta.webp", isPremium: false, description: "Quick search & summarization" },
+    { label: "Qwen 3 32B", value: "qwen/qwen3-32b", icon: "/qwen.webp", isPremium: false, description: "Strong multilingual & math skills" },
+    { label: "Kimi K2", value: "moonshotai/kimi-k2-instruct-0905", icon: "/kimi.webp", isPremium: false, description: "Long context document processing" },
+    { label: "GPT OSS 120B", value: "openai/gpt-oss-120b", icon: "/openai.webp", isPremium: true, description: "Advanced reasoning & complex coding" },
+    { label: "Llama 70B", value: "llama-3.3-70b-versatile", icon: "/meta.webp", isPremium: true, description: "Deep analysis & creative writing" },
 ]
 
-const InputBox = ({ query, setQuery, send, isPending, files, stop, handleFileChange, removeFile }: { // 🌟 Added removeFile to props
+const InputBox = ({ query, setQuery, send, isPending, files, stop, handleFileChange, removeFile }: {
     query: string, setQuery: (value: string) => void, send: (value: string, files: File[], model: string) => void, files: File[], isPending: boolean, stop: () => void, handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>, removeFile: (index: number) => void
 }) => {
     const doc = useRef<HTMLInputElement | null>(null);
@@ -23,13 +24,14 @@ const InputBox = ({ query, setQuery, send, isPending, files, stop, handleFileCha
         const savedModelValue = localStorage.getItem('selectedModel');
         if (savedModelValue) {
             const foundOption = options.find(opt => opt.value === savedModelValue);
-            if (foundOption) {
+            if (foundOption && !foundOption.isPremium) {
                 setSelected(foundOption);
             }
         }
     }, []);
 
     const handleModelChange = (item: typeof options[0]) => {
+        if (item.isPremium) return;
         setSelected(item);
         localStorage.setItem('selectedModel', item.value);
     };
@@ -38,11 +40,9 @@ const InputBox = ({ query, setQuery, send, isPending, files, stop, handleFileCha
         <div className="flex gap-2 sm:gap-4 items-end w-full">
             <div className="w-full flex-1 space-y-3 sm:space-y-4 min-w-0">
 
-                {/* 🌟 FIX: Added w-full, overflow-x-auto, pt-2 and flex-nowrap for perfect horizontal scrolling */}
                 {files?.length !== 0 && files !== undefined &&
                     <div className="flex flex-nowrap w-full gap-3 overflow-x-auto scrollbar-none animate-in fade-in slide-in-from-bottom-2 font-mono pb-2 pt-2 px-1">
                         {files?.map((file, index) => (
-                            // flex-shrink-0 ensures the badges don't crush together
                             <div key={`${file.name}-${index}`} className="relative group flex-shrink-0">
                                 <div className='p-1.5 sm:p-2 pr-6 sm:pr-8 flex gap-2 rounded-xl relative border transition-colors
                                     bg-slate-50 border-slate-200 text-slate-800 
@@ -67,7 +67,6 @@ const InputBox = ({ query, setQuery, send, isPending, files, stop, handleFileCha
                                     </div>
                                 </div>
 
-                                {/* 🌟 NEW: Remove Badge Button */}
                                 <button
                                     onClick={() => removeFile(index)}
                                     className="absolute -top-1.5 -right-1.5 p-1 rounded-full shadow-sm transition-colors
@@ -81,7 +80,7 @@ const InputBox = ({ query, setQuery, send, isPending, files, stop, handleFileCha
                     </div>
                 }
 
-                <div className="flex rounded-[2rem] border transition-colors items-center  bg-white border-slate-300 dark:bg-[#1a1a1a] dark:border-secondary">
+                <div className="flex rounded-[2rem] border transition-colors items-center bg-white border-slate-300 dark:bg-[#1a1a1a] dark:border-secondary">
                     <button
                         className="rounded-full p-3 flex items-center justify-center transition-colors flex-shrink-0
                             bg-slate-900 text-white hover:bg-slate-800
@@ -111,31 +110,54 @@ const InputBox = ({ query, setQuery, send, isPending, files, stop, handleFileCha
                         </MenuButton>
 
                         <MenuItems transition className={clsx(
-                            "absolute right-0 bottom-full mb-2 sm:mb-4 rounded-xl p-1 sm:p-2 z-50 w-56 sm:min-w-[220px] max-h-[60vh] overflow-y-auto space-y-1 sm:space-y-2 border shadow-lg",
+                            "absolute right-0 bottom-full mb-2 sm:mb-4 rounded-xl p-1 sm:p-2 z-50 w-72 sm:w-80 max-h-[60vh] overflow-y-auto space-y-1 sm:space-y-1 border shadow-lg",
                             "bg-white border-slate-200 text-slate-800",
                             "dark:bg-tertiary dark:border-secondary dark:text-primary dark:shadow-none",
                             "origin-bottom-right transition duration-200 ease-out",
                             "data-[closed]:scale-95 data-[closed]:opacity-0 data-[closed]:translate-y-2"
                         )}
                         >
-                            <div className="px-2 py-1 flex gap-2 items-center uppercase font-semibold text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                            {/* <div className="px-2 py-1 flex gap-2 items-center uppercase font-semibold text-xs sm:text-sm text-slate-500 dark:text-slate-400">
                                 <Package size={14} className="sm:w-[18px] sm:h-[18px]" /> Models
-                            </div>
-                            <hr className="border transition-colors border-slate-200 dark:border-secondary" />
+                            </div> */}
+                            {/* <hr className="border transition-colors border-slate-200 dark:border-secondary mb-1" /> */}
 
                             {options.map((item) => (
-                                <MenuItem key={item.value}>
-                                    {({ close }) => (
+                                <MenuItem key={item.value} disabled={item.isPremium}>
+                                    {({ close, disabled }) => (
                                         <button
                                             onClick={() => { handleModelChange(item); close(); }}
                                             className={clsx(
-                                                "w-full text-left flex gap-2 p-2 text-sm sm:text-base rounded-lg items-center cursor-pointer transition-colors",
-                                                "hover:bg-slate-100 dark:hover:bg-white/5",
-                                                selected.label === item.label && "bg-slate-100 dark:bg-white/5 font-medium"
+                                                "w-full text-left flex gap-3 p-2.5 rounded-lg items-center transition-colors",
+                                                disabled
+                                                    ? "opacity-60 cursor-not-allowed bg-slate-50 dark:bg-white/5"
+                                                    : "cursor-pointer hover:bg-slate-100 dark:hover:bg-white/10",
+                                                !disabled && selected.value === item.value && "font-medium bg-slate-100 border border-slate-200 text-slate-900 dark:bg-white/5 dark:border-secondary dark:text-white"
                                             )}
                                         >
-                                            <img src={item.icon} className='w-4 h-4 sm:w-5 sm:h-5 object-contain' alt={item.label} />
-                                            <span className="truncate">{item.label}</span>
+                                            <img src={item.icon} className='w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0' alt={item.label} />
+
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex justify-between items-center gap-1">
+                                                    <span className={clsx(
+                                                        "font-medium text-sm sm:text-base truncate",
+                                                        !disabled && selected.value === item.value && "font-semibold"
+                                                    )}>
+                                                        {item.label}
+                                                    </span>
+
+                                                    {/* 🌟 Swap between Lock and Check icon */}
+                                                    {item.isPremium ? (
+                                                        <Lock size={14} className="text-amber-500 flex-shrink-0" />
+                                                    ) : selected.value === item.value ? (
+                                                        <CheckCircle size={16} className="text-slate-800 dark:text-slate-200 flex-shrink-0" />
+                                                    ) : null}
+
+                                                </div>
+                                                <p className="text-sm text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                                                    {item.description}
+                                                </p>
+                                            </div>
                                         </button>
                                     )}
                                 </MenuItem>

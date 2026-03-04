@@ -99,15 +99,14 @@ const Chats = ({
     return (
         <>
             {/* 🌟 FIX 1: Changed `vh` to `dvh` for mobile browsers, and added horizontal padding (px-3 sm:px-6) */}
-            <div className="flex flex-col items-center w-full h-[calc(100dvh-140px)] relative px-3 sm:px-6">
+            <div className="flex flex-col items-center w-full h-[calc(100dvh-140px)] relative">
                 <div className="w-full max-w-6xl h-full relative">
                     <VList
                         ref={vlistRef}
                         data={queries}
                         onScroll={handleScroll}
                         shift={queries.length > prevQueriesRef.current.length && queries[0]?.content !== prevQueriesRef.current[0]?.content}
-                        // 🌟 FIX 2: Removed fixed pr-4 on mobile so content doesn't get pushed off-center
-                        className="scrollbar-none sm:pr-4 overflow-hidden h-full w-full py-4"
+                        className="scrollbar-none overflow-hidden h-full w-full py-4"
                     >
                         {(q, index) => (
                             <Message
@@ -140,8 +139,9 @@ const Chats = ({
 
             {/* 🌟 FIX 3: Added w-full and padding to match the chat area above */}
             <div className="fixed bottom-0 left-0 w-full pb-4 sm:pb-4 pt-2 z-50">
-                <div className="max-w-6xl w-full mx-auto px-3 sm:px-6">
+                <div className="max-w-6xl w-full mx-auto">
                     <InputBox
+                        // removeFile={removeFIle}
                         query={searchInput} setQuery={setQuery} send={handleSend}
                         isPending={isPending} files={files}
                         handleFileChange={handleFileChange} stop={handleStop}

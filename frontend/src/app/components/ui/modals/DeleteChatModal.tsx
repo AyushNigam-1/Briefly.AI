@@ -19,17 +19,17 @@ const DeleteChatDialog: React.FC<DeleteChatDialogProps> = ({ isOpen, onClose, on
                     transition
                     className="w-full max-w-sm rounded-2xl border p-6 shadow-2xl transition duration-300 ease-out data-[closed]:scale-95 data-[closed]:opacity-0 data-[closed]:translate-y-4
                         bg-white border-slate-200 shadow-slate-200/50
-                        dark:bg-tertiary dark:border-secondary dark:shadow-black/50"
+                        dark:bg-tertiary dark:border-secondary dark:shadow-black/50 space-y-4"
                 >
-                    <DialogTitle className="text-xl font-bold text-center text-slate-900 dark:text-white">
+                    <DialogTitle className="text-xl md:text-2xl font-bold text-center text-slate-900 dark:text-primary">
                         Delete chat?
                     </DialogTitle>
 
-                    <Description className="mt-3 text-sm leading-relaxed text-center text-slate-500 dark:text-slate-400">
+                    <Description className=" text-sm md:text-base leading-relaxed text-center text-slate-500 dark:text-slate-400">
                         This action cannot be undone. It will permanently delete this conversation from your history.
                     </Description>
 
-                    <div className="flex justify-center gap-3 mt-8">
+                    <div className="flex justify-center gap-3 ">
                         <button
                             onClick={onClose}
                             className="px-4 py-2.5 rounded-xl font-semibold transition-colors

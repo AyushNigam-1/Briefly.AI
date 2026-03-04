@@ -77,11 +77,11 @@ export default function Preference() {
 
             {/* Custom Instructions Section */}
             <div>
-                <div className="mb-3">
-                    <h3 className="text-xl font-bold transition-colors text-slate-900 dark:text-slate-200">
+                <div className="mb-3 sm:mb-4">
+                    <h3 className="text-lg sm:text-xl font-bold transition-colors text-slate-900 dark:text-slate-200">
                         Custom Instructions
                     </h3>
-                    <p className="text-sm mt-1 transition-colors text-slate-500 dark:text-slate-400">
+                    <p className="text-xs sm:text-sm mt-1 transition-colors text-slate-500 dark:text-slate-400">
                         Persistent behavior across all chats.
                     </p>
                 </div>
@@ -102,7 +102,7 @@ export default function Preference() {
                     <h4 className="text-lg font-bold transition-colors text-slate-900 dark:text-slate-200">
                         Verbosity
                     </h4>
-                    <p className="text-sm mt-1 transition-colors text-slate-500 dark:text-slate-400">
+                    <p className="text-xs sm:text-sm mt-1 transition-colors text-slate-500 dark:text-slate-400">
                         Controls how long and detailed replies should be.
                     </p>
                 </div>
@@ -134,7 +134,7 @@ export default function Preference() {
                     <h4 className="text-lg font-bold transition-colors text-slate-900 dark:text-slate-200">
                         Writing Style
                     </h4>
-                    <p className="text-sm mt-1 transition-colors text-slate-500 dark:text-slate-400">
+                    <p className="text-xs sm:text-sm mt-1 transition-colors text-slate-500 dark:text-slate-400">
                         Defines tone and presentation.
                     </p>
                 </div>

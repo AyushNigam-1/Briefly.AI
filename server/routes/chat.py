@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Form, UploadFile, File, Query, Response , Body
+from fastapi import APIRouter, HTTPException, Depends, Form, UploadFile, File, Query, Response 
 from fastapi.responses import StreamingResponse
 from utils.auth import get_current_user
 from pydantic import BaseModel, Field
@@ -10,12 +10,17 @@ from controllers.chat_handler import (
     get_chat_history,
     generate_audio_from_text,
     regenerate_chat_stream,
-    edit_chat_stream
+    edit_chat_stream,
+    private_chat_stream
 )
 from typing import Optional
 from datetime import datetime
 from fastapi_limiter.depends import RateLimiter
 from pyrate_limiter import Limiter, Rate, Duration
+from fastapi import APIRouter, Depends, Form, File, UploadFile
+from fastapi.responses import StreamingResponse
+from typing import List, Optional
+import json
 
 router = APIRouter()
 
@@ -174,3 +179,29 @@ async def edit_chat_route(
     )
 
     return StreamingResponse(generator, media_type="text/event-stream")
+
+@router.post("/query/private")
+async def private_chat_endpoint(
+    query: str = Form(...),
+    modal_name: Optional[str] = Form(None),
+    chat_history: Optional[str] = Form(None), # Stringified JSON array if sending context
+    files: List[UploadFile] = File(default=[]),
+    user: str = Depends(get_current_user) 
+):
+    parsed_history = []
+    if chat_history:
+        try:
+            parsed_history = json.loads(chat_history)
+        except json.JSONDecodeError:
+            pass
+
+    return StreamingResponse(
+        private_chat_stream(
+            user_input=query,
+            user_id=user["user_id"],
+            files=files,
+            modal_name=modal_name,
+            chat_history=parsed_history
+        ),
+        media_type="text/event-stream"
+    )

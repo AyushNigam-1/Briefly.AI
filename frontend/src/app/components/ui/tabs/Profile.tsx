@@ -46,7 +46,7 @@ export default function ProfilePanel() {
     return (
         <div className="space-y-6 font-mono">
             {/* Profile Header Card */}
-            <div className="flex items-center gap-4 p-4 rounded-xl border transition-colors
+            <div className="flex items-center gap-4 md:p-4 p-2  rounded-xl border transition-colors
                 bg-white border-slate-200 shadow-sm
                 dark:bg-white/5 dark:border-secondary dark:shadow-none"
             >
@@ -90,7 +90,7 @@ export default function ProfilePanel() {
                 <h3 className="text-xl font-bold text-slate-900 dark:text-slate-200">
                     About You
                 </h3>
-                <p className="text-sm mt-1 text-slate-500 dark:text-slate-400">
+                <p className="text-xs sm:text-sm mt-1 transition-colors text-slate-500 dark:text-slate-400">
                     This helps personalize your AI experience.
                 </p>
             </div>
@@ -118,8 +118,6 @@ export default function ProfilePanel() {
     )
 }
 
-/* ---------------- Inputs ---------------- */
-
 interface FieldProps {
     label: string
     value?: string
@@ -128,8 +126,8 @@ interface FieldProps {
 
 function Field({ label, value, onChange }: FieldProps) {
     return (
-        <div>
-            <label className="block text-sm font-semibold mb-1.5 transition-colors
+        <div className="w-full">
+            <label className="block text-xs sm:text-sm font-semibold mb-1.5 transition-colors
                 text-slate-700 dark:text-slate-400"
             >
                 {label}
@@ -137,7 +135,7 @@ function Field({ label, value, onChange }: FieldProps) {
             <input
                 value={value || ""}
                 onChange={e => onChange(e.target.value)}
-                className="w-full rounded-xl px-4 py-2.5 outline-none transition-colors border
+                className="w-full rounded-xl px-4 py-2.5 sm:py-3 text-sm sm:text-base outline-none transition-colors border
                     bg-slate-50 border-slate-200 text-slate-900 focus:border-slate-400 focus:bg-white
                     dark:bg-[#0b0b0b] dark:border-white/10 dark:text-slate-200 dark:focus:border-white/30"
             />
@@ -147,8 +145,8 @@ function Field({ label, value, onChange }: FieldProps) {
 
 function Textarea({ label, value, onChange }: FieldProps) {
     return (
-        <div>
-            <label className="block text-sm font-semibold mb-1.5 transition-colors
+        <div className="w-full">
+            <label className="block text-xs sm:text-sm font-semibold mb-1.5 transition-colors
                 text-slate-700 dark:text-slate-400"
             >
                 {label}
@@ -156,7 +154,7 @@ function Textarea({ label, value, onChange }: FieldProps) {
             <textarea
                 value={value || ""}
                 onChange={e => onChange(e.target.value)}
-                className="w-full h-28 rounded-xl px-4 py-3 outline-none resize-none transition-colors border
+                className="w-full h-28 sm:h-32 rounded-xl px-4 py-3 text-sm sm:text-base outline-none resize-none transition-colors border
                     bg-slate-50 border-slate-200 text-slate-900 focus:border-slate-400 focus:bg-white
                     dark:bg-[#0b0b0b] dark:border-white/10 dark:text-slate-200 dark:focus:border-white/30"
             />

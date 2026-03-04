@@ -65,11 +65,11 @@ const Memory: React.FC = () => {
         <div className="space-y-6">
 
             {/* HEADER */}
-            <div>
-                <h3 className="text-xl font-semibold text-slate-300">
+            <div className="border-b border-slate-200 dark:border-white/10 pb-4 sm:pb-5">
+                <h3 className="text-lg sm:text-xl font-bold transition-colors text-slate-900 dark:text-slate-200">
                     Saved Memories
                 </h3>
-                <p className="text-sm text-slate-500">
+                <p className="text-xs sm:text-sm mt-1 transition-colors text-slate-500 dark:text-slate-400">
                     Long-term facts the assistant can use during conversations.
                 </p>
             </div>
@@ -77,7 +77,7 @@ const Memory: React.FC = () => {
             {/* TOGGLE */}
             <div className="flex items-center justify-between bg-white/5 border border-secondary rounded-xl px-4 py-3">
                 <div>
-                    <p className="text-slate-200 font-medium">
+                    <p className="text-slate-200 font-semibold">
                         Use memories in conversations
                     </p>
                     <p className="text-xs text-slate-400">

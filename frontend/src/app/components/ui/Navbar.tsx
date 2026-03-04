@@ -24,7 +24,7 @@ const Navbar: React.FC<NavbarProps> = ({ component }) => {
     return (
         <>
             {/* 🌟 FIX 1: Adjusted container padding to match the standard layout and ensure items don't touch edges */}
-            <div className='flex justify-between items-center py-3 sm:py-4 px-4 sm:px-6 border-b border-slate-200 dark:border-secondary transition-colors duration-300 w-full'>
+            <div className='flex justify-between items-center py-3 sm:py-4 border-b border-slate-200 dark:border-secondary transition-colors duration-300 w-full'>
 
                 {/* 🌟 FIX 2: Logo scaling for mobile */}
                 <div className="flex-shrink-0 flex items-center">
