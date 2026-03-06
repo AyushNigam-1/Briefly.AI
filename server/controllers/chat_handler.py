@@ -12,7 +12,10 @@ from fastapi import HTTPException
 import traceback
 import os
 import json
+from redis_client import redis_client
 from groq import Groq
+import hashlib
+import time
 
 client = Groq(api_key=os.getenv("groq_api_key"))
 
@@ -35,6 +38,62 @@ def get_or_create_chat(chat_id, user_id):
     doc["_id"] = res.inserted_id
     return doc, res.inserted_id, True
 
+def search_user_chats(user_id: str, search_term: str):
+    """
+    Searches across all chats for a user and returns the specific 
+    sessions and exact messages that match the search term.
+    """
+    try:
+        pipeline = [
+            # 1. Match only documents belonging to this user
+            {"$match": {"user_id": user_id}},
+            
+            # 2. Project (shape) the output to only include matching messages
+            {"$project": {
+                "_id": 1,
+                "title": 1,
+                "timestamp": 1,
+                "matching_messages": {
+                    "$filter": {
+                        "input": "$queries",
+                        "as": "msg",
+                        "cond": {
+                            "$regexMatch": {
+                                # Use ifNull to prevent crashes if a message has no content
+                                "input": {"$ifNull": ["$$msg.content", ""]}, 
+                                "regex": search_term,
+                                "options": "i" # 'i' makes it case-insensitive
+                            }
+                        }
+                    }
+                }
+            }},
+            
+            # 3. Filter out any chats where no messages matched
+            {"$match": {
+                "matching_messages": {"$ne": []}
+            }},
+            
+            # 4. Sort by newest chats first
+            {"$sort": {"timestamp": -1}}
+        ]
+
+        cursor = summary_collection.aggregate(pipeline)
+        
+        results = []
+        for doc in cursor:
+            results.append({
+                "id": str(doc["_id"]),
+                "title": doc.get("title", "Untitled Chat"),
+                "timestamp": doc.get("timestamp"),
+                "messages": doc.get("matching_messages", [])
+            })
+            
+        return results
+
+    except Exception as e:
+        print(f"Search Error: {e}")
+        raise HTTPException(status_code=500, detail="Error searching chats")
 
 def build_messages(chat, user_input, file_context):
     messages = [
@@ -225,24 +284,29 @@ def get_chat_history(
         print(f"Error fetching history: {e}")
         raise e
     
-def get_chats_by_user(user_id: str):
+def get_chats_by_user(user_id: str, skip: int = 0, limit: int = 10):
+    # Sort by is_pinned (True first), then timestamp (Newest first)
+    time.sleep(1.5)
     summaries = list(
         summary_collection.find(
             {"user_id": user_id},
-            {"_id": 1, "title": 1, "timestamp": 1, "url": 1, "queries": 1, "type": 1, "thumbnail": 1,"is_pinned":1},
+            {"_id": 1, "title": 1, "timestamp": 1, "queries": 1, "is_pinned": 1},
         )
+        .sort([("is_pinned", -1), ("timestamp", -1)])
+        .skip(skip)
+        .limit(limit)
     )
+    
     result = []
     for summary in summaries:
         result.append({
             "id": str(summary["_id"]),
-            "title": summary["title"],
-            "timestamp": summary["timestamp"],
+            "title": summary.get("title", "Untitled Chat"),
+            "timestamp": summary.get("timestamp"),
             "queries": len(summary.get("queries", [])),
-            "is_pinned":summary["is_pinned"]
+            "is_pinned": summary.get("is_pinned", False)
         })
     
-
     return result
 
 
@@ -289,20 +353,37 @@ async def toggle_chat_pin(chat_id: str, user_id: str, is_pinned: bool):
             raise e
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
+def get_cache_key(text: str, voice: str):
+    raw = f"{voice}:{text}".encode()
+    return "tts:" + hashlib.sha256(raw).hexdigest()
+
+
 def generate_audio_from_text(text: str, voice: str = "troy") -> bytes:
     """
-    Takes text and a voice ID, calls the Groq TTS API, 
-    and returns the raw audio bytes.
+    Generates audio from text using Groq TTS.
+    Uses Redis caching to avoid regenerating audio.
     """
+
+    cache_key = get_cache_key(text, voice)
+
     try:
+        # 1️⃣ Check Redis cache
+        cached_audio = redis_client.get(cache_key)
+
+        if cached_audio:
+            return cached_audio
+
         response = client.audio.speech.create(
             model="canopylabs/orpheus-v1-english",
             voice=voice,
             input=text,
-            response_format="wav" 
+            response_format="wav"
         )
-        
-        return response.read()
+
+        audio_bytes = response.read()
+        redis_client.setex(cache_key, 86400, audio_bytes)
+
+        return audio_bytes
 
     except Exception as e:
         print(e)

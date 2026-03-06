@@ -11,7 +11,8 @@ from controllers.chat_handler import (
     generate_audio_from_text,
     regenerate_chat_stream,
     edit_chat_stream,
-    private_chat_stream
+    private_chat_stream,
+    search_user_chats,
 )
 from typing import Optional
 from datetime import datetime
@@ -79,12 +80,13 @@ async def get_history(
     "/chats/",
     dependencies=[Depends(RateLimiter(limiter=read_limiter))]
 )
-def get_user_summaries(current_user: dict = Depends(get_current_user)):
-    try:
-        summaries = get_chats_by_user(current_user["user_id"])
-        return {"chats": summaries}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+async def get_user_chats(
+    skip: int = Query(0, description="Items to skip"),
+    limit: int = Query(10, description="Items to return"),
+    user: dict = Depends(get_current_user)
+):
+    chats = get_chats_by_user(user_id=user["user_id"], skip=skip, limit=limit)
+    return {"chats": chats}
 
 
 class PinRequest(BaseModel):
@@ -203,3 +205,29 @@ async def private_chat_endpoint(
         ),
         media_type="text/event-stream"
     )
+
+@router.get("/chats/search")
+async def search_chats_endpoint(
+    q: str = Query(..., description="The search query string"),
+    user: dict = Depends(get_current_user)
+):
+    """
+    Endpoint to search through user chat history.
+    """
+    # Prevent empty searches from hitting the database
+    if not q or not q.strip():
+        return {"results": []}
+
+    try:
+        # Assuming your get_current_user returns a dict with 'user_id'
+        user_id = user["user_id"] 
+        
+        results = search_user_chats(user_id=user_id, search_term=q.strip())
+        
+        return {
+            "status": "success",
+            "search_term": q,
+            "results": results
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { motion } from "framer-motion";
-import { ChevronDown, Copy, FileText, ImageIcon, Link, RefreshCw, Pencil, Check, X } from "lucide-react";
+import { ChevronDown, Copy, FileText, ImageIcon, Link, RefreshCw, Pencil, Check, X, Volume2, Pause, Loader2 } from "lucide-react";
 import remarkGfm from "remark-gfm";
 import { Disclosure, DisclosureButton, DisclosurePanel } from "@headlessui/react";
 import { query } from "@/app/types";
@@ -19,10 +19,14 @@ interface MessageProps {
 
 const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen, onRegenerate, onEdit }: MessageProps) => {
     const isStreaming = isPending && isLastItem && q.sender === "llm";
-
     const [isEditing, setIsEditing] = useState(false);
     const [copied, setCopied] = useState(false);
     const editRef = useRef<HTMLParagraphElement>(null);
+
+    // 🌟 Voice state and refs
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [isAudioLoading, setIsAudioLoading] = useState(false);
 
     useEffect(() => {
         if (isEditing && editRef.current) {
@@ -38,6 +42,18 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
         }
     }, [isEditing, q.content]);
 
+    // 🌟 Cleanup audio when component unmounts
+    useEffect(() => {
+        return () => {
+            if (audioRef.current) {
+                audioRef.current.pause();
+                if (audioRef.current.src) {
+                    URL.revokeObjectURL(audioRef.current.src);
+                }
+            }
+        };
+    }, []);
+
     if (!q.content && !isStreaming && (!q.files || q.files.length === 0)) {
         return <div className="h-0" />;
     }
@@ -45,7 +61,6 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
     const handleSaveEdit = () => {
         if (!editRef.current) return;
         const newText = editRef.current.innerText.trim();
-
         if (newText && newText !== q.content) {
             onEdit(newText);
         }
@@ -68,6 +83,56 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
         setTimeout(() => setCopied(false), 2000);
     };
 
+    // 🌟 Voice functionality
+    const handleToggleAudio = async () => {
+        // If already playing, pause it
+        if (isPlaying && audioRef.current) {
+            audioRef.current.pause();
+            setIsPlaying(false);
+            return;
+        }
+
+        // If audio is already fetched and paused, resume playing
+        if (audioRef.current && audioRef.current.src) {
+            audioRef.current.play();
+            setIsPlaying(true);
+            return;
+        }
+
+        // Otherwise, fetch from backend (No token sent!)
+        if (!q.content) return;
+        setIsAudioLoading(true);
+
+        try {
+            const response = await fetch("http://10.207.18.43:8000/generate-voice", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ text: q.content, voice: "troy" })
+            });
+
+            if (!response.ok) throw new Error("Failed to fetch audio");
+
+            const blob = await response.blob();
+            const audioUrl = URL.createObjectURL(blob);
+
+            const audio = new Audio(audioUrl);
+            audioRef.current = audio;
+
+            audio.onended = () => {
+                setIsPlaying(false);
+            };
+
+            audio.play();
+            setIsPlaying(true);
+        } catch (error) {
+            console.error("Error playing audio:", error);
+        } finally {
+            setIsAudioLoading(false);
+        }
+    };
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -76,10 +141,7 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
             className={`flex w-full ${q.sender === "user" ? "justify-end" : "justify-start"}`}
         >
             {/* 🌟 Added 'relative' to this wrapper so absolute elements map perfectly to it */}
-            <div className={`relative flex flex-col gap-1 mb-6 group ${q.sender === "user"
-                ? "items-end w-full max-w-[90%] sm:max-w-[85%]"
-                : "items-start w-full max-w-full"
-                }`}>
+            <div className={`relative flex flex-col gap-1 p-3 md:py-3 md:p-0 group ${q.sender === "user" ? "items-end w-full max-w-[90%] sm:max-w-[85%]" : "items-start w-full max-w-full"}`}>
 
                 {/* Files badges */}
                 {q?.files && q.files.length > 0 && (
@@ -99,12 +161,7 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
                 )}
 
                 <div className={`flex flex-col gap-1.5 transition-all duration-200 ${q.sender === "user" ? "items-end w-fit max-w-full" : "items-start w-full"}`}>
-
-                    <div className={`transition-all duration-200 ${q.sender === "user"
-                        ? "bg-slate-50 border border-slate-200 dark:bg-tertiary dark:border-secondary dark:text-white shadow-sm rounded-2xl w-fit max-w-full"
-                        : "bg-transparent rounded-2xl w-full"
-                        }`}>
-
+                    <div className={`transition-all duration-200 ${q.sender === "user" ? "bg-slate-50 border border-slate-200 dark:bg-tertiary dark:border-secondary dark:text-white shadow-sm rounded-2xl w-fit max-w-full" : "bg-transparent rounded-2xl w-full"}`}>
                         {q.sender === "user" ? (
                             <p
                                 ref={editRef}
@@ -176,6 +233,8 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
                             </button>
                         )}
 
+
+
                         <button
                             onClick={handleCopy}
                             className={`p-1 transition-colors ${copied ? "text-green-500 dark:text-green-400" : "text-slate-400 hover:text-slate-900 dark:hover:text-white"}`}
@@ -184,16 +243,29 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
                         </button>
 
                         {q.sender !== 'user' && (
-                            <button
-                                onClick={onRegenerate}
-                                disabled={isPending}
-                                className={`text-slate-400 p-1 transition-colors ${isPending
-                                    ? "opacity-50 cursor-not-allowed"
-                                    : "hover:text-slate-900 dark:hover:text-white"
-                                    }`}
-                            >
-                                <RefreshCw size={14} className="sm:w-4 sm:h-4" />
-                            </button>
+                            <>
+                                <button
+                                    onClick={onRegenerate}
+                                    disabled={isPending}
+                                    className={`text-slate-400 p-1 transition-colors ${isPending ? "opacity-50 cursor-not-allowed" : "hover:text-slate-900 dark:hover:text-white"}`}
+                                >
+                                    <RefreshCw size={14} className="sm:w-4 sm:h-4" />
+                                </button>
+                                <button
+                                    onClick={handleToggleAudio}
+                                    disabled={isPending || isAudioLoading}
+                                    className={`p-1 transition-colors text-slate-400 ${isAudioLoading || isPending ? "opacity-50 cursor-not-allowed" : " hover:text-slate-900 dark:hover:text-white"}`}
+                                >
+                                    {
+                                        isAudioLoading ? (
+                                            <Loader2 size={14} className="sm:w-4 sm:h-4 animate-spin" />
+                                        ) : isPlaying ? (
+                                            <Pause size={14} className="sm:w-4 sm:h-4" />
+                                        ) : (
+                                            <Volume2 size={14} className="sm:w-4 sm:h-4" />
+                                        )}
+                                </button>
+                            </>
                         )}
                         {q.sources?.length !== 0 && q.sender !== 'user' && (
                             <button onClick={() => { setSources(q.sources); setSourcesOpen(true) }} className="text-slate-400 flex gap-2 items-center hover:text-slate-900 dark:hover:text-white p-1 transition-colors text-sm sm:text-base">
@@ -211,7 +283,7 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
                     </div>
                 )}
             </div>
-        </motion.div>
+        </motion.div >
     );
 };
 

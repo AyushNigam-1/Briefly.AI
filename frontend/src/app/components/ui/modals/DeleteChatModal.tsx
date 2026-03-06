@@ -1,5 +1,8 @@
+"use client";
+
 import React from "react";
 import { Description, Dialog, DialogPanel, DialogTitle, DialogBackdrop } from "@headlessui/react";
+import { Trash2 } from "lucide-react";
 
 interface DeleteChatDialogProps {
     isOpen: boolean;
@@ -17,24 +20,30 @@ const DeleteChatDialog: React.FC<DeleteChatDialogProps> = ({ isOpen, onClose, on
             <div className="fixed inset-0 flex items-center justify-center p-4">
                 <DialogPanel
                     transition
-                    className="w-full max-w-sm rounded-2xl border p-6 shadow-2xl transition duration-300 ease-out data-[closed]:scale-95 data-[closed]:opacity-0 data-[closed]:translate-y-4
+                    className="w-full max-w-sm rounded-2xl border p-6 flex flex-col items-center text-center shadow-2xl transition duration-300 ease-out data-[closed]:scale-95 data-[closed]:opacity-0 data-[closed]:translate-y-4
                         bg-white border-slate-200 shadow-slate-200/50
-                        dark:bg-tertiary dark:border-secondary dark:shadow-black/50 space-y-4"
+                        dark:bg-tertiary dark:border-white/10 dark:shadow-black/50"
                 >
-                    <DialogTitle className="text-xl md:text-2xl font-bold text-center text-slate-900 dark:text-primary">
-                        Delete chat?
+                    {/* Warning Icon */}
+                    <div className="p-3.5 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-full mb-4">
+                        <Trash2 size={24} strokeWidth={2} />
+                    </div>
+
+                    <DialogTitle className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+                        Delete Chat
                     </DialogTitle>
 
-                    <Description className=" text-sm md:text-base leading-relaxed text-center text-slate-500 dark:text-slate-400">
-                        This action cannot be undone. It will permanently delete this conversation from your history.
+                    <Description className="text-sm leading-relaxed text-slate-500 dark:text-gray-400 mb-6">
+                        This action cannot be undone. It will permanently delete this conversation and its data from your history.
                     </Description>
 
-                    <div className="flex justify-center gap-3 ">
+                    {/* Perfectly Balanced Buttons */}
+                    <div className="flex w-full gap-3">
                         <button
                             onClick={onClose}
-                            className="px-4 py-2.5 rounded-xl font-semibold transition-colors
-                                text-slate-600 hover:text-slate-900 hover:bg-slate-100
-                                dark:text-slate-300 bg-white/5 dark:hover:text-white dark:hover:bg-white/10"
+                            className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 border
+                                bg-white text-slate-700 border-slate-200 hover:bg-slate-50
+                                dark:bg-white/5 dark:text-slate-300 dark:border-white/10 dark:hover:bg-white/10"
                         >
                             Cancel
                         </button>
@@ -44,7 +53,9 @@ const DeleteChatDialog: React.FC<DeleteChatDialogProps> = ({ isOpen, onClose, on
                                 onConfirm();
                                 onClose();
                             }}
-                            className="px-5 py-2.5 rounded-xl font-semibold bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all duration-200"
+                            className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 border
+                                bg-red-500 text-white border-red-600 hover:bg-red-600 shadow-sm
+                                dark:bg-red-500/10 dark:text-red-500 dark:border-red-500/20 dark:hover:bg-red-500/20"
                         >
                             Delete
                         </button>

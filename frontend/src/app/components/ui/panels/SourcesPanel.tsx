@@ -35,7 +35,6 @@ const SourcesSidebar: React.FC<SourcesSidebarProps> = ({
                         className="fixed inset-0 bg-black/5 z-40"
                     />
 
-                    {/* Sidebar sliding in from the right */}
                     <motion.div
                         initial={{ x: "100%" }}
                         animate={{ x: 0 }}
@@ -44,16 +43,13 @@ const SourcesSidebar: React.FC<SourcesSidebarProps> = ({
                         className="fixed top-0 right-0 h-full text-white w-72 bg-tertiary border-l border-secondary shadow-lg z-50"
                     >
                         <div className="p-4 flex flex-col h-full space-y-4 font-mono">
-                            {/* Header */}
                             <div className="flex items-center justify-between ">
                                 <h2 className="text-xl font-bold text-white">Sources</h2>
                                 <button onClick={onClose}>
                                     <X size={20} className="text-gray-400 hover:text-white transition-colors" />
                                 </button>
                             </div>
-                            <hr className="border border-secondary" />
 
-                            {/* Sources List */}
                             <div className="flex-1 overflow-y-auto space-y-3 scrollbar-none">
                                 {!sources?.length && (
                                     <p className="text-gray-500 text-sm">No sources available.</p>

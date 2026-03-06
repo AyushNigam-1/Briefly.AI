@@ -1,4 +1,4 @@
-import React, { Dispatch, SetStateAction, useState, useRef, useEffect, useLayoutEffect } from "react";
+import React, { Dispatch, SetStateAction, useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { VList, VListHandle } from 'virtua';
 import InputBox from "./InputBox";
@@ -46,47 +46,28 @@ const Chats = ({
 
     const vlistRef = useRef<VListHandle>(null);
     const atBottomRef = useRef(true);
-    const prevQueriesRef = useRef<query[]>(queries);
-    const initialScrollDone = useRef(false);
-
-    useLayoutEffect(() => {
-        if (!initialScrollDone.current && queries.length > 0 && vlistRef.current) {
-            vlistRef.current.scrollToIndex(queries.length - 1, { align: 'end' });
-            initialScrollDone.current = true;
-        }
-    }, [queries.length]);
 
     const handleScroll = (offset: number) => {
         if (!vlistRef.current) return;
 
-        if (offset < 10 && hasMore && !isLoadingOlder) {
+        // Trigger infinite scroll near the top
+        if (offset < 50 && hasMore && !isLoadingOlder) {
             loadOlderChats();
         }
 
-        const scrollSize = vlistRef.current.scrollSize;
-        const viewportSize = vlistRef.current.viewportSize;
+        // Keep track of whether the user is near the bottom
+        const { scrollSize, viewportSize } = vlistRef.current;
         atBottomRef.current = scrollSize - (offset + viewportSize) < 100;
     };
 
-    // 🌟 STRICT SCROLL LOGIC
+    // 🌟 SIMPLIFIED SCROLL LOGIC
     useEffect(() => {
         if (!vlistRef.current || queries.length === 0) return;
 
-        const prev = prevQueriesRef.current;
-
-        const isNewMessageAppended =
-            queries.length > prev.length &&
-            (prev.length === 0 || queries[queries.length - 1] !== prev[prev.length - 1]);
-
-        if (isNewMessageAppended || (isPending && atBottomRef.current)) {
-            requestAnimationFrame(() => {
-                setTimeout(() => {
-                    vlistRef.current?.scrollToIndex(queries.length - 1, { align: "end" });
-                }, 15);
-            });
+        // Only auto-scroll if the user is already at the bottom, or if the AI is actively typing
+        if (atBottomRef.current || isPending) {
+            vlistRef.current.scrollToIndex(queries.length - 1, { align: "end" });
         }
-
-        prevQueriesRef.current = queries;
     }, [queries, isPending]);
 
     const copyToClipboard = async (text?: string) => {
@@ -98,15 +79,27 @@ const Chats = ({
 
     return (
         <>
-            {/* 🌟 FIX 1: Changed `vh` to `dvh` for mobile browsers, and added horizontal padding (px-3 sm:px-6) */}
             <div className="flex flex-col items-center w-full h-[calc(100dvh-140px)] relative">
                 <div className="w-full max-w-6xl h-full relative">
+
+                    {isLoadingOlder && (
+                        <div className="absolute top-0 left-0 w-full z-10">
+                            <div className="h-1 w-full bg-slate-100 dark:bg-secondary overflow-hidden">
+                                <motion.div
+                                    className="h-full bg-primary w-1/3"
+                                    animate={{ x: ["-100%", "300%"] }}
+                                    transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                                />
+                            </div>
+                        </div>
+                    )}
+
                     <VList
                         ref={vlistRef}
                         data={queries}
                         onScroll={handleScroll}
-                        shift={queries.length > prevQueriesRef.current.length && queries[0]?.content !== prevQueriesRef.current[0]?.content}
-                        className="scrollbar-none overflow-hidden h-full w-full py-4"
+                        shift={true} // 🌟 virtua automatically prevents scroll jumps when older chats are prepended!
+                        className="scrollbar-none overflow-x-hidden h-full w-full py-4"
                     >
                         {(q, index) => (
                             <Message
@@ -122,26 +115,12 @@ const Chats = ({
                             />
                         )}
                     </VList>
-
-                    {isLoadingOlder && (
-                        <div className="absolute top-0 left-0 w-full z-10">
-                            <div className="h-1 w-full bg-slate-100 dark:bg-secondary overflow-hidden">
-                                <motion.div
-                                    className="h-full bg-primary w-1/3"
-                                    animate={{ x: ["-100%", "300%"] }}
-                                    transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                                />
-                            </div>
-                        </div>
-                    )}
                 </div>
             </div>
 
-            {/* 🌟 FIX 3: Added w-full and padding to match the chat area above */}
-            <div className="fixed bottom-0 left-0 w-full pb-4 sm:pb-4 pt-2 z-50">
-                <div className="max-w-6xl w-full mx-auto">
+            <div className="fixed bottom-0 left-0 w-full p-2 md:py-2 z-50">
+                <div className="max-w-4xl w-full mx-auto">
                     <InputBox
-                        // removeFile={removeFIle}
                         query={searchInput} setQuery={setQuery} send={handleSend}
                         isPending={isPending} files={files}
                         handleFileChange={handleFileChange} stop={handleStop}
