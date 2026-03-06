@@ -184,9 +184,8 @@ async def edit_chat_route(
 async def private_chat_endpoint(
     query: str = Form(...),
     modal_name: Optional[str] = Form(None),
-    chat_history: Optional[str] = Form(None), # Stringified JSON array if sending context
-    files: List[UploadFile] = File(default=[]),
-    user: str = Depends(get_current_user) 
+    chat_history: Optional[str] = Form(None), 
+    files: List[UploadFile] = File(default=[])
 ):
     parsed_history = []
     if chat_history:
@@ -198,7 +197,6 @@ async def private_chat_endpoint(
     return StreamingResponse(
         private_chat_stream(
             user_input=query,
-            user_id=user["user_id"],
             files=files,
             modal_name=modal_name,
             chat_history=parsed_history

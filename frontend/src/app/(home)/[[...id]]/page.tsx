@@ -9,7 +9,7 @@ import InputBox from "@/app/components/ui/InputBox";
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import Chats from "@/app/components/ui/Chats";
 import { query as QueryType } from "@/app/types";
-import { Ghost } from "lucide-react";
+import { Ghost, MessageSquareDashed } from "lucide-react";
 
 class StopRetryError extends Error {
   constructor(message: string) {
@@ -21,10 +21,17 @@ class StopRetryError extends Error {
 const Page = () => {
   const { id } = useParams();
   const router = useRouter();
-  const token = Cookies.get("access_token");
   const rawId = Array.isArray(id) ? id[0] : id;
+  const [isMounted, setIsMounted] = useState(false);
+  const [token, setToken] = useState<string | undefined>(undefined);
 
-  const isPrivate = rawId === "private";
+  useEffect(() => {
+    setToken(Cookies.get("access_token"));
+    setIsMounted(true);
+  }, []);
+
+  const isExplicitPrivate = rawId === "private";
+  const isPrivateMode = isExplicitPrivate || !token;
 
   const [query, setQuery] = useState<string>("");
   const [queries, setQueries] = useState<QueryType[]>([]);
@@ -32,7 +39,7 @@ const Page = () => {
   const [isPending, setPending] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
 
-  const [isInitialLoad, setIsInitialLoad] = useState<boolean>(!!rawId && rawId !== "private");
+  const [isInitialLoad, setIsInitialLoad] = useState<boolean>(!!rawId && !isExplicitPrivate);
 
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingOlder, setIsLoadingOlder] = useState(false);
@@ -41,7 +48,7 @@ const Page = () => {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const fetchHistory = useCallback(async (before?: string) => {
-    if (!rawId || rawId === "private") return;
+    if (!rawId || isPrivateMode) return;
 
     const params = new URLSearchParams({ limit: before ? "10" : "10" });
     if (before) params.append("before", before);
@@ -72,22 +79,22 @@ const Page = () => {
       if (before) setIsLoadingOlder(false);
       setIsInitialLoad(false);
     }
-  }, [rawId, token]);
+  }, [rawId, isPrivateMode, token]);
 
   useEffect(() => {
-    if (!rawId) {
+    if (isExplicitPrivate) {
       setQueries([]);
-      setActiveId(undefined);
-      setHasMore(true);
+      setActiveId("private");
+      setHasMore(false);
       setOldestCreatedAt(null);
       setIsInitialLoad(false);
       return;
     }
 
-    if (rawId === "private") {
+    if (!rawId) {
       setQueries([]);
-      setActiveId("private");
-      setHasMore(false);
+      setActiveId(undefined);
+      setHasMore(true);
       setOldestCreatedAt(null);
       setIsInitialLoad(false);
       return;
@@ -100,14 +107,14 @@ const Page = () => {
     setIsInitialLoad(true);
 
     fetchHistory();
-  }, [rawId, fetchHistory]);
+  }, [rawId, isExplicitPrivate, fetchHistory]);
 
   const loadOlderChats = useCallback(async () => {
-    if (!oldestCreatedAt || !hasMore || isLoadingOlder || isPrivate) return;
+    if (!oldestCreatedAt || !hasMore || isLoadingOlder || isPrivateMode) return;
 
     setIsLoadingOlder(true);
     await fetchHistory(oldestCreatedAt);
-  }, [oldestCreatedAt, hasMore, isLoadingOlder, fetchHistory, isPrivate]);
+  }, [oldestCreatedAt, hasMore, isLoadingOlder, fetchHistory, isPrivateMode]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.length) {
@@ -120,14 +127,13 @@ const Page = () => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // 🌟 HELPER: Private Stream Logic
   const executePrivateStream = async (form: FormData) => {
     try {
       abortControllerRef.current = new AbortController();
 
       await fetchEventSource("http://10.207.18.43:8000/query/private", {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: form,
         signal: abortControllerRef.current.signal,
 
@@ -163,7 +169,6 @@ const Page = () => {
                 return updated;
               });
             }
-            // 🌟 CRITICAL FIX: Kill the connection immediately so it doesn't auto-retry!
             abortControllerRef.current?.abort();
           }
 
@@ -174,7 +179,6 @@ const Page = () => {
           }
         },
         onclose() {
-          // 🌟 CRITICAL FIX: Prevent default retry behavior on close
           throw new StopRetryError("Stream closed normally");
         },
         onerror(err) {
@@ -193,12 +197,12 @@ const Page = () => {
 
 
   const handleRegenerate = async (targetIndex: number) => {
-    if (isPending || !activeId) return;
+    if (isPending || (!activeId && !isPrivateMode)) return;
 
     const savedModelValue = localStorage.getItem('selectedModel');
     setPending(true);
 
-    if (isPrivate) {
+    if (isPrivateMode) {
       const truncated = queries.slice(0, targetIndex);
       const lastUserMsg = truncated[truncated.length - 1];
 
@@ -248,11 +252,11 @@ const Page = () => {
           if (parsed.type === "done") {
             setPending(false);
             if (parsed.sources) setQueries(prev => { const up = [...prev]; up[up.length - 1].sources = parsed.sources; return up; });
-            abortControllerRef.current?.abort(); // 🌟 FIX
+            abortControllerRef.current?.abort();
           }
           if (parsed.type === "error") { setPending(false); abortControllerRef.current?.abort(); }
         },
-        onclose() { throw new StopRetryError("Closed"); }, // 🌟 FIX
+        onclose() { throw new StopRetryError("Closed"); },
         onerror(err) {
           if (err instanceof StopRetryError || err.name === 'AbortError') throw err;
           setPending(false);
@@ -267,14 +271,14 @@ const Page = () => {
 
 
   const handleEdit = async (targetIndex: number, newContent: string) => {
-    if (isPending || !activeId || !newContent.trim()) return;
+    if (isPending || (!activeId && !isPrivateMode) || !newContent.trim()) return;
 
     const savedModelValue = localStorage.getItem('selectedModel');
     const oldFiles = queries[targetIndex]?.files || [];
 
     setPending(true);
 
-    if (isPrivate) {
+    if (isPrivateMode) {
       const truncated = queries.slice(0, targetIndex);
       const updatedQueries: QueryType[] = [
         ...truncated,
@@ -326,11 +330,11 @@ const Page = () => {
           if (parsed.type === "done") {
             setPending(false);
             if (parsed.sources) setQueries(prev => { const up = [...prev]; up[up.length - 1].sources = parsed.sources; return up; });
-            abortControllerRef.current?.abort(); // 🌟 FIX 
+            abortControllerRef.current?.abort();
           }
           if (parsed.type === "error") { setPending(false); abortControllerRef.current?.abort(); }
         },
-        onclose() { throw new StopRetryError("Closed"); }, // 🌟 FIX
+        onclose() { throw new StopRetryError("Closed"); },
         onerror(err) {
           if (err instanceof StopRetryError || err.name === 'AbortError') throw err;
           setPending(false);
@@ -370,7 +374,7 @@ const Page = () => {
     form.append("modal_name", modal);
     filesData.forEach(file => form.append("files", file));
 
-    if (isPrivate) {
+    if (isPrivateMode) {
       form.append("chat_history", JSON.stringify(historyToSend));
       await executePrivateStream(form);
       return;
@@ -415,7 +419,7 @@ const Page = () => {
               router.replace(`/${parsed.id}`);
             }
 
-            abortControllerRef.current?.abort(); // 🌟 FIX
+            abortControllerRef.current?.abort();
           }
 
           if (parsed.type === "blocked") {
@@ -430,10 +434,10 @@ const Page = () => {
               };
               return updated;
             });
-            abortControllerRef.current?.abort(); // 🌟 FIX
+            abortControllerRef.current?.abort();
           }
         },
-        onclose() { throw new StopRetryError("Closed"); }, // 🌟 FIX
+        onclose() { throw new StopRetryError("Closed"); },
         onerror(err) {
           if (err instanceof StopRetryError || err.name === 'AbortError') throw err;
           setPending(false);
@@ -456,108 +460,128 @@ const Page = () => {
     }
     setPending(false);
   };
-
+  if (!isMounted) {
+    return null;
+  }
   return (
-    <>
-      <AnimatePresence mode="wait">
-        {isInitialLoad ? (
-          <motion.div
-            key="loading"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="flex items-center justify-center w-full h-[80vh]"
-          >
-            <div className="flex space-x-2 items-center text-slate-400 dark:text-gray-500">
-              <span className="animate-pulse">Loading conversation...</span>
-            </div>
-          </motion.div>
-        ) : queries.length > 0 ? (
-          <motion.div
-            key="chat"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="w-full h-full overflow-none"
-          >
-            <Chats
-              query={query}
-              queries={queries}
-              files={files}
-              isPending={isPending}
-              isLoadingOlder={isLoadingOlder}
-              hasMore={hasMore}
-              setQueries={setQueries}
-              handleSend={handleSend}
-              setQuery={setQuery}
-              setFiles={setFiles}
-              handleStop={handleStop}
-              handleFileChange={handleFileChange}
-              loadOlderChats={loadOlderChats}
-              handleRegenerate={handleRegenerate}
-              handleEdit={handleEdit}
-            />
-          </motion.div>
-        ) : (
-          <motion.div
-            key="intro"
-            initial={{ opacity: 0, scale: 0.95, x: "-50%", y: "-50%" }}
-            animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
-            exit={{ opacity: 0, scale: 0.95, x: "-50%", y: "-50%" }}
-            className="fixed top-1/2 left-1/2 w-full max-w-3xl px-4 sm:px-6 transition-colors duration-300 text-slate-800 dark:text-white"
-          >
-            <div className="flex flex-col gap-6 md:gap-10 font-mono">
-              <div className="text-center space-y-3 md:space-y-4 relative">
+    <AnimatePresence mode="wait">
+      {isInitialLoad ? (
+        <motion.div
+          key="loading"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+          className="flex items-center justify-center w-full h-[80vh]"
+        >
+          <div className="flex space-x-2 items-center text-slate-400 dark:text-gray-500">
+            <span className="animate-pulse">Loading conversation...</span>
+          </div>
+        </motion.div>
+      ) : queries.length > 0 ? (
+        <motion.div
+          key="chat"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="w-full h-full overflow-none"
+        >
+          <Chats
+            query={query}
+            queries={queries}
+            files={files}
+            isPending={isPending}
+            isLoadingOlder={isLoadingOlder}
+            hasMore={hasMore}
+            setQueries={setQueries}
+            handleSend={handleSend}
+            setQuery={setQuery}
+            setFiles={setFiles}
+            handleStop={handleStop}
+            handleFileChange={handleFileChange}
+            loadOlderChats={loadOlderChats}
+            handleRegenerate={handleRegenerate}
+            handleEdit={handleEdit}
+          />
+        </motion.div>
+      ) : (
+        <motion.div
+          key="intro"
+          initial={{ opacity: 0, scale: 0.95, x: "-50%", y: "-45%" }}
+          animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
+          exit={{ opacity: 0, scale: 0.95, x: "-50%", y: "-55%" }}
+          transition={{ duration: 0.4, ease: "easeInOut" }}
+          className="fixed top-1/2 left-1/2 w-full max-w-3xl px-4 sm:px-6 transition-colors duration-300 text-slate-800 dark:text-white"
+        >
+          <div className="flex flex-col gap-6 md:gap-10 font-mono">
+            <div className="text-center relative">
 
-                {isPrivate ? (
-                  <div className="flex flex-col items-center justify-center gap-2 mb-2">
-                    <div className="p-3 bg-slate-100 dark:bg-white/5 rounded-full text-slate-600 dark:text-slate-300">
-                      <Ghost size={32} />
-                    </div>
-                    <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
-                      Incognito Session
-                    </h3>
-                  </div>
-                ) : (
-                  <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
-                    How can I help you today?
-                  </h3>
-                )}
+              {/* Smooth Animation Wrapper for Headings */}
+              <div className="min-h-[80px] flex flex-col justify-end mb-3 md:mb-4">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={isExplicitPrivate ? "private" : "normal"}
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -15 }}
+                    transition={{ duration: 0.4, ease: "easeInOut" }}
+                  >
+                    {isExplicitPrivate ? (
+                      <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
+                        Incognito Session
+                      </h3>
+                    ) : (
+                      <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
+                        How can I help you today?
+                      </h3>
+                    )}
 
-                <p className="text-sm sm:text-base transition-colors text-slate-500 dark:text-gray-400">
-                  {isPrivate
-                    ? "Your history won't be saved. Close the tab to erase this session."
-                    : "Ask anything, upload docs, brainstorm, or chat."}
-                </p>
+                    <p className="text-sm sm:text-base transition-colors text-slate-500 dark:text-gray-400 mt-2">
+                      {isExplicitPrivate
+                        ? "Your history won't be saved. Close the tab to erase this session."
+                        : "Ask anything, upload docs, brainstorm, or chat."}
+                    </p>
+                  </motion.div>
+                </AnimatePresence>
+              </div>
 
-                <InputBox
-                  query={query}
-                  setQuery={setQuery}
-                  send={handleSend}
-                  isPending={isPending}
-                  handleFileChange={handleFileChange}
-                  files={files}
-                  stop={handleStop}
-                  removeFile={removeFile}
-                />
+              <InputBox
+                query={query}
+                setQuery={setQuery}
+                send={handleSend}
+                isPending={isPending}
+                handleFileChange={handleFileChange}
+                files={files}
+                stop={handleStop}
+                removeFile={removeFile}
+              />
 
-                {!isPrivate && !activeId && (
-                  <div className="pt-4 flex justify-center">
+              {token && (!activeId || isPrivateMode) && (
+                <div className="pt-4 flex justify-center">
+                  {!isPrivateMode ? (
                     <button
                       onClick={() => router.push('/private')}
-                      className="text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-colors text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300"
+                      className="text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-colors  hover:text-slate-700 text-slate-500 dark:text-gray-400 dark:hover:text-slate-300"
                     >
                       <Ghost size={14} /> Go Private
                     </button>
-                  </div>
-                )}
+                  ) : (
+                    <button
+                      onClick={() => router.push('/')}
+                      className="text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-colors  hover:text-slate-700 text-slate-500 dark:text-gray-400 dark:hover:text-slate-300"
+                    >
+                      <Ghost size={14} className="opacity-60" /> Exit Private Mode
+                    </button>
+                  )}
+                </div>
+              )}
 
-              </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 

@@ -19,7 +19,6 @@ import {
     Plus,
     Search,
     Share2,
-    Stars,
     Trash
 } from "lucide-react";
 import Link from "next/link";
@@ -60,6 +59,7 @@ const groupSummariesByDate = (summaries: SummaryHistoryResponse[]) => {
 
 const Sidebar: React.FC = () => {
     const router = useRouter();
+    const [mounted, setMounted] = useState(false); // 🌟 Added to prevent Next.js hydration errors
     const [isOpen, setIsOpen] = useState(false);
     const [chats, setChats] = useState<SummaryHistoryResponse[]>([]);
     const [filtered, setFiltered] = useState<SummaryHistoryResponse[]>([]);
@@ -72,6 +72,14 @@ const Sidebar: React.FC = () => {
     const [shareChatInfo, setShareChatInfo] = useState({ id: "", title: "" });
     const params = useParams();
     const activeId = params?.id;
+
+    // 🌟 Read the token
+    const token = Cookies.get('access_token');
+
+    // 🌟 Set mounted to true once the component renders on the client
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     useEffect(() => {
         const handleResize = () => {
@@ -96,8 +104,12 @@ const Sidebar: React.FC = () => {
     };
 
     const fetchUserSummaries = async () => {
+        if (!token) {
+            setLoading(false);
+            return; // 🌟 Prevent API call if no token exists
+        }
+
         try {
-            const token = Cookies.get("access_token");
             const res = await axios.get("http://10.207.18.43:8000/chats/", {
                 headers: { Authorization: `Bearer ${token}` },
                 withCredentials: true,
@@ -111,8 +123,13 @@ const Sidebar: React.FC = () => {
     };
 
     useEffect(() => {
-        fetchUserSummaries();
-    }, []);
+        if (mounted && token) {
+            fetchUserSummaries();
+        } else if (mounted && !token) {
+            setLoading(false);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [mounted, token]);
 
     useEffect(() => {
         setFiltered(
@@ -124,7 +141,6 @@ const Sidebar: React.FC = () => {
 
     const handleDelete = async () => {
         try {
-            const token = Cookies.get("access_token");
             await axios.delete(`http://10.207.18.43:8000/summary/?id=${summaryId}`, {
                 headers: { Authorization: `Bearer ${token}` },
                 withCredentials: true,
@@ -139,7 +155,6 @@ const Sidebar: React.FC = () => {
 
     const handlePin = async (chatId: string, currentPinStatus: boolean) => {
         try {
-            const token = Cookies.get("access_token");
             const newPinStatus = !currentPinStatus;
             await axios.patch(`http://10.207.18.43:8000/summary/${chatId}/pin`,
                 { is_pinned: newPinStatus },
@@ -158,6 +173,11 @@ const Sidebar: React.FC = () => {
             setError("Failed to pin chat");
         }
     };
+
+    // 🌟 If the component hasn't mounted yet OR there is no token, don't show the sidebar at all!
+    if (!mounted || !token) {
+        return null;
+    }
 
     const grouped = groupSummariesByDate(filtered);
     const options = (chat: any) => [
@@ -214,7 +234,6 @@ const Sidebar: React.FC = () => {
                 <div className="p-4 space-y-4 h-full flex flex-col">
                     <div className="flex items-center justify-between">
                         <h2 className="text-xl font-bold">Chats</h2>
-                        {/* 🌟 FIX: Added onClick to route to /private */}
                         <button
                             onClick={() => { router.push("/private"); handleMobileNav(); }}
                             title="Incognito Chat"
