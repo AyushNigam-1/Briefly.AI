@@ -3,28 +3,11 @@ import { motion } from "framer-motion";
 import { VList, VListHandle } from 'virtua';
 import InputBox from "./InputBox";
 import SourcesSidebar from "./panels/SourcesPanel";
-import { query } from "@/app/types";
+import { ChatsProps, query } from "@/app/types";
 import Message from "./Messages";
 
-interface ChatsProps {
-    queries: query[];
-    setQueries: Dispatch<SetStateAction<query[]>>;
-    isPending: boolean;
-    handleSend: (query: string, files: File[], modal: string) => Promise<void>;
-    query: string;
-    setQuery: (value: string) => void;
-    handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
-    handleStop: () => void;
-    files: File[];
-    setFiles: (files: File[]) => void;
-    loadOlderChats: () => Promise<void>;
-    isLoadingOlder: boolean;
-    hasMore: boolean;
-    handleRegenerate: (index: number) => Promise<void>;
-    handleEdit: (index: number, newContent: string) => Promise<void>;
-}
-
 const Chats = ({
+    removeFile,
     queries,
     isPending,
     handleSend,
@@ -121,6 +104,7 @@ const Chats = ({
             <div className="fixed bottom-0 left-0 w-full p-2 md:py-2 z-50">
                 <div className="max-w-4xl w-full mx-auto">
                     <InputBox
+                        removeFile={removeFile}
                         query={searchInput} setQuery={setQuery} send={handleSend}
                         isPending={isPending} files={files}
                         handleFileChange={handleFileChange} stop={handleStop}

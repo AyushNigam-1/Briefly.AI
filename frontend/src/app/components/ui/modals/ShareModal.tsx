@@ -3,13 +3,8 @@
 import { useState } from "react";
 import { Dialog, DialogPanel, DialogTitle, DialogBackdrop } from "@headlessui/react";
 import { Copy, Check, X, Twitter, Linkedin, Facebook, MessageCircle, Mail, Info } from "lucide-react";
+import { ShareModalProps } from "@/app/types";
 
-interface ShareModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    chatId: string;
-    chatTitle?: string;
-}
 
 export default function ShareModal({ isOpen, onClose, chatId, chatTitle }: ShareModalProps) {
     const [copied, setCopied] = useState(false);

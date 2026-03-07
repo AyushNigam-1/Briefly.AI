@@ -3,18 +3,7 @@
 import { X } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-
-type Source = {
-    title?: string;
-    link?: string;
-    snippet?: string;
-};
-
-interface SourcesSidebarProps {
-    isOpen: boolean;
-    onClose: () => void;
-    sources: Source[];
-}
+import { SourcesSidebarProps } from "@/app/types";
 
 const SourcesSidebar: React.FC<SourcesSidebarProps> = ({
     isOpen,

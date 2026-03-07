@@ -34,7 +34,6 @@ const tabs = [
 export default function SettingsDialog({
     isOpen,
     setIsOpen,
-    userContext,
 }: any) {
     const [activeTab, setActiveTab] = useState(0)
 

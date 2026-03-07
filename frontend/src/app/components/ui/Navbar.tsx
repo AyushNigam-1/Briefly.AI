@@ -1,12 +1,11 @@
 "use client"
-import React, { useEffect, useState } from 'react'
-import { NavbarProps } from '../../types';
+import { useEffect, useState } from 'react'
 import { User, UserPlus } from 'lucide-react';
 import SettingsDialog from './modals/Settings';
 import Cookies from 'js-cookie';
 import Link from 'next/link';
 
-const Navbar: React.FC<NavbarProps> = ({ component }) => {
+const Navbar = () => {
     const [isOpen, setOpen] = useState<boolean>(false);
     const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
     const [mounted, setMounted] = useState<boolean>(false);
@@ -23,10 +22,8 @@ const Navbar: React.FC<NavbarProps> = ({ component }) => {
 
     return (
         <>
-            {/* 🌟 FIX 1: Adjusted container padding to match the standard layout and ensure items don't touch edges */}
-            <div className='flex justify-between items-center p-3 md:py-3 sm:py-4  border-b border-slate-200 dark:border-secondary transition-colors duration-300 w-full'>
+            <div className='flex justify-between items-center p-3 md:py-3 md:px-0 border-b border-slate-200 dark:border-secondary transition-colors duration-300 w-full'>
 
-                {/* 🌟 FIX 2: Logo scaling for mobile */}
                 <div className="flex-shrink-0 flex items-center">
                     <img src="/logo.png" alt="Logo" className='w-32 sm:w-32 md:w-40 h-auto' />
                 </div>
@@ -46,7 +43,6 @@ const Navbar: React.FC<NavbarProps> = ({ component }) => {
                         </>
                     ) : (
                         <>
-                            {/* 🌟 FIX 3: Scaled down text and padding for buttons on small screens so they fit side-by-side */}
                             <Link
                                 href="/account/login"
                                 className="px-3 sm:px-5 py-1.5 sm:py-2 font-semibold flex items-center gap-1.5 sm:gap-2 rounded-full transition-colors text-sm sm:text-lg whitespace-nowrap

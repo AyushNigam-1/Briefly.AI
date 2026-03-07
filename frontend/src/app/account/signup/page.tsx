@@ -8,7 +8,6 @@ import 'react-toastify/dist/ReactToastify.css';
 import { User } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-// Animation Variants matching the Login page for consistency
 const containerVariants = {
     hidden: { opacity: 0 },
     visible: {

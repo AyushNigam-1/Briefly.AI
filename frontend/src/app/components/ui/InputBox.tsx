@@ -1,4 +1,5 @@
 "use client"
+import { InputProps } from '@/app/types';
 import { Listbox, ListboxButton, ListboxOption, ListboxOptions, MenuButton, MenuItem, MenuItems, Menu } from '@headlessui/react';
 import clsx from 'clsx';
 // 🌟 Added Check icon to the imports
@@ -14,9 +15,7 @@ const options = [
     { label: "Llama 70B", value: "llama-3.3-70b-versatile", icon: "/meta.webp", isPremium: true, description: "Deep analysis & creative writing" },
 ]
 
-const InputBox = ({ query, setQuery, send, isPending, files, stop, handleFileChange, removeFile }: {
-    query: string, setQuery: (value: string) => void, send: (value: string, files: File[], model: string) => void, files: File[], isPending: boolean, stop: () => void, handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>, removeFile: (index: number) => void
-}) => {
+const InputBox = ({ query, setQuery, send, isPending, files, stop, handleFileChange, removeFile }: InputProps) => {
     const doc = useRef<HTMLInputElement | null>(null);
     const [selected, setSelected] = useState(options[0])
 

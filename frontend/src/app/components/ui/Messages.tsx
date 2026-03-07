@@ -4,18 +4,7 @@ import { motion } from "framer-motion";
 import { ChevronDown, Copy, FileText, ImageIcon, Link, RefreshCw, Pencil, Check, X, Volume2, Pause, Loader2 } from "lucide-react";
 import remarkGfm from "remark-gfm";
 import { Disclosure, DisclosureButton, DisclosurePanel } from "@headlessui/react";
-import { query } from "@/app/types";
-
-interface MessageProps {
-    q: query;
-    isLastItem: boolean;
-    isPending: boolean;
-    onCopy: (text: string) => void;
-    setSources: (sources: any) => void;
-    setSourcesOpen: (open: boolean) => void;
-    onRegenerate: () => void;
-    onEdit: (newContent: string) => void;
-}
+import { MessageProps, query } from "@/app/types";
 
 const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen, onRegenerate, onEdit }: MessageProps) => {
     const isStreaming = isPending && isLastItem && q.sender === "llm";

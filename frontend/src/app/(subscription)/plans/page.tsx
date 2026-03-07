@@ -1,8 +1,7 @@
 "use client"
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Check, Sparkles, Zap, Shield, Loader2 } from 'lucide-react';
 import Cookies from 'js-cookie';
-import Navbar from '@/app/components/ui/Navbar';
 
 export default function PricingPage() {
     const [loadingTier, setLoadingTier] = useState<string | null>(null);
@@ -93,7 +92,6 @@ export default function PricingPage() {
         <>
             <div className="bg-[#0b0b0b] text-slate-200 py-20 px-4 font-mono flex flex-col items-center">
 
-                {/* Header section */}
                 <div className="text-center max-w-2xl mb-16 space-y-4">
                     <h1 className="text-4xl font-bold tracking-tight text-white">
                         Simple, transparent pricing

@@ -9,7 +9,7 @@ import InputBox from "@/app/components/ui/InputBox";
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import Chats from "@/app/components/ui/Chats";
 import { query as QueryType } from "@/app/types";
-import { Ghost, MessageSquareDashed } from "lucide-react";
+import { Ghost, Loader2 } from "lucide-react";
 
 class StopRetryError extends Error {
   constructor(message: string) {
@@ -474,8 +474,8 @@ const Page = () => {
           transition={{ duration: 0.3 }}
           className="flex items-center justify-center w-full h-[80vh]"
         >
-          <div className="flex space-x-2 items-center text-slate-400 dark:text-gray-500">
-            <span className="animate-pulse">Loading conversation...</span>
+          <div className="flex justify-center items-center py-2">
+            <Loader2 size={28} className="animate-spin text-slate-400" />
           </div>
         </motion.div>
       ) : queries.length > 0 ? (
@@ -503,6 +503,8 @@ const Page = () => {
             loadOlderChats={loadOlderChats}
             handleRegenerate={handleRegenerate}
             handleEdit={handleEdit}
+            removeFile={removeFile}
+
           />
         </motion.div>
       ) : (

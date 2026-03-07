@@ -7,23 +7,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import Cookies from "js-cookie";
-
-interface SearchMessage {
-    sender: "user" | "llm";
-    content: string;
-    created_at: string;
-}
-
-interface SearchResult {
-    id: string;
-    title: string;
-    timestamp: string;
-    messages: SearchMessage[];
-}
-
-interface SearchModalProps {
-    onCloseSidebar: () => void;
-}
+import { SearchModalProps, SearchResult } from "@/app/types";
 
 const SearchModal: React.FC<SearchModalProps> = ({ onCloseSidebar }) => {
     const router = useRouter();

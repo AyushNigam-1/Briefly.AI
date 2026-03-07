@@ -11,21 +11,11 @@ import {
 import { Trash2, Play, X, Workflow, Search, Loader2, Calendar } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import clsx from "clsx"
-
-interface Workflow {
-    workflow_id: string
-    workflow_name: string
-    is_active: boolean
-    created_at?: string
-}
-
-interface SearchModalProps {
-    onCloseSidebar: () => void;
-}
+import { SearchModalProps, Task } from "@/app/types"
 
 export default function TaskManagerModal({ onCloseSidebar }: SearchModalProps) {
     const [open, setOpen] = useState(false)
-    const [workflows, setWorkflows] = useState<Workflow[]>([])
+    const [workflows, setWorkflows] = useState<Task[]>([])
     const [loading, setLoading] = useState(false)
     const [query, setQuery] = useState("")
 

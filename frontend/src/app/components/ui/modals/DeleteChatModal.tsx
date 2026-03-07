@@ -3,12 +3,8 @@
 import React from "react";
 import { Description, Dialog, DialogPanel, DialogTitle, DialogBackdrop } from "@headlessui/react";
 import { Trash2 } from "lucide-react";
+import { DeleteChatDialogProps } from "@/app/types";
 
-interface DeleteChatDialogProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onConfirm: () => void;
-}
 
 const DeleteChatDialog: React.FC<DeleteChatDialogProps> = ({ isOpen, onClose, onConfirm }) => {
     return (

@@ -1,4 +1,4 @@
-import { JSX, ReactNode } from "react";
+import { Dispatch, JSX, ReactNode, SetStateAction } from "react";
 
 export type metadata = {
     title: string;
@@ -50,6 +50,7 @@ export type SummaryHistoryResponse = {
     queries: number;
     type: string;
     thumbnail: string;
+    is_pinned?: boolean
 }
 
 export interface SidebarProps {
@@ -113,4 +114,92 @@ export type webRecommendations = {
     link: string,
     website_name: string,
     icon: string,
+}
+
+export interface DeleteChatDialogProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: () => void;
+}
+
+
+interface SearchMessage {
+    sender: "user" | "llm";
+    content: string;
+    created_at: string;
+}
+
+export interface SearchResult {
+    id: string;
+    title: string;
+    timestamp: string;
+    messages: SearchMessage[];
+}
+
+export interface SearchModalProps {
+    onCloseSidebar: () => void;
+}
+
+export interface ShareModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    chatId: string;
+    chatTitle?: string;
+}
+
+export interface Task {
+    workflow_id: string
+    workflow_name: string
+    is_active: boolean
+    created_at?: string
+}
+
+export interface SearchModalProps {
+    onCloseSidebar: () => void;
+}
+
+type Source = {
+    title?: string;
+    link?: string;
+    snippet?: string;
+};
+
+export interface SourcesSidebarProps {
+    isOpen: boolean;
+    onClose: () => void;
+    sources: Source[];
+}
+
+export interface ChatsProps {
+    removeFile: (index: number) => void
+    queries: query[];
+    setQueries: Dispatch<SetStateAction<query[]>>;
+    isPending: boolean;
+    handleSend: (query: string, files: File[], modal: string) => Promise<void>;
+    query: string;
+    setQuery: (value: string) => void;
+    handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
+    handleStop: () => void;
+    files: File[];
+    setFiles: (files: File[]) => void;
+    loadOlderChats: () => Promise<void>;
+    isLoadingOlder: boolean;
+    hasMore: boolean;
+    handleRegenerate: (index: number) => Promise<void>;
+    handleEdit: (index: number, newContent: string) => Promise<void>;
+}
+
+export interface InputProps {
+    query: string, setQuery: (value: string) => void, send: (value: string, files: File[], model: string) => void, files: File[], isPending: boolean, stop: () => void, handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>, removeFile: (index: number) => void
+}
+
+export interface MessageProps {
+    q: query;
+    isLastItem: boolean;
+    isPending: boolean;
+    onCopy: (text: string) => void;
+    setSources: (sources: any) => void;
+    setSourcesOpen: (open: boolean) => void;
+    onRegenerate: () => void;
+    onEdit: (newContent: string) => void;
 }
