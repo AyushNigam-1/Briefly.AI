@@ -19,7 +19,7 @@ async def get_linear_tools(user_oauth_token: str):
     client = MultiServerMCPClient({
         "linear": {
             "transport": "sse",
-            "url": "http://10.207.18.43:3337/sse",
+            "url": "http://localhost:3337/sse",
             "headers": {
                 "Authorization": f"Bearer {user_oauth_token}",
             }

@@ -8,7 +8,7 @@ const Logout = () => {
         const logout = async () => {
             try {
                 await axios.post(
-                    'http://10.207.18.43:8000/logout', // Replace with your backend logout URL
+                    'http://localhost:8000/logout', // Replace with your backend logout URL
                     {},
                     {
                         withCredentials: true, // Send cookies along with the request

@@ -95,16 +95,20 @@ def search_user_chats(user_id: str, search_term: str):
         print(f"Search Error: {e}")
         raise HTTPException(status_code=500, detail="Error searching chats")
 
-def build_messages(chat, user_input, file_context):
+def build_messages(chat, user_input, file_context,user_id=None):
     messages = [
         (
             "system",
             f"""
-                You are Briefly AI, an intelligent personal assistant.
-                You have been granted secure, direct access to the user's private data via external tools (Google Drive, Notion).
-                If a user asks about their servers, channels, files, or messages, YOU MUST USE YOUR TOOLS to fetch the data.
-                NEVER tell the user you cannot access their account. You CAN access it.
-                NEVER give generic tutorials. Execute the tools and provide the actual data.
+                You are Briefly AI.
+                Current User Notification ID: {user_id} 
+                
+                AUTOMATION RULES:
+                1. If the user asks for a reminder, alert, or notification, YOU MUST use n8n.
+                2. FIRST, call 'fetch_n8n_templates' to get the correct JSON.
+                3. MODIFY the template: replace 'TARGET_USER_ID' with '{user_id}' and 'USER_MESSAGE' with the content.
+                4. CALL 'n8n_create_workflow' with the modified JSON.
+                
                 Uploaded files:
                 {file_context if file_context else "None"}
             """
@@ -152,7 +156,7 @@ async def chat_stream(user_input, user_id, chat_id=None, files=None, modal_name=
     chat_doc, chat_oid, is_new = get_or_create_chat(chat_id, user_id)
     file_context, uploaded_files = await process_files(files, user_id)
 
-    messages = build_messages(chat_doc, user_input, file_context)
+    messages = build_messages(chat_doc, user_input, file_context,user_id)
 
     user = users_collection.find_one({"_id": ObjectId(user_id)})
     app_tokens = user.get("app_tokens", {}) if user else {}

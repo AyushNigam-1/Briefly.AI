@@ -31,7 +31,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ onCloseSidebar }) => {
             try {
                 const token = Cookies.get("access_token");
                 const res = await axios.get(
-                    `http://10.207.18.43:8000/chats/search?q=${encodeURIComponent(searchQuery.trim())}`,
+                    `http://localhost:8000/chats/search?q=${encodeURIComponent(searchQuery.trim())}`,
                     {
                         headers: { Authorization: `Bearer ${token}` },
                     }

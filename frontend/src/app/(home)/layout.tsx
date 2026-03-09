@@ -1,6 +1,7 @@
 import React from "react";
 import Sidebar from "../components/ui/panels/Sidebar";
 import Navbar from "../components/ui/Navbar";
+import OneSignalSetup from "../components/providers/OneSignalProvider";
 
 export default function DashboardLayout({
     children,
@@ -9,6 +10,7 @@ export default function DashboardLayout({
 }>) {
     return (
         <div className="flex h-full w-full relative max-w-4xl mx-auto">
+            <OneSignalSetup />
             <Sidebar />
             <div className="flex flex-col flex-1 h-full w-full">
                 <Navbar />

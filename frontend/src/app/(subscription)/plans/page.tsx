@@ -12,7 +12,7 @@ export default function PricingPage() {
         const token = Cookies.get("access_token");
 
         try {
-            const response = await fetch("http://10.207.18.43:8000/payment/create-checkout-session", {
+            const response = await fetch("http://localhost:8000/payment/create-checkout-session", {
                 method: "POST",
                 headers: {
                     Authorization: `Bearer ${token}`,

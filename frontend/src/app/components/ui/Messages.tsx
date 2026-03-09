@@ -93,7 +93,7 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
         setIsAudioLoading(true);
 
         try {
-            const response = await fetch("http://10.207.18.43:8000/generate-voice", {
+            const response = await fetch("http://localhost:8000/generate-voice", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"

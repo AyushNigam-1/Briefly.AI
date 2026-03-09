@@ -16,7 +16,7 @@ OAUTH_CONFIG = {
             "client_id": os.getenv("NOTION_CLIENT_ID"),
             "response_type": "code",
             "owner": "user",
-            "redirect_uri": "http://10.207.18.43:8000/notion/callback",
+            "redirect_uri": "http://localhost:8000/notion/callback",
         },
         # Notion uses JSON body and Basic Auth
         "get_token_kwargs": lambda code, cfg: {
@@ -31,7 +31,7 @@ OAUTH_CONFIG = {
             "client_id": os.getenv("GOOGLE_CLIENT_ID"),
             "response_type": "code",
             "scope": "https://www.googleapis.com/auth/drive",
-            "redirect_uri": "http://10.207.18.43:8000/google/callback",
+            "redirect_uri": "http://localhost:8000/google/callback",
             "access_type": "offline",
             "prompt": "consent",
         },
@@ -55,7 +55,7 @@ OAUTH_CONFIG = {
             # Linear uses comma-separated scopes. 'read,write' gives full access to their workspace.
             # You can downgrade this to just 'read' if you only want the AI to fetch data, not create issues.
             "scope": "read,write", 
-            "redirect_uri": "http://10.207.18.43:8000/linear/callback",
+            "redirect_uri": "http://localhost:8000/linear/callback",
             "prompt": "consent"
         },
         "get_token_kwargs": lambda code, cfg: {
@@ -77,7 +77,7 @@ OAUTH_CONFIG = {
         "auth_params": {
             "client_id": os.getenv("SLACK_CLIENT_ID"),
             "scope": "channels:read,groups:read,users:read,users.profile:read,chat:write,reactions:write,channels:history,groups:history",
-            "redirect_uri": "http://10.207.18.43:8000/slack/callback",
+            "redirect_uri": "http://localhost:8000/slack/callback",
         },
         "get_token_kwargs": lambda code, cfg: {
             "headers": {"Content-Type": "application/x-www-form-urlencoded"},

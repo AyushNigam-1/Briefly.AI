@@ -11,8 +11,8 @@ const options = [
     { label: "Llama 4 Scout", value: "meta-llama/llama-4-scout-17b-16e-instruct", icon: "/meta.webp", isPremium: false, description: "Quick search & summarization" },
     { label: "Qwen 3 32B", value: "qwen/qwen3-32b", icon: "/qwen.webp", isPremium: false, description: "Strong multilingual & math skills" },
     { label: "Kimi K2", value: "moonshotai/kimi-k2-instruct-0905", icon: "/kimi.webp", isPremium: false, description: "Long context document processing" },
-    { label: "GPT OSS 120B", value: "openai/gpt-oss-120b", icon: "/openai.webp", isPremium: true, description: "Advanced reasoning & complex coding" },
-    { label: "Llama 70B", value: "llama-3.3-70b-versatile", icon: "/meta.webp", isPremium: true, description: "Deep analysis & creative writing" },
+    { label: "GPT OSS 120B", value: "openai/gpt-oss-120b", icon: "/openai.webp", isPremium: false, description: "Advanced reasoning & complex coding" },
+    { label: "Llama 70B", value: "llama-3.3-70b-versatile", icon: "/meta.webp", isPremium: false, description: "Deep analysis & creative writing" },
 ]
 
 const InputBox = ({ query, setQuery, send, isPending, files, stop, handleFileChange, removeFile }: InputProps) => {

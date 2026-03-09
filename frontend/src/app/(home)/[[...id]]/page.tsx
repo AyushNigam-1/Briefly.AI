@@ -55,7 +55,7 @@ const Page = () => {
 
     try {
       const res = await axios.get(
-        `http://10.207.18.43:8000/history/${rawId}?${params}`,
+        `http://localhost:8000/history/${rawId}?${params}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -131,7 +131,7 @@ const Page = () => {
     try {
       abortControllerRef.current = new AbortController();
 
-      await fetchEventSource("http://10.207.18.43:8000/query/private", {
+      await fetchEventSource("http://localhost:8000/query/private", {
         method: "POST",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: form,
@@ -231,7 +231,7 @@ const Page = () => {
     try {
       abortControllerRef.current = new AbortController();
 
-      await fetchEventSource(`http://10.207.18.43:8000/chat/${activeId}/regenerate`, {
+      await fetchEventSource(`http://localhost:8000/chat/${activeId}/regenerate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -308,7 +308,7 @@ const Page = () => {
     try {
       abortControllerRef.current = new AbortController();
 
-      await fetchEventSource(`http://10.207.18.43:8000/chat/${activeId}/edit`, {
+      await fetchEventSource(`http://localhost:8000/chat/${activeId}/edit`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -387,7 +387,7 @@ const Page = () => {
     try {
       abortControllerRef.current = new AbortController();
 
-      await fetchEventSource("http://10.207.18.43:8000/query", {
+      await fetchEventSource("http://localhost:8000/query", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: form,

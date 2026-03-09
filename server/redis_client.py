@@ -2,7 +2,7 @@ import redis
 import os
 
 # Environment variables
-REDIS_HOST = os.getenv("REDIS_HOST", "10.207.18.43")
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
 REDIS_DB = int(os.getenv("REDIS_DB", 0))
 

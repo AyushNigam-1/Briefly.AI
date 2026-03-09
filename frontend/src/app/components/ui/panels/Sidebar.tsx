@@ -92,7 +92,7 @@ const Sidebar: React.FC = () => {
         else setLoading(true);
 
         try {
-            const res = await axios.get(`http://10.207.18.43:8000/chats/?skip=${currentSkip}&limit=15`, {
+            const res = await axios.get(`http://localhost:8000/chats/?skip=${currentSkip}&limit=15`, {
                 headers: { Authorization: `Bearer ${token}` },
                 withCredentials: true,
             });
@@ -144,7 +144,7 @@ const Sidebar: React.FC = () => {
 
     const handleDelete = async () => {
         try {
-            await axios.delete(`http://10.207.18.43:8000/summary/?id=${summaryId}`, {
+            await axios.delete(`http://localhost:8000/summary/?id=${summaryId}`, {
                 headers: { Authorization: `Bearer ${token}` },
                 withCredentials: true,
             });
@@ -159,7 +159,7 @@ const Sidebar: React.FC = () => {
     const handlePin = async (chatId: string, currentPinStatus: boolean) => {
         try {
             const newPinStatus = !currentPinStatus;
-            await axios.patch(`http://10.207.18.43:8000/summary/${chatId}/pin`,
+            await axios.patch(`http://localhost:8000/summary/${chatId}/pin`,
                 { is_pinned: newPinStatus },
                 {
                     headers: { Authorization: `Bearer ${token}` },

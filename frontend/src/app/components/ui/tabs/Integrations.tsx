@@ -65,7 +65,7 @@ export default function Integrations() {
 
     const handleConnect = (appId: string) => {
         setConnectingTo(appId)
-        const backendBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://10.207.18.43:8000"
+        const backendBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
         const token = Cookies.get('access_token')
         window.location.href = `${backendBaseUrl}/${appId}/login?token=${token}`
     }

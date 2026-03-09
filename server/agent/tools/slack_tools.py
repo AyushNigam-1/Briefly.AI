@@ -20,7 +20,7 @@ async def get_slack_tools(token: str):
         "slack": {
             "transport": "sse",
             
-            "url": "http://10.207.18.43:3335/sse",
+            "url": "http://localhost:3335/sse",
             
             "headers": {
                 "Authorization": f"Bearer {token}",

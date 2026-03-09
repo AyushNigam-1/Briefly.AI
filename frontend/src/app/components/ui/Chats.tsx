@@ -101,7 +101,7 @@ const Chats = ({
                 </div>
             </div>
 
-            <div className="fixed bottom-0 left-0 w-full p-2 md:py-2 z-50">
+            <div className="fixed bottom-0 left-0 w-full py-4 z-50">
                 <div className="max-w-4xl w-full mx-auto">
                     <InputBox
                         removeFile={removeFile}
