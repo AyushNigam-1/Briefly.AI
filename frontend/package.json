@@ -10,8 +10,10 @@
   },
   "dependencies": {
     "@headlessui/react": "^2.2.0",
+    "@marsidev/react-turnstile": "^1.4.2",
     "@microsoft/fetch-event-source": "^2.0.1",
     "@radix-ui/react-dialog": "^1.1.4",
+    "@sentry/nextjs": "^10.43.0",
     "@shadcn/ui": "^0.0.4",
     "@tailwindcss/typography": "^0.5.16",
     "@tanstack/react-query": "^5.90.20",

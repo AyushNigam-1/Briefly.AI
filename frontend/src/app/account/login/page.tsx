@@ -7,6 +7,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { User } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Turnstile } from '@marsidev/react-turnstile'; // 🌟 Import Turnstile
 
 // Animation Variants
 const containerVariants = {
@@ -14,7 +15,7 @@ const containerVariants = {
     visible: {
         opacity: 1,
         transition: {
-            staggerChildren: 0.1, // Delays each child animation slightly for a cascading effect
+            staggerChildren: 0.1,
             delayChildren: 0.1,
         }
     }
@@ -32,41 +33,50 @@ const itemVariants = {
 const LoginPage: React.FC = () => {
     const [username, setUsername] = useState<string>('');
     const [password, setPassword] = useState<string>('');
+    const [captchaToken, setCaptchaToken] = useState<string | null>(null); // 🌟 State for the token
     const [loading, setLoading] = useState<boolean>(false);
     const router = useRouter()
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         setLoading(true);
-        const formData = new FormData(event.currentTarget);
-        const username = formData.get("name") as string;
-        const password = formData.get("password") as string;
+
+        // 🌟 Stop submission if CAPTCHA isn't completed
+        if (!captchaToken) {
+            toast.error("Please complete the CAPTCHA check.");
+            setLoading(false);
+            return;
+        }
+
         const data = {
             action: 'login',
             username,
             password,
+            captcha_token: captchaToken, // 🌟 Send token to backend
         };
+
         try {
             const response = await axios.post('http://localhost:8000/auth', data, {
                 withCredentials: true,
             });
-            alert(response.data)
-            if (response.status === 200) {
-                localStorage.setItem('favourites', JSON.stringify(response.data.favourites));
-                router.push("/")
+
+            if (response.status === 200 || response.status === 201) {
+                localStorage.setItem('favourites', JSON.stringify(response.data.favourites || []));
+                toast.success("Login successful!");
+                router.push("/");
             } else {
-                toast.error("Something went wrong")
+                toast.error("Something went wrong");
             }
-        } catch (err) {
-            alert(err)
-            toast.error("Something went wrong")
+        } catch (err: any) {
+            // Display specific error from backend if available (e.g. Invalid credentials or Bot detected)
+            const errorMessage = err.response?.data?.detail || "Something went wrong";
+            toast.error(errorMessage);
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        // Added px-4 for safe mobile edge padding
         <div className="relative min-h-screen w-full flex items-center justify-center bg-transparent overflow-hidden font-mono text-white px-4 sm:px-0">
 
             {/* Main Card */}
@@ -76,7 +86,6 @@ const LoginPage: React.FC = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.5, ease: "easeOut" }}
             >
-                {/* Adjusted padding: p-6 on mobile, p-8 on larger screens */}
                 <div className="bg-tertiary backdrop-blur-xl border border-secondary rounded-2xl p-6 sm:p-8 shadow-2xl">
 
                     {/* Header Section */}
@@ -90,7 +99,6 @@ const LoginPage: React.FC = () => {
                             <User size={30} className="sm:w-[35px] sm:h-[35px]" />
                         </div>
                         <div className="text-center">
-                            {/* Adjusted text size: text-2xl on mobile, text-3xl on larger screens */}
                             <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Welcome Back</h3>
                             <p className="text-xs sm:text-sm text-gray-400 mt-1">Enter credentials to access your account</p>
                         </div>
@@ -148,6 +156,9 @@ const LoginPage: React.FC = () => {
                             </a>
                         </motion.div>
 
+                        {/* 🌟 Cloudflare Turnstile Widget */}
+
+
                         <motion.button
                             type="submit"
                             disabled={loading}
@@ -177,6 +188,15 @@ const LoginPage: React.FC = () => {
                                 Create New Account
                             </Link>
                         </motion.div>
+                        <motion.div variants={itemVariants} className="flex justify-center w-full my-1">
+                            <Turnstile
+                                siteKey={process.env.NEXT_PUBLIC_CLOUDFLARE_SITE_KEY!} // 🔑 Replace with your actual Site Key
+                                // theme="dark"
+                                onSuccess={(token) => setCaptchaToken(token)}
+                                onExpire={() => setCaptchaToken(null)}
+                                onError={() => toast.error("CAPTCHA verification failed. Please try again.")}
+                            />
+                        </motion.div>
                     </motion.form>
                 </div>
 
@@ -195,7 +215,6 @@ const LoginPage: React.FC = () => {
     );
 };
 
-// Removed hardcoded width/height so Tailwind sizing classes work properly
 const LoaderIcon = ({ className }: { className?: string }) => (
     <svg
         xmlns="http://www.w3.org/2000/svg"

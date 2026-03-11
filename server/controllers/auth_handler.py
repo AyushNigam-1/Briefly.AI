@@ -1,10 +1,12 @@
 from werkzeug.security import generate_password_hash, check_password_hash
 from pydantic import BaseModel
 from typing import Optional, List
-from .mongo import users_collection  # Correct import from the conn module
-from utils.auth import create_access_token  # Correct import from utils.auth
+from .mongo import users_collection 
+from utils.auth import create_access_token  
 from fastapi import HTTPException, Response
 from dotenv import load_dotenv
+import httpx
+import os
 
 # Load environment variables
 load_dotenv()
@@ -12,6 +14,7 @@ load_dotenv()
 class User(BaseModel):
     username: str
     password: str
+    captcha_token: str  # 🌟 Added to receive the token from the frontend
 
 
 class AuthResponse(BaseModel):
@@ -25,12 +28,37 @@ class Token(BaseModel):
     favorites: List[str]
 
 
+async def verify_captcha(token: str):
+    """Verifies the CAPTCHA token with the provider."""
+    secret_key = os.getenv("CAPTCHA_SECRET_KEY")
+    
+    # This URL is for Cloudflare Turnstile. 
+    # If using Google reCAPTCHA, use: https://www.google.com/recaptcha/api/siteverify
+    verify_url = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+    
+    async with httpx.AsyncClient() as client:
+        # We send our secret key and the user's token to the provider
+        response = await client.post(
+            verify_url,
+            data={"secret": secret_key, "response": token}
+        )
+        result = response.json()
+        
+        # If the provider says "false", we block the request immediately
+        if not result.get("success"):
+            # Sentry will catch this 400 error if someone is trying to spam you!
+            raise HTTPException(status_code=400, detail="CAPTCHA verification failed. Bot behavior detected.")
+
+
 async def signup(user: User, response: Response):
     """Sign up a new user."""
     if not user.username or not user.password:
         raise HTTPException(status_code=400, detail="Username and password are required")
 
-    # Check if the username already exists by querying the users_collection
+    # 🌟 1. Verify CAPTCHA before touching the database
+    await verify_captcha(user.captcha_token)
+
+    # 2. Check if the username already exists by querying the users_collection
     if users_collection.find_one({"username": user.username}):
         raise HTTPException(status_code=400, detail="Username already exists")
 
@@ -67,6 +95,9 @@ async def login(user: User, response: Response):
     if not user.username or not user.password:
         raise HTTPException(status_code=400, detail="Username and password are required")
 
+    # 🌟 1. Verify CAPTCHA before heavy password hashing or DB lookups
+    await verify_captcha(user.captcha_token)
+
     # Fetch the user from the users_collection
     stored_user = users_collection.find_one({"username": user.username})
 
@@ -99,6 +130,3 @@ async def login(user: User, response: Response):
         "favorites": favorites,  # Include the user's favorites list
         "status_code": 201
     }
-
-
-

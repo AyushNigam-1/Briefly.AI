@@ -7,6 +7,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { User } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Turnstile } from '@marsidev/react-turnstile'; // 🌟 Import Turnstile
 
 const containerVariants = {
     hidden: { opacity: 0 },
@@ -32,49 +33,54 @@ const SignupPage: React.FC = () => {
 
     const [username, setUsername] = useState<string>('');
     const [password, setPassword] = useState<string>('');
+    const [captchaToken, setCaptchaToken] = useState<string | null>(null); // 🌟 Captcha state
     const [loading, setLoading] = useState<boolean>(false);
     const router = useRouter()
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+
+        if (!captchaToken) {
+            toast.error("Please complete the security check.");
+            return;
+        }
+
         setLoading(true);
-        const formData = new FormData(event.currentTarget);
-        const username = formData.get("name") as string;
-        const password = formData.get("password") as string;
         const data = {
             action: 'signup',
             username,
             password,
+            captcha_token: captchaToken // 🌟 Pass token to backend
         };
+
         try {
             const response = await axios.post('http://localhost:8000/auth', data, {
                 withCredentials: true,
             });
-            if (response.status === 200) {
-                localStorage.setItem('favourites', JSON.stringify(response.data.favourites));
+            if (response.status === 200 || response.status === 201) {
+                localStorage.setItem('favourites', JSON.stringify(response.data.favourites || []));
+                toast.success("Account created successfully!");
                 router.push("/")
             } else {
                 toast.error("Something went wrong")
             }
-        } catch (err) {
-            toast.error("Registration failed. Try a different username.")
+        } catch (err: any) {
+            const msg = err.response?.data?.detail || "Registration failed. Try a different username.";
+            toast.error(msg);
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        // Added px-4 for safe mobile edge padding
         <div className="relative min-h-screen w-full flex items-center justify-center bg-transparent overflow-hidden font-mono text-white px-4 sm:px-0">
 
-            {/* Main Card */}
             <motion.div
                 className="relative z-10 w-full max-w-md"
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.5, ease: "easeOut" }}
             >
-                {/* Adjusted padding: p-6 on mobile, p-8 on larger screens */}
                 <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 sm:p-8 shadow-2xl">
 
                     {/* Header */}
@@ -88,7 +94,6 @@ const SignupPage: React.FC = () => {
                             <User size={30} className="sm:w-[35px] sm:h-[35px]" />
                         </div>
                         <div className="text-center">
-                            {/* Adjusted text size: text-2xl on mobile, text-3xl on larger screens */}
                             <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Create Account</h3>
                             <p className="text-xs sm:text-sm text-gray-400 mt-1">Join us to start summarizing instantly</p>
                         </div>
@@ -134,6 +139,9 @@ const SignupPage: React.FC = () => {
                             By clicking Sign Up, you agree to our Terms of Service and Privacy Policy.
                         </motion.p>
 
+                        {/* 🌟 Turnstile Widget */}
+
+
                         <motion.button
                             type="submit"
                             disabled={loading}
@@ -162,6 +170,14 @@ const SignupPage: React.FC = () => {
                             >
                                 Log In
                             </Link>
+                        </motion.div>
+                        <motion.div variants={itemVariants} className="flex justify-center w-full my-1">
+                            <Turnstile
+                                siteKey={process.env.NEXT_PUBLIC_CLOUDFLARE_SITE_KEY!}
+                                onSuccess={(token) => setCaptchaToken(token)}
+                                onExpire={() => setCaptchaToken(null)}
+                                onError={() => toast.error("Security check failed. Please refresh.")}
+                            />
                         </motion.div>
                     </motion.form>
                 </div>

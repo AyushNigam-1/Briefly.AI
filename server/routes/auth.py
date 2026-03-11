@@ -9,10 +9,11 @@ router = APIRouter()
 auth_limiter = Limiter(Rate(5, Duration.MINUTE))     # 5 attempts per minute
 logout_limiter = Limiter(Rate(20, Duration.MINUTE))  # 20 per minute
 
-
+# 🌟 1. Update the local model to expect the token
 class User(BaseModel):
     username: str
     password: str
+    captcha_token: str 
 
 
 @router.post(
@@ -24,11 +25,14 @@ async def auth(request: Request, response: Response):
     action = data.get('action')
     username = data.get('username')
     password = data.get('password')
+    captcha_token = data.get('captcha_token')  # 🌟 2. Extract the token from the frontend
 
-    if not username or not password:
-        raise HTTPException(status_code=400, detail="Username and password are required")
+    # 🌟 3. Ensure all three pieces of data are present
+    if not username or not password or not captcha_token:
+        raise HTTPException(status_code=400, detail="Username, password, and CAPTCHA token are required")
 
-    user = User(username=username, password=password)
+    # 🌟 4. Pass the token into the User object
+    user = User(username=username, password=password, captcha_token=captcha_token)
 
     if action == 'login':
         result = await login(user, response)
