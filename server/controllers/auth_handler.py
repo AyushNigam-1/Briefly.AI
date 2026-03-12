@@ -1,25 +1,21 @@
 from werkzeug.security import generate_password_hash, check_password_hash
 from pydantic import BaseModel
-from typing import Optional, List
-from .mongo import users_collection 
-from utils.auth import create_access_token  
-from fastapi import HTTPException, Response
+from typing import  List
+from .mongo import users_collection
+from utils.auth import create_access_token, create_refresh_token, decode_token
+from fastapi import HTTPException, Response , Request
 from dotenv import load_dotenv
+from bson import ObjectId
 import httpx
 import os
 
-# Load environment variables
 load_dotenv()
+
 
 class User(BaseModel):
     username: str
     password: str
-    captcha_token: str  # 🌟 Added to receive the token from the frontend
-
-
-class AuthResponse(BaseModel):
-    message: str
-    token: Optional[str] = None
+    captcha_token: str
 
 
 class Token(BaseModel):
@@ -29,104 +25,197 @@ class Token(BaseModel):
 
 
 async def verify_captcha(token: str):
-    """Verifies the CAPTCHA token with the provider."""
+    """Verify Cloudflare Turnstile CAPTCHA."""
     secret_key = os.getenv("CAPTCHA_SECRET_KEY")
-    
-    # This URL is for Cloudflare Turnstile. 
-    # If using Google reCAPTCHA, use: https://www.google.com/recaptcha/api/siteverify
+
     verify_url = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
-    
+
     async with httpx.AsyncClient() as client:
-        # We send our secret key and the user's token to the provider
         response = await client.post(
             verify_url,
             data={"secret": secret_key, "response": token}
         )
+
         result = response.json()
-        
-        # If the provider says "false", we block the request immediately
+
         if not result.get("success"):
-            # Sentry will catch this 400 error if someone is trying to spam you!
-            raise HTTPException(status_code=400, detail="CAPTCHA verification failed. Bot behavior detected.")
+            raise HTTPException(
+                status_code=400,
+                detail="CAPTCHA verification failed"
+            )
 
 
-async def signup(user: User, response: Response):
-    """Sign up a new user."""
-    if not user.username or not user.password:
-        raise HTTPException(status_code=400, detail="Username and password are required")
+def set_auth_cookies(response: Response, access_token: str, refresh_token: str):
+    """Set secure auth cookies."""
 
-    # 🌟 1. Verify CAPTCHA before touching the database
-    await verify_captcha(user.captcha_token)
-
-    # 2. Check if the username already exists by querying the users_collection
-    if users_collection.find_one({"username": user.username}):
-        raise HTTPException(status_code=400, detail="Username already exists")
-
-    # Hash the password and create the new user with an empty favorites list
-    hashed_password = generate_password_hash(user.password)
-    new_user = users_collection.insert_one({"username": user.username, "password": hashed_password, "favorites": []})
-
-    # Fetch the user_id from the inserted user document
-    user_id = str(new_user.inserted_id)
-
-    # Create access token for the user, include user_id in the payload
-    token_data = {"username": user.username, "user_id": user_id}
-    access_token = create_access_token(data=token_data)
-
-    # Set the token in the response cookie
     response.set_cookie(
         key="access_token",
         value=access_token,
+        httponly=True,
         secure=False,
-        samesite="Lax",
-        httponly=False,
+        samesite="Lax"
     )
+
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=False,
+        samesite="Lax"
+    )
+
+
+async def signup(user: User, response: Response):
+
+    if not user.username or not user.password:
+        raise HTTPException(status_code=400, detail="Username and password required")
+
+    await verify_captcha(user.captcha_token)
+
+    if users_collection.find_one({"username": user.username}):
+        raise HTTPException(status_code=400, detail="Username already exists")
+
+    hashed_password = generate_password_hash(user.password)
+
+    new_user = users_collection.insert_one({
+        "username": user.username,
+        "password": hashed_password,
+        "favorites": [],
+        "refresh_token": None
+    })
+
+    user_id = str(new_user.inserted_id)
+
+    token_data = {"username": user.username, "user_id": user_id}
+
+    access_token = create_access_token(token_data)
+    refresh_token = create_refresh_token(token_data)
+
+    users_collection.update_one(
+        {"_id": new_user.inserted_id},
+        {"$set": {"refresh_token": refresh_token}}
+    )
+
+    set_auth_cookies(response, access_token, refresh_token)
 
     return {
         "access_token": access_token,
-        "token_type": "bearer",
-        "favorites": [],  # New users have an empty favorites list
-        "status_code": 201
+        "favorites": []
     }
 
 
 async def login(user: User, response: Response):
-    """Log in an existing user."""
-    if not user.username or not user.password:
-        raise HTTPException(status_code=400, detail="Username and password are required")
 
-    # 🌟 1. Verify CAPTCHA before heavy password hashing or DB lookups
+    if not user.username or not user.password:
+        raise HTTPException(status_code=400, detail="Username and password required")
+
     await verify_captcha(user.captcha_token)
 
-    # Fetch the user from the users_collection
     stored_user = users_collection.find_one({"username": user.username})
 
-    print(stored_user)
-
-    # Check if the user exists and if the password is correct
-    if not stored_user or not check_password_hash(stored_user['password'], user.password):
+    if not stored_user or not check_password_hash(stored_user["password"], user.password):
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
-    # Fetch the user_id and favorites list from the stored user document
-    user_id = str(stored_user['_id'])
-    favorites = stored_user.get("favorites", [])  # Ensure favorites is a list
+    user_id = str(stored_user["_id"])
+    favorites = stored_user.get("favorites", [])
 
-    # Generate access token, include user_id in the payload
     token_data = {"username": user.username, "user_id": user_id}
-    access_token = create_access_token(data=token_data)
 
-    # Set the token in the response cookie
-    response.set_cookie(
-        key="access_token",
-        value=access_token,
-        secure=False,
-        samesite="Lax",
-        httponly=False,
+    access_token = create_access_token(token_data)
+    refresh_token = create_refresh_token(token_data)
+
+    users_collection.update_one(
+        {"_id": stored_user["_id"]},
+        {"$set": {"refresh_token": refresh_token}}
     )
+
+    set_auth_cookies(response, access_token, refresh_token)
 
     return {
         "access_token": access_token,
-        "token_type": "bearer",
-        "favorites": favorites,  # Include the user's favorites list
-        "status_code": 201
+        "favorites": favorites
     }
+
+
+async def refresh_token(request: Request, response: Response):
+
+    refresh_token_cookie = request.cookies.get("refresh_token")
+
+    if not refresh_token_cookie:
+        raise HTTPException(status_code=401, detail="Missing refresh token")
+
+    payload = decode_token(refresh_token_cookie)
+
+    user = users_collection.find_one({
+        "_id": ObjectId(payload.get("user_id"))
+    })
+
+    if not user or user.get("refresh_token") != refresh_token_cookie:
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
+
+    token_data = {
+        "username": payload["username"],
+        "user_id": payload["user_id"]
+    }
+
+    new_access_token = create_access_token(token_data)
+
+    response.set_cookie(
+        key="access_token",
+        value=new_access_token,
+        httponly=True,
+        secure=False,
+        samesite="Lax"
+    )
+
+    return {"access_token": new_access_token}
+
+async def get_current_user(request: Request):
+    """
+    Return the currently authenticated user.
+    Reads access_token from httpOnly cookie.
+    """
+
+    access_token = request.cookies.get("access_token")
+
+    if not access_token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    try:
+        payload = decode_token(access_token)
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    user_id = payload.get("user_id")
+
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token payload")
+
+    user_doc = users_collection.find_one({"_id": ObjectId(user_id)})
+
+    if not user_doc:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return {
+        "user": {
+            "user_id": str(user_doc["_id"]),
+            "username": user_doc["username"],
+            "favorites": user_doc.get("favorites", [])
+        }
+    }
+
+async def logout(response: Response, request):
+
+    refresh_token = request.cookies.get("refresh_token")
+
+    if refresh_token:
+        payload = decode_token(refresh_token)
+        users_collection.update_one(
+            {"_id": payload.get("user_id")},
+            {"$set": {"refresh_token": None}}
+        )
+
+    response.delete_cookie("access_token")
+    response.delete_cookie("refresh_token")
+
+    return {"message": "Logged out successfully"}

@@ -1,15 +1,15 @@
 "use client"
 import React, { useState } from 'react';
-import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { User } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Turnstile } from '@marsidev/react-turnstile'; // 🌟 Import Turnstile
+import { Turnstile } from '@marsidev/react-turnstile';
+import { useAuth } from '@/app/components/providers/AuthProvider';
 
-// Animation Variants
+
 const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -33,44 +33,34 @@ const itemVariants = {
 const LoginPage: React.FC = () => {
     const [username, setUsername] = useState<string>('');
     const [password, setPassword] = useState<string>('');
-    const [captchaToken, setCaptchaToken] = useState<string | null>(null); // 🌟 State for the token
+    const [captchaToken, setCaptchaToken] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const router = useRouter()
+    const { login } = useAuth();
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         setLoading(true);
 
-        // 🌟 Stop submission if CAPTCHA isn't completed
         if (!captchaToken) {
             toast.error("Please complete the CAPTCHA check.");
             setLoading(false);
             return;
         }
 
-        const data = {
-            action: 'login',
-            username,
-            password,
-            captcha_token: captchaToken, // 🌟 Send token to backend
-        };
-
         try {
-            const response = await axios.post('http://localhost:8000/auth', data, {
-                withCredentials: true,
+            await login({
+                action: "login",
+                username,
+                password,
+                captcha_token: captchaToken,
             });
 
-            if (response.status === 200 || response.status === 201) {
-                localStorage.setItem('favourites', JSON.stringify(response.data.favourites || []));
-                toast.success("Login successful!");
-                router.push("/");
-            } else {
-                toast.error("Something went wrong");
-            }
+            toast.success("Login successful!");
+            router.push("/");
         } catch (err: any) {
-            // Display specific error from backend if available (e.g. Invalid credentials or Bot detected)
-            const errorMessage = err.response?.data?.detail || "Something went wrong";
-            toast.error(errorMessage);
+            const message = err?.response?.data?.detail || err?.message || "Login failed";
+            toast.error(message);
         } finally {
             setLoading(false);
         }

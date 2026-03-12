@@ -1,13 +1,14 @@
 "use client"
 import React, { useState } from 'react';
-import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { User } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Turnstile } from '@marsidev/react-turnstile'; // 🌟 Import Turnstile
+import { Turnstile } from '@marsidev/react-turnstile';
+import { useAuth } from '@/app/components/providers/AuthProvider';
+
 
 const containerVariants = {
     hidden: { opacity: 0 },
@@ -31,9 +32,10 @@ const itemVariants = {
 
 const SignupPage: React.FC = () => {
 
+    const { signup } = useAuth();
     const [username, setUsername] = useState<string>('');
     const [password, setPassword] = useState<string>('');
-    const [captchaToken, setCaptchaToken] = useState<string | null>(null); // 🌟 Captcha state
+    const [captchaToken, setCaptchaToken] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const router = useRouter()
 
@@ -46,26 +48,19 @@ const SignupPage: React.FC = () => {
         }
 
         setLoading(true);
-        const data = {
-            action: 'signup',
-            username,
-            password,
-            captcha_token: captchaToken // 🌟 Pass token to backend
-        };
 
         try {
-            const response = await axios.post('http://localhost:8000/auth', data, {
-                withCredentials: true,
+            await signup({
+                action: "signup",
+                username,
+                password,
+                captcha_token: captchaToken,
             });
-            if (response.status === 200 || response.status === 201) {
-                localStorage.setItem('favourites', JSON.stringify(response.data.favourites || []));
-                toast.success("Account created successfully!");
-                router.push("/")
-            } else {
-                toast.error("Something went wrong")
-            }
+
+            toast.success("Account created successfully!");
+            router.push("/");
         } catch (err: any) {
-            const msg = err.response?.data?.detail || "Registration failed. Try a different username.";
+            const msg = err.response?.data?.detail || "Registration failed.";
             toast.error(msg);
         } finally {
             setLoading(false);
@@ -83,7 +78,6 @@ const SignupPage: React.FC = () => {
             >
                 <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 sm:p-8 shadow-2xl">
 
-                    {/* Header */}
                     <motion.div
                         className="flex flex-col items-center gap-3 sm:gap-4 mb-6 sm:mb-8"
                         initial={{ opacity: 0, y: -20 }}
@@ -98,8 +92,6 @@ const SignupPage: React.FC = () => {
                             <p className="text-xs sm:text-sm text-gray-400 mt-1">Join us to start summarizing instantly</p>
                         </div>
                     </motion.div>
-
-                    {/* Form */}
                     <motion.form
                         onSubmit={handleSubmit}
                         className="flex flex-col gap-4 sm:gap-5"
@@ -133,15 +125,9 @@ const SignupPage: React.FC = () => {
                                 />
                             </motion.div>
                         </div>
-
-                        {/* Terms Text */}
                         <motion.p className="text-[10px] sm:text-xs text-center text-gray-500 px-2 sm:px-4" variants={itemVariants}>
                             By clicking Sign Up, you agree to our Terms of Service and Privacy Policy.
                         </motion.p>
-
-                        {/* 🌟 Turnstile Widget */}
-
-
                         <motion.button
                             type="submit"
                             disabled={loading}
@@ -156,13 +142,11 @@ const SignupPage: React.FC = () => {
                                 "Sign Up"
                             )}
                         </motion.button>
-
                         <motion.div className="relative flex py-2 items-center" variants={itemVariants}>
                             <div className="flex-grow border-t border-white/10"></div>
                             <span className="flex-shrink mx-3 sm:mx-4 text-gray-500 text-[10px] sm:text-xs text-center">Already have an account?</span>
                             <div className="flex-grow border-t border-white/10"></div>
                         </motion.div>
-
                         <motion.div variants={itemVariants} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                             <Link
                                 href='/account/login'

@@ -1,14 +1,12 @@
 import jwt
-from datetime import datetime, timedelta, timezone
-from typing import Optional
 import os
+from datetime import datetime, timedelta
 from pymongo import MongoClient
 from dotenv import load_dotenv
 from fastapi.security import OAuth2PasswordBearer
-from fastapi import  HTTPException 
-from fastapi import Depends, HTTPException
+from fastapi import  HTTPException , Request
 from fastapi.security import OAuth2PasswordBearer
-from typing import Any
+from bson import ObjectId
 
 load_dotenv()
 
@@ -19,33 +17,61 @@ client = MongoClient(CONNECTION_STRING)
 db = client['briefly']
 users_collection = db['users']
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
-SECRET_KEY = os.getenv("SECRET_KEY")
+ACCESS_TOKEN_EXPIRE_MINUTES = 15
+REFRESH_TOKEN_EXPIRE_DAYS = 7
+SECRET = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_HOURS= 30
 
-# OAuth2PasswordBearer will automatically extract the token from the Authorization header
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-def get_current_user(token: str = Depends(oauth2_scheme)) -> Any:
-    try:
-        payload = verify_token(token)
-        print("this is the payload",payload)
-        return payload  # Return the payload which might include user data like username or user_id
-    except HTTPException as e:
-        print(e)
-        raise e
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    to_encode = data.copy()
-    expire = datetime.now(timezone.utc)+ (expires_delta or timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS))
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+async def get_current_user(request: Request):
+
+    access_token = request.cookies.get("access_token")
+
+    if not access_token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    try:
+        payload = decode_token(access_token)
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    user_id = payload.get("user_id")
+
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token payload")
+
+    user_doc = users_collection.find_one({"_id": ObjectId(user_id)})
+
+    if not user_doc:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return {
+        "user_id": str(user_doc["_id"]),
+        "username": user_doc["username"],
+        "favorites": user_doc.get("favorites", [])
+    }
+
+
+def create_access_token(data: dict):
+    payload = data.copy()
+    payload["exp"] = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    return jwt.encode(payload, SECRET, algorithm=ALGORITHM)
+
+
+def create_refresh_token(data: dict):
+    payload = data.copy()
+    payload["exp"] = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    return jwt.encode(payload, SECRET, algorithm=ALGORITHM)
+
+
+def decode_token(token: str):
+    return jwt.decode(token, SECRET, algorithms=[ALGORITHM])
 
 def verify_token(token: str):
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, SECRET, algorithms=[ALGORITHM])
         return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token has expired")
@@ -70,7 +96,7 @@ def verify_state_token(state: str) -> str:
     if not state:
         raise HTTPException(status_code=401, detail="Authentication state missing")
     try:
-        payload = jwt.decode(state, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(state, SECRET, algorithms=[ALGORITHM])
         username = payload.get("username")
         if not username:
             raise HTTPException(status_code=401, detail="Invalid token payload")

@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect, UIEvent } from "react";
-import Cookies from "js-cookie";
-import axios from "axios";
+import api from "@/app/api";
+import { useAuth } from "../../providers/AuthProvider";
 import {
     Menu,
     MenuButton,
@@ -53,7 +53,7 @@ const Sidebar: React.FC = () => {
     const params = useParams();
     const activeId = params?.id;
 
-    const token = Cookies.get('access_token');
+    const { user } = useAuth();
 
     useEffect(() => {
         setMounted(true);
@@ -83,7 +83,7 @@ const Sidebar: React.FC = () => {
 
     // 🌟 Updated Fetch for Pagination (10 at a time)
     const fetchUserSummaries = async (currentSkip = 0, isAppending = false) => {
-        if (!token) {
+        if (!user) {
             setLoading(false);
             return;
         }
@@ -92,10 +92,7 @@ const Sidebar: React.FC = () => {
         else setLoading(true);
 
         try {
-            const res = await axios.get(`http://localhost:8000/chats/?skip=${currentSkip}&limit=15`, {
-                headers: { Authorization: `Bearer ${token}` },
-                withCredentials: true,
-            });
+            const res = await api.get(`/chats/?skip=${currentSkip}&limit=15`);
 
             const fetchedChats = res.data.chats || [];
 
@@ -121,13 +118,13 @@ const Sidebar: React.FC = () => {
     };
 
     useEffect(() => {
-        if (mounted && token) {
+        if (mounted && user) {
             fetchUserSummaries(0, false);
-        } else if (mounted && !token) {
+        } else if (mounted && !user) {
             setLoading(false);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [mounted, token]);
+    }, [mounted, user]);
 
     // 🌟 Calculate the filtered array directly during render! No state gaps = no scroll jumping.
     const filtered = chats.filter((s) => s.title.toLowerCase().includes(search.toLowerCase()));
@@ -144,11 +141,7 @@ const Sidebar: React.FC = () => {
 
     const handleDelete = async () => {
         try {
-            await axios.delete(`http://localhost:8000/summary/?id=${summaryId}`, {
-                headers: { Authorization: `Bearer ${token}` },
-                withCredentials: true,
-            });
-
+            await api.delete(`/summary/?id=${summaryId}`);
             const updated = chats.filter((s) => s.id !== summaryId);
             setChats(updated);
         } catch {
@@ -159,13 +152,9 @@ const Sidebar: React.FC = () => {
     const handlePin = async (chatId: string, currentPinStatus: boolean) => {
         try {
             const newPinStatus = !currentPinStatus;
-            await axios.patch(`http://localhost:8000/summary/${chatId}/pin`,
-                { is_pinned: newPinStatus },
-                {
-                    headers: { Authorization: `Bearer ${token}` },
-                    withCredentials: true,
-                }
-            );
+            await api.patch(`/summary/${chatId}/pin`, {
+                is_pinned: newPinStatus,
+            });
             setChats(prevChats =>
                 prevChats.map(chat =>
                     chat.id === chatId ? { ...chat, is_pinned: newPinStatus } : chat
@@ -177,7 +166,7 @@ const Sidebar: React.FC = () => {
         }
     };
 
-    if (!mounted || !token) {
+    if (!user) {
         return null;
     }
 

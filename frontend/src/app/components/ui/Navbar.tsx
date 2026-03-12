@@ -4,21 +4,23 @@ import { User, UserPlus } from 'lucide-react';
 import SettingsDialog from './modals/Settings';
 import Cookies from 'js-cookie';
 import Link from 'next/link';
+import { useAuth } from '../providers/AuthProvider';
 
 const Navbar = () => {
+    const { user } = useAuth()
     const [isOpen, setOpen] = useState<boolean>(false);
     const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
     const [mounted, setMounted] = useState<boolean>(false);
 
-    useEffect(() => {
-        setMounted(true);
-        const token = Cookies.get('access_token');
-        if (token) {
-            setIsLoggedIn(true);
-        }
-    }, []);
+    // useEffect(() => {
+    //     setMounted(true);
+    //     const token = Cookies.get('access_token');
+    //     if (token) {
+    //         setIsLoggedIn(true);
+    //     }
+    // }, []);
 
-    if (!mounted) return null;
+    // if (!mounted) return null;
 
     return (
         <>
@@ -29,7 +31,7 @@ const Navbar = () => {
                 </div>
 
                 <div className="flex justify-end gap-2 sm:gap-3 items-center">
-                    {isLoggedIn ? (
+                    {user ? (
                         <>
                             <button
                                 onClick={() => setOpen(true)}
