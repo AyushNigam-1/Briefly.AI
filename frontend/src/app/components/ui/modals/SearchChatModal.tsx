@@ -5,9 +5,8 @@ import { Dialog, DialogPanel, DialogBackdrop } from "@headlessui/react";
 import { Search, X, MessageSquare, User, Bot, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import axios from "axios";
-import Cookies from "js-cookie";
 import { SearchModalProps, SearchResult } from "@/app/types";
+import api from "@/app/api";
 
 const SearchModal: React.FC<SearchModalProps> = ({ onCloseSidebar }) => {
     const router = useRouter();
@@ -29,12 +28,8 @@ const SearchModal: React.FC<SearchModalProps> = ({ onCloseSidebar }) => {
             setIsLoading(true);
             setError(null);
             try {
-                const token = Cookies.get("access_token");
-                const res = await axios.get(
-                    `http://localhost:8000/chats/search?q=${encodeURIComponent(searchQuery.trim())}`,
-                    {
-                        headers: { Authorization: `Bearer ${token}` },
-                    }
+                const res = await api.get(
+                    `chats/search?q=${encodeURIComponent(searchQuery.trim())}`,
                 );
                 setResults(res.data.results || []);
             } catch (err) {

@@ -1,10 +1,10 @@
 "use client"
 import { InputProps } from '@/app/types';
-import { Listbox, ListboxButton, ListboxOption, ListboxOptions, MenuButton, MenuItem, MenuItems, Menu } from '@headlessui/react';
+import { MenuButton, MenuItem, MenuItems, Menu } from '@headlessui/react';
 import clsx from 'clsx';
-// 🌟 Added Check icon to the imports
-import { AlarmClock, AlarmClockCheck, ChevronDown, FileText, Filter, ImageIcon, Loader2, MessageCircle, MessageSquare, Package, Paperclip, PauseCircle, SendHorizontal, SlidersHorizontal, X, Lock, Check, CheckCircle } from 'lucide-react';
-import React, { useEffect, useRef, useState } from 'react'
+import { FileText, ImageIcon, Package, Paperclip, PauseCircle, SendHorizontal, X, Lock, CheckCircle } from 'lucide-react';
+import { useEffect, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion';
 
 const options = [
     { label: "GPT OSS 20B", value: "openai/gpt-oss-20b", icon: "/openai.webp", isPremium: false, description: "Fast & efficient for everyday tasks" },
@@ -15,12 +15,40 @@ const options = [
     { label: "Llama 70B", value: "llama-3.3-70b-versatile", icon: "/meta.webp", isPremium: false, description: "Deep analysis & creative writing" },
 ]
 
-const InputBox = ({ query, setQuery, send, isPending, files, stop, handleFileChange, removeFile }: InputProps) => {
-    const doc = useRef<HTMLInputElement | null>(null);
+// 🌟 Ultra-smooth, clean fade & slide (No bouncy springs)
+const fileItemVariants = {
+    initial: { opacity: 0, y: 10, scale: 0.95 },
+    animate: {
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        transition: { duration: 0.2, ease: "easeOut" }
+    },
+    exit: {
+        opacity: 0,
+        scale: 0.95,
+        transition: { duration: 0.15, ease: "easeIn" }
+    }
+};
+
+const InputBox = ({ query, setQuery, send, isPending, stop }: InputProps) => {
     const [selected, setSelected] = useState(options[0])
+    const [files, setFiles] = useState<File[]>([]);
+
+    const removeFile = (index: number) => {
+        setFiles((prev) => prev.filter((_, i) => i !== index));
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files?.length) {
+            const newFiles = Array.from(e.target.files);
+            setFiles((prev) => [...prev, ...newFiles]);
+            e.target.value = '';
+        }
+    }
 
     useEffect(() => {
-        const savedModelValue = localStorage.getItem('selectedModel');
+        const savedModelValue = typeof window !== 'undefined' ? localStorage.getItem('selectedModel') : null;
         if (savedModelValue) {
             const foundOption = options.find(opt => opt.value === savedModelValue);
             if (foundOption && !foundOption.isPremium) {
@@ -39,56 +67,87 @@ const InputBox = ({ query, setQuery, send, isPending, files, stop, handleFileCha
         <div className="flex gap-2 sm:gap-4 items-end w-full">
             <div className="w-full flex-1 space-y-3 sm:space-y-4 min-w-0">
 
-                {files?.length !== 0 && files !== undefined &&
-                    <div className="flex flex-nowrap w-full gap-3 overflow-x-auto scrollbar-none animate-in fade-in slide-in-from-bottom-2 font-mono pb-2 pt-2 px-1">
-                        {files?.map((file, index) => (
-                            <div key={`${file.name}-${index}`} className="relative group flex-shrink-0">
-                                <div className='p-1.5 sm:p-2 pr-6 sm:pr-8 flex gap-2 rounded-xl relative border transition-colors
+                {/* 🌟 Removed the extra motion.div wrapper so AnimatePresence can do its job */}
+                <AnimatePresence initial={false}>
+                    {files?.length > 0 && (
+                        <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.25, ease: "easeInOut" }}
+                            className="overflow-hidden" // 🌟 CRITICAL: Stops files from poking out while it shrinks
+                        >
+                            <div className="flex flex-nowrap w-full items-center gap-3 overflow-x-auto scrollbar-none font-mono pt-1">
+
+                                {/* 🌟 2. Inner AnimatePresence for the individual files sliding around */}
+                                <AnimatePresence mode="popLayout">
+                                    {files.map((file, index) => (
+                                        <motion.div
+                                            layout
+                                            key={`${file.name}-${index}-${file.lastModified}`}
+                                            className="relative group flex-shrink-0"
+                                            variants={fileItemVariants}
+                                            initial="initial"
+                                            animate="animate"
+                                            exit="exit"
+                                        >
+                                            <div className='p-1.5 sm:p-2 pr-6 sm:pr-8 flex gap-2 rounded-xl relative border transition-colors
                                     bg-slate-50 border-slate-200 text-slate-800 
                                     dark:bg-[#1a1a1a] dark:border-secondary dark:text-primary'
-                                >
-                                    <div className='p-2 sm:p-3 rounded-full my-auto transition-colors flex items-center justify-center
+                                            >
+                                                <div className='p-2 sm:p-3 rounded-full my-auto transition-colors flex items-center justify-center
                                         bg-slate-200 text-slate-700 
                                         dark:bg-primary dark:text-tertiary'
-                                    >
-                                        {file.type.startsWith('image/') ? <ImageIcon size={16} className="sm:w-5 sm:h-5" /> : <FileText size={16} className="sm:w-5 sm:h-5" />}
-                                    </div>
+                                                >
+                                                    {file.type.startsWith('image/') ? <ImageIcon size={16} className="sm:w-5 sm:h-5" /> : <FileText size={16} className="sm:w-5 sm:h-5" />}
+                                                </div>
 
-                                    <div className='flex gap-0.5 sm:gap-1 flex-col justify-center'>
-                                        <h1 className='font-semibold text-xs sm:text-sm truncate max-w-[100px] sm:max-w-[150px]'>
-                                            {file.name}
-                                        </h1>
-                                        <p className='text-[10px] sm:text-xs text-start opacity-70'>
-                                            {file.size >= 1048576
-                                                ? (file.size / 1048576).toFixed(2) + ' MB'
-                                                : (file.size / 1024).toFixed(2) + ' KB'}
-                                        </p>
-                                    </div>
-                                </div>
+                                                <div className='flex gap-0.5 sm:gap-1 flex-col justify-center'>
+                                                    <h1 className='font-semibold text-xs sm:text-sm truncate max-w-[100px] sm:max-w-[150px]'>
+                                                        {file.name}
+                                                    </h1>
+                                                    <p className='text-[10px] sm:text-xs text-start opacity-70'>
+                                                        {file.size >= 1048576
+                                                            ? (file.size / 1048576).toFixed(2) + ' MB'
+                                                            : (file.size / 1024).toFixed(2) + ' KB'}
+                                                    </p>
+                                                </div>
+                                            </div>
 
-                                <button
-                                    onClick={() => removeFile(index)}
-                                    className="absolute -top-1.5 -right-1.5 p-1 rounded-full shadow-sm transition-colors
-                                        bg-slate-200 text-slate-600 hover:bg-red-500 hover:text-white
-                                        dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-red-500 dark:hover:text-white"
-                                >
-                                    <X size={12} strokeWidth={3} />
-                                </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => removeFile(index)}
+                                                className="absolute top-1.5 right-1.5 p-1 rounded-full shadow-sm transition-colors z-10 bg-slate-200 text-slate-600 hover:bg-red-500 hover:text-white dark:bg-white/15 dark:text-slate-300 dark:hover:bg-white/20 dark:hover:text-white"
+                                            >
+                                                <X size={12} strokeWidth={3} />
+                                            </button>
+                                        </motion.div>
+                                    ))}
+                                </AnimatePresence>
                             </div>
-                        ))}
-                    </div>
-                }
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 <div className="flex rounded-[2rem] border transition-colors items-center bg-white border-slate-300 dark:bg-[#1a1a1a] dark:border-secondary">
-                    <button
-                        className="rounded-full p-3 flex items-center justify-center transition-colors flex-shrink-0
-                            bg-slate-900 text-white hover:bg-slate-800
-                    dark:bg-primary dark:text-tertiary dark:hover:bg-primary/90"
-                        onClick={() => doc.current?.click()}
+
+                    <input
+                        id="file-upload"
+                        type="file"
+                        className="hidden"
+                        multiple
+                        onChange={handleFileChange}
+                        onClick={(e) => {
+                            (e.currentTarget as HTMLInputElement).value = '';
+                        }}
+                    />
+
+                    <label
+                        htmlFor="file-upload"
+                        className="cursor-pointer rounded-full p-3 flex items-center justify-center transition-colors flex-shrink-0 bg-slate-900 text-white hover:bg-slate-800 dark:bg-primary dark:text-tertiary dark:hover:bg-primary/90"
                     >
-                        <input ref={doc} type="file" hidden multiple onChange={handleFileChange} />
                         <Paperclip size={20} className="sm:w-5 sm:h-5" />
-                    </button>
+                    </label>
 
                     <input
                         value={query}
@@ -116,11 +175,6 @@ const InputBox = ({ query, setQuery, send, isPending, files, stop, handleFileCha
                             "data-[closed]:scale-95 data-[closed]:opacity-0 data-[closed]:translate-y-2"
                         )}
                         >
-                            {/* <div className="px-2 py-1 flex gap-2 items-center uppercase font-semibold text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-                                <Package size={14} className="sm:w-[18px] sm:h-[18px]" /> Models
-                            </div> */}
-                            {/* <hr className="border transition-colors border-slate-200 dark:border-secondary mb-1" /> */}
-
                             {options.map((item) => (
                                 <MenuItem key={item.value} disabled={item.isPremium}>
                                     {({ close, disabled }) => (
@@ -145,7 +199,6 @@ const InputBox = ({ query, setQuery, send, isPending, files, stop, handleFileCha
                                                         {item.label}
                                                     </span>
 
-                                                    {/* 🌟 Swap between Lock and Check icon */}
                                                     {item.isPremium ? (
                                                         <Lock size={14} className="text-amber-500 flex-shrink-0" />
                                                     ) : selected.value === item.value ? (
@@ -167,6 +220,7 @@ const InputBox = ({ query, setQuery, send, isPending, files, stop, handleFileCha
             </div>
 
             <button
+                type="button"
                 onClick={() => isPending ? stop() : query && send(query, files, selected.value)}
                 className="p-3 rounded-full flex-shrink-0 transition-colors shadow-sm mb-[2px] sm:mb-1
                     bg-slate-900 text-white hover:bg-slate-800

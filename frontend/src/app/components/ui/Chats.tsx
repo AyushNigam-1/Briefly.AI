@@ -7,16 +7,13 @@ import { ChatsProps, query } from "@/app/types";
 import Message from "./Messages";
 
 const Chats = ({
-    removeFile,
     queries,
     isPending,
     handleSend,
     query: searchInput,
     setQuery,
-    files,
     handleFileChange,
     handleStop,
-    setFiles,
     loadOlderChats,
     isLoadingOlder,
     hasMore,
@@ -32,22 +29,14 @@ const Chats = ({
 
     const handleScroll = (offset: number) => {
         if (!vlistRef.current) return;
-
-        // Trigger infinite scroll near the top
         if (offset < 50 && hasMore && !isLoadingOlder) {
             loadOlderChats();
         }
-
-        // Keep track of whether the user is near the bottom
         const { scrollSize, viewportSize } = vlistRef.current;
         atBottomRef.current = scrollSize - (offset + viewportSize) < 100;
     };
-
-    // 🌟 SIMPLIFIED SCROLL LOGIC
     useEffect(() => {
         if (!vlistRef.current || queries.length === 0) return;
-
-        // Only auto-scroll if the user is already at the bottom, or if the AI is actively typing
         if (atBottomRef.current || isPending) {
             vlistRef.current.scrollToIndex(queries.length - 1, { align: "end" });
         }
@@ -81,7 +70,7 @@ const Chats = ({
                         ref={vlistRef}
                         data={queries}
                         onScroll={handleScroll}
-                        shift={true} // 🌟 virtua automatically prevents scroll jumps when older chats are prepended!
+                        shift={true}
                         className="scrollbar-none overflow-x-hidden h-full w-full py-4"
                     >
                         {(q, index) => (
@@ -104,9 +93,8 @@ const Chats = ({
             <div className="fixed bottom-0 left-0 w-full py-4 z-50">
                 <div className="max-w-4xl w-full mx-auto">
                     <InputBox
-                        removeFile={removeFile}
                         query={searchInput} setQuery={setQuery} send={handleSend}
-                        isPending={isPending} files={files}
+                        isPending={isPending}
                         handleFileChange={handleFileChange} stop={handleStop}
                     />
                 </div>

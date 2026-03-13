@@ -171,7 +171,6 @@ export interface SourcesSidebarProps {
 }
 
 export interface ChatsProps {
-    removeFile: (index: number) => void
     queries: query[];
     setQueries: Dispatch<SetStateAction<query[]>>;
     isPending: boolean;
@@ -180,8 +179,6 @@ export interface ChatsProps {
     setQuery: (value: string) => void;
     handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
     handleStop: () => void;
-    files: File[];
-    setFiles: (files: File[]) => void;
     loadOlderChats: () => Promise<void>;
     isLoadingOlder: boolean;
     hasMore: boolean;
@@ -190,7 +187,7 @@ export interface ChatsProps {
 }
 
 export interface InputProps {
-    query: string, setQuery: (value: string) => void, send: (value: string, files: File[], model: string) => void, files: File[], isPending: boolean, stop: () => void, handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>, removeFile: (index: number) => void
+    query: string, setQuery: (value: string) => void, send: (value: string, files: File[], model: string) => void, isPending: boolean, stop: () => void, handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>
 }
 
 export interface MessageProps {

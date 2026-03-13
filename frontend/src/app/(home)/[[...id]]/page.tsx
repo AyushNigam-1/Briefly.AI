@@ -1,43 +1,37 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import axios from "axios";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import Cookies from "js-cookie";
 import InputBox from "@/app/components/ui/InputBox";
-import { fetchEventSource } from '@microsoft/fetch-event-source';
 import Chats from "@/app/components/ui/Chats";
 import { query as QueryType } from "@/app/types";
 import { Ghost, Loader2 } from "lucide-react";
+import { useAuth } from "@/app/components/providers/AuthProvider";
+import api, { streamChat } from "@/app/api";
 
-class StopRetryError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "StopRetryError";
-  }
-}
 
 const Page = () => {
   const { id } = useParams();
   const router = useRouter();
   const rawId = Array.isArray(id) ? id[0] : id;
-  const [isMounted, setIsMounted] = useState(false);
-  const [token, setToken] = useState<string | undefined>(undefined);
 
-  useEffect(() => {
-    setToken(Cookies.get("access_token"));
-    setIsMounted(true);
-  }, []);
-
+  const { user } = useAuth()
   const isExplicitPrivate = rawId === "private";
-  const isPrivateMode = isExplicitPrivate || !token;
+  const isPrivateMode = isExplicitPrivate || !user;
 
   const [query, setQuery] = useState<string>("");
   const [queries, setQueries] = useState<QueryType[]>([]);
   const [activeId, setActiveId] = useState<string | undefined>();
   const [isPending, setPending] = useState(false);
-  const [files, setFiles] = useState<File[]>([]);
+  const [selectedModel, setSelectedModel] = useState("default_model");
+
+  useEffect(() => {
+    const savedModelValue = localStorage.getItem('selectedModel');
+    if (savedModelValue) {
+      setSelectedModel(savedModelValue);
+    }
+  }, []);
 
   const [isInitialLoad, setIsInitialLoad] = useState<boolean>(!!rawId && !isExplicitPrivate);
 
@@ -54,9 +48,8 @@ const Page = () => {
     if (before) params.append("before", before);
 
     try {
-      const res = await axios.get(
+      const res = await api(
         `http://localhost:8000/history/${rawId}?${params}`,
-        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       const newHistory: QueryType[] = res.data?.history || [];
@@ -79,7 +72,7 @@ const Page = () => {
       if (before) setIsLoadingOlder(false);
       setIsInitialLoad(false);
     }
-  }, [rawId, isPrivateMode, token]);
+  }, [rawId, isPrivateMode, user]);
 
   useEffect(() => {
     if (isExplicitPrivate) {
@@ -117,95 +110,88 @@ const Page = () => {
   }, [oldestCreatedAt, hasMore, isLoadingOlder, fetchHistory, isPrivateMode]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("file change")
     if (e.target.files?.length) {
-      setFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
     }
-    e.target.value = "";
+    // e.target.value = "";
   };
 
-  const removeFile = (index: number) => {
-    setFiles((prev) => prev.filter((_, i) => i !== index));
-  };
+
 
   const executePrivateStream = async (form: FormData) => {
+
+    abortControllerRef.current = new AbortController()
+
     try {
-      abortControllerRef.current = new AbortController();
 
-      await fetchEventSource("http://localhost:8000/query/private", {
-        method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      await streamChat({
+        endpoint: "/query/private",
         body: form,
-        signal: abortControllerRef.current.signal,
-
-        async onopen(response) {
-          if (!response.ok) throw new StopRetryError(`Failed to connect: ${response.status}`);
+        abortController: abortControllerRef.current,
+        isPrivate: true,
+        onToken(token) {
+          setQueries(prev => {
+            const updated = [...prev]
+            updated[updated.length - 1].content += token
+            return updated
+          })
         },
 
-        onmessage(msg) {
-          const parsed = JSON.parse(msg.data);
+        onThinking(token) {
+          setQueries(prev => {
+            const updated = [...prev]
+            updated[updated.length - 1].thinking =
+              (updated[updated.length - 1].thinking || "") + token
+            return updated
+          })
+        },
 
-          if (parsed.type === "token") {
+        onDone(sources) {
+
+          setPending(false)
+          if (sources) {
             setQueries(prev => {
-              const updated = [...prev];
-              updated[updated.length - 1].content += parsed.data;
-              return updated;
-            });
+              const updated = [...prev]
+              updated[updated.length - 1].sources = sources
+              return updated
+            })
           }
+        },
 
-          if (parsed.type === "thinking") {
-            setQueries(prev => {
-              const updated = [...prev];
-              updated[updated.length - 1].thinking = (updated[updated.length - 1].thinking || "") + parsed.data;
-              return updated;
-            });
-          }
+        onBlocked() {
+          setPending(false)
 
-          if (parsed.type === "done") {
-            setPending(false);
-            if (parsed.sources) {
-              setQueries(prev => {
-                const updated = [...prev];
-                updated[updated.length - 1].sources = parsed.sources;
-                return updated;
-              });
+          setQueries(prev => {
+            const updated = [...prev]
+
+            updated[updated.length - 1] = {
+              sender: "llm",
+              content: "Sorry — I can’t help with that request.",
+              blocked: true,
+              created_at: ""
             }
-            abortControllerRef.current?.abort();
-          }
 
-          if (parsed.type === "error") {
-            setPending(false);
-            console.error("Backend error:", parsed.message);
-            abortControllerRef.current?.abort();
-          }
-        },
-        onclose() {
-          throw new StopRetryError("Stream closed normally");
-        },
-        onerror(err) {
-          if (err instanceof StopRetryError || err.name === 'AbortError') throw err;
-          setPending(false);
-          console.error("Stream error:", err);
-          throw err;
+            return updated
+          })
         }
-      });
+
+      })
+
     } catch (err: any) {
-      if (err?.name === 'AbortError' || err instanceof StopRetryError) return;
-      setPending(false);
-      console.error("Streaming failed", err);
+      setPending(false)
+      console.error("Private streaming failed", err)
     }
-  };
+  }
 
 
   const handleRegenerate = async (targetIndex: number) => {
-    if (isPending || (!activeId && !isPrivateMode)) return;
 
-    const savedModelValue = localStorage.getItem('selectedModel');
-    setPending(true);
+    if (isPending || (!activeId && !isPrivateMode)) return
+    setPending(true)
 
     if (isPrivateMode) {
       const truncated = queries.slice(0, targetIndex);
       const lastUserMsg = truncated[truncated.length - 1];
-
       setQueries([
         ...truncated,
         { sender: "llm", content: "", thinking: "", sources: [], created_at: "" }
@@ -213,7 +199,7 @@ const Page = () => {
 
       const form = new FormData();
       form.append("query", lastUserMsg.content);
-      if (savedModelValue) form.append("modal_name", savedModelValue);
+      if (selectedModel) form.append("modal_name", selectedModel);
       form.append("chat_history", JSON.stringify(truncated.slice(0, -1)));
 
       await executePrivateStream(form);
@@ -228,55 +214,74 @@ const Page = () => {
       ];
     });
 
-    try {
-      abortControllerRef.current = new AbortController();
 
-      await fetchEventSource(`http://localhost:8000/chat/${activeId}/regenerate`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
+    setQueries(prev => {
+
+      const truncated = prev.slice(0, targetIndex)
+
+      return [
+        ...truncated,
+        { sender: "llm", content: "", thinking: "", sources: [], created_at: "" }
+      ]
+    })
+
+    abortControllerRef.current = new AbortController()
+
+    try {
+
+      await streamChat({
+        endpoint: `/chat/${activeId}/regenerate`,
         body: JSON.stringify({
           target_index: targetIndex,
-          modal_name: savedModelValue
+          modal_name: selectedModel
         }),
-        signal: abortControllerRef.current.signal,
-        async onopen(response) {
-          if (!response.ok) throw new StopRetryError("Connection failed");
+        abortController: abortControllerRef.current,
+
+        onToken(token) {
+          setQueries(prev => {
+            const up = [...prev]
+            up[up.length - 1].content += token
+            return up
+          })
         },
-        onmessage(msg) {
-          const parsed = JSON.parse(msg.data);
-          if (parsed.type === "token") setQueries(prev => { const up = [...prev]; up[up.length - 1].content += parsed.data; return up; });
-          if (parsed.type === "thinking") setQueries(prev => { const up = [...prev]; up[up.length - 1].thinking = (up[up.length - 1].thinking || "") + parsed.data; return up; });
-          if (parsed.type === "done") {
-            setPending(false);
-            if (parsed.sources) setQueries(prev => { const up = [...prev]; up[up.length - 1].sources = parsed.sources; return up; });
-            abortControllerRef.current?.abort();
+
+        onThinking(token) {
+          setQueries(prev => {
+            const up = [...prev]
+            up[up.length - 1].thinking =
+              (up[up.length - 1].thinking || "") + token
+            return up
+          })
+        },
+
+        onDone(sources: any) {
+
+          setPending(false)
+
+          if (sources) {
+            setQueries(prev => {
+              const up = [...prev]
+              up[up.length - 1].sources = sources
+              return up
+            })
           }
-          if (parsed.type === "error") { setPending(false); abortControllerRef.current?.abort(); }
-        },
-        onclose() { throw new StopRetryError("Closed"); },
-        onerror(err) {
-          if (err instanceof StopRetryError || err.name === 'AbortError') throw err;
-          setPending(false);
-          throw err;
         }
-      });
-    } catch (err: any) {
-      if (err?.name === 'AbortError' || err instanceof StopRetryError) return;
-      setPending(false);
+      })
+
+    } catch (err) {
+      setPending(false)
+      console.error("Regenerate failed", err)
     }
-  };
+  }
 
 
   const handleEdit = async (targetIndex: number, newContent: string) => {
-    if (isPending || (!activeId && !isPrivateMode) || !newContent.trim()) return;
 
-    const savedModelValue = localStorage.getItem('selectedModel');
-    const oldFiles = queries[targetIndex]?.files || [];
+    if (isPending || (!activeId && !isPrivateMode) || !newContent.trim()) return
 
-    setPending(true);
+    const oldFiles = queries[targetIndex]?.files || []
+
+    setPending(true)
 
     if (isPrivateMode) {
       const truncated = queries.slice(0, targetIndex);
@@ -289,169 +294,161 @@ const Page = () => {
 
       const form = new FormData();
       form.append("query", newContent);
-      if (savedModelValue) form.append("modal_name", savedModelValue);
+      if (selectedModel) form.append("modal_name", selectedModel);
       form.append("chat_history", JSON.stringify(truncated));
 
       await executePrivateStream(form);
       return;
     }
+    setQueries(prev => {
+      const truncated = prev.slice(0, targetIndex)
 
-    setQueries((prev) => {
-      const truncated = prev.slice(0, targetIndex);
       return [
         ...truncated,
         { sender: "user", content: newContent, files: oldFiles, created_at: "" },
         { sender: "llm", content: "", thinking: "", sources: [], created_at: "" }
-      ];
-    });
+      ]
+    })
+
+    abortControllerRef.current = new AbortController()
 
     try {
-      abortControllerRef.current = new AbortController();
 
-      await fetchEventSource(`http://localhost:8000/chat/${activeId}/edit`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
+      await streamChat({
+        endpoint: `/chat/${activeId}/edit`,
         body: JSON.stringify({
           target_index: targetIndex,
           new_content: newContent,
-          modal_name: savedModelValue
+          modal_name: selectedModel
         }),
-        signal: abortControllerRef.current.signal,
-        async onopen(response) {
-          if (!response.ok) throw new StopRetryError("Connection failed");
+        abortController: abortControllerRef.current,
+
+        onToken(token) {
+          setQueries(prev => {
+            const up = [...prev]
+            up[up.length - 1].content += token
+            return up
+          })
         },
-        onmessage(msg) {
-          const parsed = JSON.parse(msg.data);
-          if (parsed.type === "token") setQueries(prev => { const up = [...prev]; up[up.length - 1].content += parsed.data; return up; });
-          if (parsed.type === "thinking") setQueries(prev => { const up = [...prev]; up[up.length - 1].thinking = (up[up.length - 1].thinking || "") + parsed.data; return up; });
-          if (parsed.type === "done") {
-            setPending(false);
-            if (parsed.sources) setQueries(prev => { const up = [...prev]; up[up.length - 1].sources = parsed.sources; return up; });
-            abortControllerRef.current?.abort();
+
+        onThinking(token) {
+          setQueries(prev => {
+            const up = [...prev]
+            up[up.length - 1].thinking =
+              (up[up.length - 1].thinking || "") + token
+            return up
+          })
+        },
+
+        onDone(sources) {
+          setPending(false)
+
+          if (sources) {
+            setQueries(prev => {
+              const up = [...prev]
+              up[up.length - 1].sources = sources
+              return up
+            })
           }
-          if (parsed.type === "error") { setPending(false); abortControllerRef.current?.abort(); }
-        },
-        onclose() { throw new StopRetryError("Closed"); },
-        onerror(err) {
-          if (err instanceof StopRetryError || err.name === 'AbortError') throw err;
-          setPending(false);
-          throw err;
         }
-      });
-    } catch (err: any) {
-      if (err?.name === 'AbortError' || err instanceof StopRetryError) return;
-      setPending(false);
+      })
+
+    } catch (err) {
+      setPending(false)
+      console.error("Edit failed", err)
     }
-  };
+  }
 
 
   const handleSend = async (queryText: string, filesData: File[], modal: string) => {
-    setPending(true);
-    if (!queryText.trim()) return;
-
-    setQuery("");
-    setFiles([]);
+    if (!queryText.trim()) return
+    setPending(true)
+    setQuery("")
 
     const newQueriesState: QueryType[] = [
       ...queries,
       {
         sender: "user",
         content: queryText,
-        files: filesData.map(file => ({ name: file.name, size: file.size, type: file.type, url: "" })),
+        files: filesData.map(f => ({
+          name: f.name,
+          size: f.size,
+          type: f.type,
+          url: ""
+        })),
         created_at: ""
       },
       { sender: "llm", content: "", thinking: "", sources: [], created_at: "" }
-    ];
+    ]
+    setQueries(newQueriesState)
 
-    const historyToSend = [...queries];
-    setQueries(newQueriesState);
+    const form = new FormData()
+    form.append("query", queryText)
+    form.append("modal_name", modal)
 
-    const form = new FormData();
-    form.append("query", queryText);
-    form.append("modal_name", modal);
-    filesData.forEach(file => form.append("files", file));
+    filesData.forEach(file => form.append("files", file))
 
     if (isPrivateMode) {
+      const historyToSend = [...queries];
       form.append("chat_history", JSON.stringify(historyToSend));
       await executePrivateStream(form);
       return;
     }
 
-    if (activeId) {
-      form.append("id", activeId);
-    }
+    if (activeId) form.append("id", activeId)
+
+    abortControllerRef.current = new AbortController()
 
     try {
-      abortControllerRef.current = new AbortController();
 
-      await fetchEventSource("http://localhost:8000/query", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+      await streamChat({
+        endpoint: "/query",
         body: form,
-        signal: abortControllerRef.current.signal,
+        abortController: abortControllerRef.current,
 
-        async onopen(response) {
-          if (!response.ok) throw new StopRetryError(`Failed to connect: ${response.status}`);
+        onToken(token) {
+          setQueries(prev => {
+            const up = [...prev]
+            up[up.length - 1].content += token
+            return up
+          })
         },
 
-        onmessage(msg) {
-          const parsed = JSON.parse(msg.data);
+        onThinking(token) {
+          setQueries(prev => {
+            const up = [...prev]
+            up[up.length - 1].thinking =
+              (up[up.length - 1].thinking || "") + token
+            return up
+          })
+        },
 
-          if (parsed.type === "token") setQueries(prev => { const up = [...prev]; up[up.length - 1].content += parsed.data; return up; });
-          if (parsed.type === "thinking") setQueries(prev => { const up = [...prev]; up[up.length - 1].thinking = (up[up.length - 1].thinking || "") + parsed.data; return up; });
-
-          if (parsed.type === "done") {
-            setPending(false);
-
-            if (parsed.sources) {
-              setQueries(prev => {
-                const updated = [...prev];
-                updated[updated.length - 1].sources = parsed.sources;
-                return updated;
-              });
-            }
-
-            if (!activeId && parsed.id) {
-              setActiveId(parsed.id);
-              router.replace(`/${parsed.id}`);
-            }
-
-            abortControllerRef.current?.abort();
-          }
-
-          if (parsed.type === "blocked") {
-            setPending(false);
+        onDone(sources, id) {
+          setPending(false)
+          if (sources) {
             setQueries(prev => {
-              const updated = [...prev];
-              updated[updated.length - 1] = {
-                sender: "llm",
-                content: "Sorry — I can’t help with that request.",
-                blocked: true,
-                created_at: ''
-              };
-              return updated;
-            });
-            abortControllerRef.current?.abort();
+              const up = [...prev]
+              up[up.length - 1].sources = sources
+              return up
+            })
+          }
+
+          if (!activeId && id) {
+            setActiveId(id)
+            router.replace(`/${id}`)
           }
         },
-        onclose() { throw new StopRetryError("Closed"); },
-        onerror(err) {
-          if (err instanceof StopRetryError || err.name === 'AbortError') throw err;
-          setPending(false);
-          console.error("Stream error:", err);
-          throw err;
-        }
-      });
 
-    } catch (err: any) {
-      if (err?.name === 'AbortError' || err instanceof StopRetryError) return;
-      setPending(false);
-      console.error("Streaming failed", err);
+        onBlocked() {
+          setPending(false)
+        }
+      })
+
+    } catch (err) {
+      setPending(false)
+      console.error("Streaming failed", err)
     }
-  };
+  }
 
   const handleStop = () => {
     if (abortControllerRef.current) {
@@ -460,9 +457,7 @@ const Page = () => {
     }
     setPending(false);
   };
-  if (!isMounted) {
-    return null;
-  }
+
   return (
     <AnimatePresence mode="wait">
       {isInitialLoad ? (
@@ -490,20 +485,17 @@ const Page = () => {
           <Chats
             query={query}
             queries={queries}
-            files={files}
             isPending={isPending}
             isLoadingOlder={isLoadingOlder}
             hasMore={hasMore}
             setQueries={setQueries}
             handleSend={handleSend}
             setQuery={setQuery}
-            setFiles={setFiles}
             handleStop={handleStop}
             handleFileChange={handleFileChange}
             loadOlderChats={loadOlderChats}
             handleRegenerate={handleRegenerate}
             handleEdit={handleEdit}
-            removeFile={removeFile}
 
           />
         </motion.div>
@@ -554,12 +546,10 @@ const Page = () => {
                 send={handleSend}
                 isPending={isPending}
                 handleFileChange={handleFileChange}
-                files={files}
                 stop={handleStop}
-                removeFile={removeFile}
               />
 
-              {token && (!activeId || isPrivateMode) && (
+              {user && (!activeId || isPrivateMode) && (
                 <div className="pt-4 flex justify-center">
                   {!isPrivateMode ? (
                     <button

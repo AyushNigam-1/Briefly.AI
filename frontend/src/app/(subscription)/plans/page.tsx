@@ -1,37 +1,30 @@
 "use client"
 import { useState } from 'react';
 import { Check, Sparkles, Zap, Shield, Loader2 } from 'lucide-react';
-import Cookies from 'js-cookie';
+import api from '@/app/api';
 
 export default function PricingPage() {
     const [loadingTier, setLoadingTier] = useState<string | null>(null);
 
-    // This handles the Stripe redirect we built earlier!
     const handleCheckout = async (priceId: string, tierName: string) => {
-        setLoadingTier(tierName);
-        const token = Cookies.get("access_token");
-
+        setLoadingTier(tierName)
         try {
-            const response = await fetch("http://localhost:8000/payment/create-checkout-session", {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json"
-                },
-                // Pass the specific price ID depending on which tier they clicked
-                body: JSON.stringify({ price_id: priceId })
-            });
-
-            const data = await response.json();
-
+            const response = await api.post(
+                "/payment/create-checkout-session",
+                {
+                    price_id: priceId
+                }
+            )
+            const data = response.data
             if (data.url) {
-                window.location.href = data.url;
+                window.location.href = data.url
             }
         } catch (error) {
-            console.error("Checkout failed:", error);
-            setLoadingTier(null);
+            console.error("Checkout failed:", error)
+        } finally {
+            setLoadingTier(null)
         }
-    };
+    }
 
     const tiers = [
         {
@@ -48,7 +41,7 @@ export default function PricingPage() {
             buttonText: "Current Plan",
             isCurrent: true,
             isPopular: false,
-            priceId: null // No Stripe ID for free
+            priceId: null
         },
         {
             name: "Pro",
@@ -84,7 +77,7 @@ export default function PricingPage() {
             buttonText: "Upgrade to Max",
             isCurrent: false,
             isPopular: false,
-            priceId: "price_1T3arQLIlOqwk7Lftg4SWrO3" // Replace with your Max Stripe Price ID
+            priceId: "price_1T3arQLIlOqwk7Lftg4SWrO3"
         }
     ];
 

@@ -1,4 +1,3 @@
-import React from 'react';
 import { CheckCircle2, ArrowRight, Sparkles, Receipt } from 'lucide-react';
 import Link from 'next/link';
 

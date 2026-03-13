@@ -2,7 +2,6 @@
 
 import api from "@/app/api"
 import { Switch } from "@headlessui/react"
-import axios from "axios"
 import clsx from "clsx"
 import React, {
     useEffect,

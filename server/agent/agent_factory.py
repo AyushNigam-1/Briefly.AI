@@ -66,7 +66,7 @@ async def route_tools(user_prompt: str, available_apps: List[str]) -> List[str]:
 
     try:
         llm = ChatGroq(
-            model="meta-llama/llama-4-maverick-17b-128e-instruct",
+            model="llama-3.1-8b-instant",
             groq_api_key=api_key,
             temperature=0,
         )
