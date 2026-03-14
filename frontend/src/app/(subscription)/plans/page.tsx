@@ -1,7 +1,7 @@
 "use client"
 import { useState } from 'react';
 import { Check, Sparkles, Zap, Shield, Loader2 } from 'lucide-react';
-import api from '@/app/api';
+import api from '@/app/lib/api';
 
 export default function PricingPage() {
     const [loadingTier, setLoadingTier] = useState<string | null>(null);

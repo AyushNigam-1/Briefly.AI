@@ -11,6 +11,7 @@ router = APIRouter(prefix="/profile", tags=["profile"])
 @router.get("/")
 def fetch_profile(current_user=Depends(get_current_user)):
     user = get_profile(current_user["user_id"])
+    print("user",user)
     if not user:
         raise HTTPException(404, "User not found")
     return user

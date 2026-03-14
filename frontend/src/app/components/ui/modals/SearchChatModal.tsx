@@ -6,7 +6,7 @@ import { Search, X, MessageSquare, User, Bot, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { SearchModalProps, SearchResult } from "@/app/types";
-import api from "@/app/api";
+import api from "@/app/lib/api";
 
 const SearchModal: React.FC<SearchModalProps> = ({ onCloseSidebar }) => {
     const router = useRouter();

@@ -1,106 +1,67 @@
-import jwt
 import os
-from datetime import datetime, timedelta
 from pymongo import MongoClient
 from dotenv import load_dotenv
-from fastapi.security import OAuth2PasswordBearer
-from fastapi import  HTTPException , Request
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import HTTPException, Request
 from bson import ObjectId
+from datetime import datetime, timezone
 
 load_dotenv()
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 CONNECTION_STRING = os.getenv("mongo_db_uri")
 client = MongoClient(CONNECTION_STRING)
 db = client['briefly']
-users_collection = db['users']
 
-ACCESS_TOKEN_EXPIRE_MINUTES = 15
-REFRESH_TOKEN_EXPIRE_DAYS = 7
-SECRET = os.getenv("SECRET_KEY")
-ALGORITHM = "HS256"
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
+users_collection = db['user']        
+sessions_collection = db['session']  
 
 async def get_current_user(request: Request):
-
-    access_token = request.cookies.get("access_token")
-
-    if not access_token:
+    session_token = request.cookies.get("better-auth.session_token")
+    print(session_token)
+    if not session_token:
         raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token_id = session_token.split(".")[0]
 
-    try:
-        payload = decode_token(access_token)
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    session_doc = sessions_collection.find_one({"token": token_id})
 
-    user_id = payload.get("user_id")
+    if not session_doc:
+        raise HTTPException(status_code=401, detail="Invalid or expired session")
 
+
+    expires_at = session_doc.get("expiresAt")
+    if expires_at:
+        # If naive datetime (no tzinfo), treat it as UTC
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        
+        if expires_at < datetime.now(timezone.utc):
+            raise HTTPException(status_code=401, detail="Session expired")
+
+    user_id = session_doc.get("userId")
     if not user_id:
-        raise HTTPException(status_code=401, detail="Invalid token payload")
+        raise HTTPException(status_code=401, detail="Malformed session")
 
-    user_doc = users_collection.find_one({"_id": ObjectId(user_id)})
+    user_doc = users_collection.find_one({"_id": user_id})
+
+    if not user_doc:
+        try:
+            user_doc = users_collection.find_one({"_id": ObjectId(user_id)})
+        except Exception:
+            pass
 
     if not user_doc:
         raise HTTPException(status_code=404, detail="User not found")
-
     return {
         "user_id": str(user_doc["_id"]),
-        "username": user_doc["username"],
+        "email": user_doc.get("email"),
+        "name": user_doc.get("name"),
         "favorites": user_doc.get("favorites", [])
     }
 
 
-def create_access_token(data: dict):
-    payload = data.copy()
-    payload["exp"] = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    return jwt.encode(payload, SECRET, algorithm=ALGORITHM)
-
-
-def create_refresh_token(data: dict):
-    payload = data.copy()
-    payload["exp"] = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
-    return jwt.encode(payload, SECRET, algorithm=ALGORITHM)
-
-
-def decode_token(token: str):
-    return jwt.decode(token, SECRET, algorithms=[ALGORITHM])
-
-def verify_token(token: str):
-    try:
-        payload = jwt.decode(token, SECRET, algorithms=[ALGORITHM])
-        return payload
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token has expired")
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-def get_user_by_username(username: str):
-    return users_collection.find_one({"username": username})
-
-def create_user(user_data: dict):
-    users_collection.insert_one(user_data)
-
 def get_valid_username(current_user: dict) -> str:
-    """Extracts and validates username from the current user dependency."""
-    username = current_user.get("username")
-    if not username:
+    """Works with Better Auth user shape (uses email or name)."""
+    identifier = current_user.get("name")
+    if not identifier:
         raise HTTPException(status_code=401, detail="Invalid user token")
-    return username
-
-def verify_state_token(state: str) -> str:
-    """Decodes the JWT state token and returns the username."""
-    if not state:
-        raise HTTPException(status_code=401, detail="Authentication state missing")
-    try:
-        payload = jwt.decode(state, SECRET, algorithms=[ALGORITHM])
-        username = payload.get("username")
-        if not username:
-            raise HTTPException(status_code=401, detail="Invalid token payload")
-        return username
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-
+    return identifier

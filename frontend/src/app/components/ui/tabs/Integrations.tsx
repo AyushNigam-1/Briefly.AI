@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import api from "@/app/api"
+import api from "@/app/lib/api"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Loader2, Blocks, Unplug, Plug } from "lucide-react"
 import { RiNotionFill } from "react-icons/ri";

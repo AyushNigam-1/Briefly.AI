@@ -7,8 +7,8 @@ import InputBox from "@/app/components/ui/InputBox";
 import Chats from "@/app/components/ui/Chats";
 import { query as QueryType } from "@/app/types";
 import { Ghost, Loader2 } from "lucide-react";
-import { useAuth } from "@/app/components/providers/AuthProvider";
-import api, { streamChat } from "@/app/api";
+import api, { streamChat } from "@/app/lib/api";
+import { authClient } from "@/app/lib/auth-client";
 
 
 const Page = () => {
@@ -16,7 +16,8 @@ const Page = () => {
   const router = useRouter();
   const rawId = Array.isArray(id) ? id[0] : id;
 
-  const { user } = useAuth()
+  const { data } = authClient.useSession();
+  const user = data?.user
   const isExplicitPrivate = rawId === "private";
   const isPrivateMode = isExplicitPrivate || !user;
 
@@ -113,7 +114,6 @@ const Page = () => {
     console.log("file change")
     if (e.target.files?.length) {
     }
-    // e.target.value = "";
   };
 
 

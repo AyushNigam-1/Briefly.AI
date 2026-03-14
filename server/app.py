@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from routes.chat import router as chat_router
-from routes.auth import router as auth_router
+# from routes.auth import router as auth_router
 from routes.instruction import router as preference_router
 from routes.memory import router as memory_router
 from routes.profile import router as profile_router
@@ -52,7 +52,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
 # Include Routers
 app.include_router(chat_router)
-app.include_router(auth_router)
+# app.include_router(auth_router)
 app.include_router(preference_router)
 app.include_router(memory_router)
 app.include_router(profile_router)

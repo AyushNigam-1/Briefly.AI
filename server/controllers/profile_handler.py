@@ -2,23 +2,22 @@ import json
 import logging
 from controllers.mongo import users_collection
 from redis_client import redis_client, CACHE_TTL
+from bson import ObjectId
 
 # Optional: Set up a logger to track Redis connection issues without crashing the app
 logger = logging.getLogger(__name__)
 
 def get_profile(user_id: str):
     cache_key = f"user_profile:{user_id}"
-
-    # 1. Try to fetch from Redis gracefully
     try:
         cached_profile = redis_client.get(cache_key)
         if cached_profile:
             return json.loads(cached_profile)
     except Exception as e:
         logger.warning(f"Redis get error for {cache_key}: {e}")
-
     # 2. Fallback to MongoDB
-    user = users_collection.find_one({"_id": user_id}, {"password": 0})
+    user = users_collection.find_one({"_id": ObjectId(user_id)}, {"password": 0})
+    print(user)
     if not user:
         return None
 

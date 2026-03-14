@@ -1,6 +1,6 @@
 "use client"
 
-import api from "@/app/api"
+import api from "@/app/lib/api"
 import { Switch } from "@headlessui/react"
 import clsx from "clsx"
 import React, {

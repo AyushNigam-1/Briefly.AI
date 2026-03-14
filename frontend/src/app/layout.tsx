@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import QueryProvider from "./components/providers/QueryProvider";
-import { AuthProvider } from "./components/providers/AuthProvider";
 
 export const metadata: Metadata = {
     title: "Briefly.ai",
@@ -27,11 +26,9 @@ export default function RootLayout({
                     bg-white text-slate-900 
                     dark:bg-[#0b0b0b] dark:text-white"
             >
-                <AuthProvider>
-                    <QueryProvider>
-                        {children}
-                    </QueryProvider>
-                </AuthProvider>
+                <QueryProvider>
+                    {children}
+                </QueryProvider>
             </body>
         </html>
     );

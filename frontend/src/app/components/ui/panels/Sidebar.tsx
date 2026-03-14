@@ -1,8 +1,7 @@
 "use client"
 
-import { useState, useEffect, UIEvent } from "react";
-import api from "@/app/api";
-import { useAuth } from "../../providers/AuthProvider";
+import { useState, useEffect } from "react";
+import api from "@/app/lib/api";
 import {
     Menu,
     MenuButton,
@@ -17,7 +16,6 @@ import {
     MessageSquareDashed,
     Pin,
     Plus,
-    Search,
     Share2,
     Trash,
     Loader2
@@ -31,13 +29,12 @@ import ShareModal from "../modals/ShareModal";
 import DeleteChatDialog from "../modals/DeleteChatModal";
 import SearchModal from "../modals/SearchChatModal";
 
-const Sidebar: React.FC = () => {
+const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
 
     const router = useRouter();
     const [mounted, setMounted] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
 
-    // 🌟 Infinite Scroll and Chat States
     const [chats, setChats] = useState<SummaryHistoryResponse[]>([]);
     const [skip, setSkip] = useState(0);
     const [hasMore, setHasMore] = useState(true);
@@ -53,7 +50,6 @@ const Sidebar: React.FC = () => {
     const params = useParams();
     const activeId = params?.id;
 
-    const { user } = useAuth();
 
     useEffect(() => {
         setMounted(true);

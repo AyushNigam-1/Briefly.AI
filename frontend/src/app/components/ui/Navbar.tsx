@@ -1,26 +1,11 @@
 "use client"
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { User, UserPlus } from 'lucide-react';
 import SettingsDialog from './modals/Settings';
-import Cookies from 'js-cookie';
 import Link from 'next/link';
-import { useAuth } from '../providers/AuthProvider';
 
-const Navbar = () => {
-    const { user } = useAuth()
+const Navbar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
     const [isOpen, setOpen] = useState<boolean>(false);
-    const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
-    const [mounted, setMounted] = useState<boolean>(false);
-
-    // useEffect(() => {
-    //     setMounted(true);
-    //     const token = Cookies.get('access_token');
-    //     if (token) {
-    //         setIsLoggedIn(true);
-    //     }
-    // }, []);
-
-    // if (!mounted) return null;
 
     return (
         <>

@@ -67,7 +67,6 @@ const InputBox = ({ query, setQuery, send, isPending, stop }: InputProps) => {
         <div className="flex gap-2 sm:gap-4 items-end w-full">
             <div className="w-full flex-1 space-y-3 sm:space-y-4 min-w-0">
 
-                {/* 🌟 Removed the extra motion.div wrapper so AnimatePresence can do its job */}
                 <AnimatePresence initial={false}>
                     {files?.length > 0 && (
                         <motion.div
@@ -75,11 +74,9 @@ const InputBox = ({ query, setQuery, send, isPending, stop }: InputProps) => {
                             animate={{ height: "auto", opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
                             transition={{ duration: 0.25, ease: "easeInOut" }}
-                            className="overflow-hidden" // 🌟 CRITICAL: Stops files from poking out while it shrinks
+                            className="overflow-hidden"
                         >
                             <div className="flex flex-nowrap w-full items-center gap-3 overflow-x-auto scrollbar-none font-mono pt-1">
-
-                                {/* 🌟 2. Inner AnimatePresence for the individual files sliding around */}
                                 <AnimatePresence mode="popLayout">
                                     {files.map((file, index) => (
                                         <motion.div

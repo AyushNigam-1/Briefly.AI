@@ -98,7 +98,7 @@ async def save_app_token(payload: AppTokenPayload, current_username: str):
     """
     # Uses dot notation to update a specific key within the app_tokens dictionary
     result = users_collection.update_one(
-        {"username": current_username},
+        {"name": current_username},
         {"$set": {f"app_tokens.{payload.app_name}": payload.token}}
     )
     
@@ -112,19 +112,19 @@ async def get_all_app_tokens(current_username: str):
     """
     Retrieves all connected app tokens for the current user.
     """
-    user = users_collection.find_one({"username": current_username}, {"app_tokens": 1, "_id": 0})
-    
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-        
-    return {"app_tokens": user.get("app_tokens", {}), "status_code": 200}
+    user = users_collection.find_one({"name": current_username}, {"app_tokens": 1, "_id": 0})
+    app_tokens = user.get("app_tokens")
 
+    if app_tokens is None:
+        app_tokens = []
+
+    return {"app_tokens": app_tokens,"status_code": 200}
 
 async def get_specific_app_token(app_name: str, current_username: str):
     """
     Retrieves the token for one specific app.
     """
-    user = users_collection.find_one({"username": current_username}, {f"app_tokens.{app_name}": 1, "_id": 0})
+    user = users_collection.find_one({"name": current_username}, {f"app_tokens.{app_name}": 1, "_id": 0})
     
     if not user or "app_tokens" not in user or app_name not in user["app_tokens"]:
         raise HTTPException(status_code=404, detail=f"Token for '{app_name}' not found")

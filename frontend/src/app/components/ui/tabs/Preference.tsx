@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react"
 import clsx from "clsx"
-import api from "@/app/api"
+import api from "@/app/lib/api"
 
 type Verbosity = "Ultra Short" | "Concise" | "Balanced" | "Detailed" | "Very Detailed"
 type Style =

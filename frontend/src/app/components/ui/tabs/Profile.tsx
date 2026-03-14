@@ -1,6 +1,6 @@
 "use client"
 
-import api from "@/app/api"
+import api from "@/app/lib/api"
 import { useEffect, useRef, useState } from "react"
 
 interface UserProfile {
