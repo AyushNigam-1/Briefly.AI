@@ -1,16 +1,14 @@
 import os
-import time
 import mimetypes
 import tempfile
 from io import BytesIO
 from PIL import Image, ImageOps
-import cv2
 import fitz
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from utils.websocket_manager import manager
-from extra.summary import  fetch_existing_summary
+from extra.summary import fetch_existing_summary
 from controllers.mongo import fs
 
 load_dotenv()
@@ -26,21 +24,6 @@ if not GOOGLE_API_KEY:
 
 client = genai.Client(api_key=GOOGLE_API_KEY)
 
-
-def wait_for_file_active(file_obj, timeout=120):
-    start = time.time()
-    while True:
-        status = client.files.get(name=file_obj.name)
-        if status.state.name == "ACTIVE":
-            return
-        if status.state.name == "FAILED":
-            raise RuntimeError("Gemini file processing failed")
-
-        if time.time() - start > timeout:
-            raise TimeoutError("Gemini file activation timeout")
-
-        time.sleep(2)
-
 def resize_image(img: Image.Image):
     if img.mode == "RGBA":
         img = img.convert("RGB")
@@ -50,24 +33,9 @@ def resize_image(img: Image.Image):
 # Main
 # ------------------------------------------------------------------
 
-async def get_file_summary(
-    url,
-    file,
-    lang: str,
-    format: str,
-    title: str,
-    current_user: dict,
-):
+async def get_file_summary(file, current_user: dict):
     try:
-        # Run this once to see the EXACT strings your key allows
-        # print("--- Available Models for your Key ---")
-        # for m in client.models.list():
-        #     # Filter for models that support content generation
-        #     if "generateContent" in m.supported_generation_methods:
-        #         print(f"Model ID: {m.name.split('/')[-1]}") # This prints the ID you should use
-        # await manager.send_message({"progress": 10, "message": "Processing started"})
         user_id = str(current_user["user_id"])
-
         mime_type = mimetypes.guess_type(file.filename)[0]
 
         cached = await fetch_existing_summary(user_id, file.filename, manager)
@@ -75,55 +43,12 @@ async def get_file_summary(
             return cached
 
         stream = file.file
-        think_part = ""
-        extracted_text = ""
-
-        # --------------------------------------------------
-        # VIDEO
-        # --------------------------------------------------
-
-        if mime_type and mime_type.startswith("video"):
-            type = "Video"
-
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp:
-                tmp.write(stream.read())
-                video_path = tmp.name
-
-            cap = cv2.VideoCapture(video_path)
-            ok, frame = cap.read()
-            cap.release()
-
-            if not ok:
-                raise ValueError("Frame extraction failed")
-
-            thumb_path = video_path.replace(".mp4", ".jpg")
-            cv2.imwrite(thumb_path, frame)
-
-            video_file = client.files.upload(file=video_path)
-            wait_for_file_active(video_file)
-
-            response = client.models.generate_content(
-                model="gemini-1.5-pro",
-                contents=[
-                    "Summarize key events and main points from this video.",
-                    video_file,
-                ],
-            )
-
-            main_part = response.text
-
-            with open(thumb_path, "rb") as f:
-                fid = fs.put(f, filename=os.path.basename(thumb_path))
-            file_url = f"files/?id={fid}"
+        main_part = ""
 
         # --------------------------------------------------
         # IMAGE
         # --------------------------------------------------
-
-        elif mime_type and mime_type.startswith("image"):
-            print("this is triggering")
-            type = "Image"
-
+        if mime_type and mime_type.startswith("image"):
             stream.seek(0)
             image = resize_image(Image.open(stream))
 
@@ -131,27 +56,21 @@ async def get_file_summary(
                 model="gemini-3-flash-preview",
                 contents=[
                     "Describe this image in detail.",
-                    image,   # PIL Image is supported directly
+                    image,
                 ],
             )
-
             main_part = response.text
 
+            # Save to GridFS
             buf = BytesIO()
             image.save(buf, "JPEG")
             buf.seek(0)
-
-            fid = fs.put(buf, filename=file.filename)
-            file_url = f"files/?id={fid}"
-
+            fs.put(buf, filename=file.filename)
 
         # --------------------------------------------------
         # PDF
         # --------------------------------------------------
-
         elif mime_type == "application/pdf":
-            type = "PDF"
-
             pdf_bytes = await file.read()
 
             fd, pdf_path = tempfile.mkstemp(".pdf")
@@ -160,15 +79,17 @@ async def get_file_summary(
             with open(pdf_path, "wb") as f:
                 f.write(pdf_bytes)
 
+            # Generate Thumbnail
             doc = fitz.open(pdf_path)
             pix = doc[0].get_pixmap()
             img_path = pdf_path.replace(".pdf", ".jpg")
             pix.save(img_path)
 
+            # Save Thumbnail to GridFS
             with open(img_path, "rb") as f:
-                fid = fs.put(f, filename=file.filename.replace(".pdf", ".jpg"))
-            file_url = f"files/?id={fid}"
+                fs.put(f, filename=file.filename.replace(".pdf", ".jpg"))
 
+            # Ask Gemini
             response = client.models.generate_content(
                 model="gemini-3-flash-preview",
                 contents=[
@@ -179,30 +100,22 @@ async def get_file_summary(
                     "Summarize this document.",
                 ],
             )
-
             main_part = response.text
 
+            # Clean up temp files to prevent disk bloat
+            os.remove(pdf_path)
+            os.remove(img_path)
+
         else:
-            raise ValueError("Unsupported file type")
+            raise ValueError(f"Unsupported file type: {mime_type}")
 
         if not main_part:
             raise RuntimeError("Empty Gemini response")
 
-        # result = save_summary_to_mongo(
-        #     user_id,
-        #     file_url,
-        #     url,
-        #     main_part,
-        #     think_part,
-        #     extracted_text,
-        #     title,
-        #     type,
-        # )
-
         return main_part
 
     except Exception as e:
-        print(e)
+        print(f"Error processing file: {e}")
         await manager.send_message({
             "progress": 100,
             "message": str(e)
@@ -217,12 +130,9 @@ async def process_files(files, user_id):
         return context, uploaded
 
     for file in files:
+        # Notice how much cleaner this call is now
         summary = await get_file_summary(
-            url="",
             file=file,
-            lang="en",
-            format="",
-            title=file.filename,
             current_user={"user_id": user_id},
         )
 
@@ -230,7 +140,7 @@ async def process_files(files, user_id):
             "name": file.filename,
             "type": file.content_type,
             "size": file.size,
-            "url": "",
+            "url": "", # Left blank as in your original code
         })
 
         context += f"\nFile ({file.filename}):\n{summary}\n"

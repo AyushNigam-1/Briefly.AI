@@ -1,0 +1,23 @@
+# backend/.dockerignore
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Environment variables (SECURITY RISK)
+.env
+
+# OS and Editor files
+.DS_Store
+.vscode/
+.idea/
+
+# Git
+.git/
+.gitignore
