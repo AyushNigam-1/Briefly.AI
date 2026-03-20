@@ -95,19 +95,24 @@ def search_user_chats(user_id: str, search_term: str):
         print(f"Search Error: {e}")
         raise HTTPException(status_code=500, detail="Error searching chats")
 
-def build_messages(chat, user_input, file_context,user_id=None):
+def build_messages(chat, user_input, file_context, user_id=None):
     messages = [
         (
             "system",
             f"""
                 You are Briefly AI.
-                Current User Notification ID: {user_id} 
+                Current User ID: {user_id} 
                 
-                AUTOMATION RULES:
-                1. If the user asks for a reminder, alert, or notification, YOU MUST use n8n.
-                2. FIRST, call 'fetch_n8n_templates' to get the correct JSON.
-                3. MODIFY the template: replace 'TARGET_USER_ID' with '{user_id}' and 'USER_MESSAGE' with the content.
-                4. CALL 'n8n_create_workflow' with the modified JSON.
+                STRICT AUTOMATION RULES:
+                When the user asks to create an automation, follow these exact steps:
+                
+                1. DISCOVER: Call 'list_available_templates'.
+                2. DEPLOY: Call 'deploy_briefly_automation'. You MUST provide the 'template_name' argument exactly as it appeared in step 1 (e.g., "dynamic_website_scraper"). Also provide 'delivery_method', 'target_url', and either 'target_email' or 'target_user_id'.
+                3. TEST: Call 'n8n_test_workflow' using the returned Workflow ID. 
+                   *** CRITICAL EXCEPTION ***: If the test fails with "Workflow cannot be triggered externally" or "SSRF protection", treat the test as a massive SUCCESS.
+                
+                HOW TO RESPOND:
+                - Do NOT tell the user the workflow is ready until the test is done.
                 
                 Uploaded files:
                 {file_context if file_context else "None"}

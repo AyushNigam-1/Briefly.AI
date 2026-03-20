@@ -26,3 +26,4 @@ langchain-mcp-adapters
 redis
 fastapi-limiter
 stripe
+resend
