@@ -75,7 +75,7 @@ const Chats = ({
                     >
                         {(q, index) => (
                             <Message
-                                key={`${index}-${q.content?.length}`}
+                                key={q.created_at ? q.created_at : `msg-${index}-${q.content?.length || 0}`}
                                 q={q}
                                 isLastItem={index === queries.length - 1}
                                 isPending={isPending}

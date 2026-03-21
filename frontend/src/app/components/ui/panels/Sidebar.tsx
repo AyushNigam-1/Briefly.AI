@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react"; // 🌟 Added useRef
 import api from "@/app/lib/api";
 import {
     Menu,
@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion"; // 🌟 Added Framer Motion
+import { motion, AnimatePresence } from "framer-motion";
 import { SummaryHistoryResponse } from "@/app/types";
 import TaskManagerModal from "../modals/Tasks";
 import ShareModal from "../modals/ShareModal";
@@ -50,6 +50,8 @@ const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
     const params = useParams();
     const activeId = params?.id;
 
+    // 🌟 1. Ref to track if we've already done the initial fetch to prevent tab-switching re-renders
+    const fetchInitiated = useRef(false);
 
     useEffect(() => {
         setMounted(true);
@@ -77,7 +79,6 @@ const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
         }
     };
 
-    // 🌟 Updated Fetch for Pagination (10 at a time)
     const fetchUserSummaries = async (currentSkip = 0, isAppending = false) => {
         if (!user) {
             setLoading(false);
@@ -113,19 +114,23 @@ const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
         }
     };
 
+    // 🌟 1. Updated useEffect to stop fetching every time you switch browser tabs
     useEffect(() => {
-        if (mounted && user) {
+        if (!user) {
+            fetchInitiated.current = false; // Reset if user logs out
+        }
+
+        if (mounted && user?.id && !fetchInitiated.current) {
+            fetchInitiated.current = true;
             fetchUserSummaries(0, false);
-        } else if (mounted && !user) {
+        } else if (mounted && !user?.id) {
             setLoading(false);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [mounted, user]);
+    }, [mounted, user?.id]);
 
-    // 🌟 Calculate the filtered array directly during render! No state gaps = no scroll jumping.
     const filtered = chats.filter((s) => s.title.toLowerCase().includes(search.toLowerCase()));
 
-    // 🌟 Scroll Event Handler for Infinite Loading
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
         const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
         if (scrollHeight - scrollTop <= clientHeight + 50 && hasMore && !loadingMore && !loading) {
@@ -166,7 +171,6 @@ const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
         return null;
     }
 
-    // 🌟 Split filtered chats into Pinned and Recent
     const pinnedChats = filtered.filter(c => c.is_pinned);
     const recentChats = filtered.filter(c => !c.is_pinned);
 
@@ -199,14 +203,17 @@ const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
         }
     ];
 
-    // 🌟 RENDER CHAT ITEM WITH FRAMER MOTION
     const renderChatItem = (s: SummaryHistoryResponse) => (
         <motion.div
+            layout
             key={s.id}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
+            exit={{ opacity: 0, scale: 0.95, height: 0, marginBottom: 0, marginTop: 0 }}
+            transition={{
+                duration: 0.35,
+                layout: { type: "tween", duration: 0.2, ease: "easeOut" }
+            }}
             className={`group relative overflow-hidden flex items-center justify-between transition-colors rounded-xl pr-2 mb-1
             ${activeId == s.id
                     ? "font-medium bg-slate-100 border border-slate-200 text-slate-900 dark:bg-white/5 dark:border-secondary dark:text-white"
@@ -297,7 +304,6 @@ const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
                     <SearchModal onCloseSidebar={() => handleMobileNav()} />
                     <TaskManagerModal onCloseSidebar={() => handleMobileNav()} />
 
-                    {/* 🌟 Added onScroll handler here */}
                     <div
                         onScroll={handleScroll}
                         className="overflow-y-auto min-h-0 flex-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/5"
@@ -311,7 +317,6 @@ const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
 
                         <div className="space-y-4 overflow-y-auto pb-4">
 
-                            {/* 🌟 Pinned Section */}
                             {pinnedChats.length > 0 && (
                                 <div className="space-y-2">
                                     <h3 className="font-bold text-sm tracking-wide text-slate-500 dark:text-gray-200">Pinned</h3>
@@ -323,7 +328,6 @@ const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
                                 </div>
                             )}
 
-                            {/* 🌟 Recent Section */}
                             {recentChats.length > 0 && (
                                 <div className="space-y-2">
                                     <h3 className="font-bold text-sm tracking-wide text-slate-500 dark:text-gray-200">Recent</h3>
@@ -335,7 +339,6 @@ const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
                                 </div>
                             )}
 
-                            {/* 🌟 Loading Indicator for Infinite Scroll */}
                             {loadingMore && (
                                 <div className="flex justify-center">
                                     <Loader2 size={16} className="animate-spin text-slate-500 dark:text-gray-400" />

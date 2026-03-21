@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+// 🌟 Changed to useSearchParams
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import InputBox from "@/app/components/ui/InputBox";
 import Chats from "@/app/components/ui/Chats";
@@ -10,11 +11,12 @@ import { Ghost, Loader2 } from "lucide-react";
 import api, { streamChat } from "@/app/lib/api";
 import { authClient } from "@/app/lib/auth-client";
 
-
 const Page = () => {
-  const { id } = useParams();
   const router = useRouter();
-  const rawId = Array.isArray(id) ? id[0] : id;
+  const searchParams = useSearchParams();
+
+  // 🌟 Read the ID directly from the URL query parameter (e.g. /?id=123)
+  const rawId = searchParams.get("id");
 
   const { data } = authClient.useSession();
   const user = data?.user
@@ -27,6 +29,11 @@ const Page = () => {
   const [isPending, setPending] = useState(false);
   const [selectedModel, setSelectedModel] = useState("default_model");
 
+  const isSendingRef = useRef(false);
+
+  // 🌟 This ref stops the useEffect from fetching when we create a new chat
+  const isTransitioningRef = useRef(false);
+
   useEffect(() => {
     const savedModelValue = localStorage.getItem('selectedModel');
     if (savedModelValue) {
@@ -35,7 +42,6 @@ const Page = () => {
   }, []);
 
   const [isInitialLoad, setIsInitialLoad] = useState<boolean>(!!rawId && !isExplicitPrivate);
-
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingOlder, setIsLoadingOlder] = useState(false);
   const [oldestCreatedAt, setOldestCreatedAt] = useState<string | null>(null);
@@ -49,9 +55,7 @@ const Page = () => {
     if (before) params.append("before", before);
 
     try {
-      const res = await api(
-        `http://localhost:8000/history/${rawId}?${params}`,
-      );
+      const res = await api(`http://localhost:8000/history/${rawId}?${params}`);
 
       const newHistory: QueryType[] = res.data?.history || [];
       const serverHasMore = res.data?.has_more ?? (newHistory.length === 30);
@@ -73,18 +77,10 @@ const Page = () => {
       if (before) setIsLoadingOlder(false);
       setIsInitialLoad(false);
     }
-  }, [rawId, isPrivateMode, user]);
+  }, [rawId, isPrivateMode]);
 
   useEffect(() => {
-    if (isExplicitPrivate) {
-      setQueries([]);
-      setActiveId("private");
-      setHasMore(false);
-      setOldestCreatedAt(null);
-      setIsInitialLoad(false);
-      return;
-    }
-
+    // 🌟 Handle "New Chat" (No ID in URL)
     if (!rawId) {
       setQueries([]);
       setActiveId(undefined);
@@ -94,6 +90,23 @@ const Page = () => {
       return;
     }
 
+    if (isExplicitPrivate) {
+      setQueries([]);
+      setActiveId("private");
+      setHasMore(false);
+      setOldestCreatedAt(null);
+      setIsInitialLoad(false);
+      return;
+    }
+
+    // 🌟 We just created this chat! Skip the wipe and fetch.
+    if (isTransitioningRef.current) {
+      isTransitioningRef.current = false;
+      setActiveId(rawId);
+      return;
+    }
+
+    // Normal load (Clicking a chat in the sidebar)
     setQueries([]);
     setActiveId(rawId);
     setHasMore(true);
@@ -112,81 +125,76 @@ const Page = () => {
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     console.log("file change")
-    if (e.target.files?.length) {
-    }
   };
 
-
-
   const executePrivateStream = async (form: FormData) => {
+    abortControllerRef.current = new AbortController();
 
-    abortControllerRef.current = new AbortController()
+    let accumulatedContent = "";
+    let accumulatedThinking = "";
 
     try {
-
       await streamChat({
         endpoint: "/query/private",
         body: form,
         abortController: abortControllerRef.current,
         isPrivate: true,
         onToken(token) {
+          accumulatedContent += token;
           setQueries(prev => {
-            const updated = [...prev]
-            updated[updated.length - 1].content += token
-            return updated
+            const up = [...prev];
+            const lastIdx = up.length - 1;
+            up[lastIdx] = { ...up[lastIdx], content: accumulatedContent };
+            return up;
           })
         },
-
         onThinking(token) {
+          accumulatedThinking += token;
           setQueries(prev => {
-            const updated = [...prev]
-            updated[updated.length - 1].thinking =
-              (updated[updated.length - 1].thinking || "") + token
-            return updated
+            const up = [...prev];
+            const lastIdx = up.length - 1;
+            up[lastIdx] = { ...up[lastIdx], thinking: accumulatedThinking };
+            return up;
           })
         },
-
         onDone(sources) {
-
+          isSendingRef.current = false;
           setPending(false)
           if (sources) {
             setQueries(prev => {
-              const updated = [...prev]
-              updated[updated.length - 1].sources = sources
-              return updated
+              const up = [...prev];
+              const lastIdx = up.length - 1;
+              up[lastIdx] = { ...up[lastIdx], sources: sources };
+              return up;
             })
           }
         },
-
         onBlocked() {
+          isSendingRef.current = false;
           setPending(false)
-
           setQueries(prev => {
-            const updated = [...prev]
-
-            updated[updated.length - 1] = {
+            const up = [...prev];
+            const lastIdx = up.length - 1;
+            up[lastIdx] = {
+              ...up[lastIdx],
               sender: "llm",
               content: "Sorry — I can’t help with that request.",
               blocked: true,
-              created_at: ""
-            }
-
-            return updated
+            };
+            return up;
           })
         }
-
       })
-
     } catch (err: any) {
+      isSendingRef.current = false;
       setPending(false)
       console.error("Private streaming failed", err)
     }
   }
 
-
   const handleRegenerate = async (targetIndex: number) => {
-
-    if (isPending || (!activeId && !isPrivateMode)) return
+    if (isSendingRef.current || (!activeId && !isPrivateMode)) return
+    isSendingRef.current = true;
     setPending(true)
 
     if (isPrivateMode) {
@@ -206,29 +214,20 @@ const Page = () => {
       return;
     }
 
-    setQueries((prev) => {
-      const truncated = prev.slice(0, targetIndex);
-      return [
-        ...truncated,
-        { sender: "llm", content: "", thinking: "", sources: [], created_at: "" }
-      ];
-    });
-
-
     setQueries(prev => {
-
       const truncated = prev.slice(0, targetIndex)
-
       return [
         ...truncated,
         { sender: "llm", content: "", thinking: "", sources: [], created_at: "" }
       ]
     })
 
-    abortControllerRef.current = new AbortController()
+    abortControllerRef.current = new AbortController();
+
+    let accumulatedContent = "";
+    let accumulatedThinking = "";
 
     try {
-
       await streamChat({
         endpoint: `/chat/${activeId}/regenerate`,
         body: JSON.stringify({
@@ -236,51 +235,50 @@ const Page = () => {
           modal_name: selectedModel
         }),
         abortController: abortControllerRef.current,
-
         onToken(token) {
+          accumulatedContent += token;
           setQueries(prev => {
-            const up = [...prev]
-            up[up.length - 1].content += token
-            return up
+            const up = [...prev];
+            const lastIdx = up.length - 1;
+            up[lastIdx] = { ...up[lastIdx], content: accumulatedContent };
+            return up;
           })
         },
-
         onThinking(token) {
+          accumulatedThinking += token;
           setQueries(prev => {
-            const up = [...prev]
-            up[up.length - 1].thinking =
-              (up[up.length - 1].thinking || "") + token
-            return up
+            const up = [...prev];
+            const lastIdx = up.length - 1;
+            up[lastIdx] = { ...up[lastIdx], thinking: accumulatedThinking };
+            return up;
           })
         },
-
         onDone(sources: any) {
-
+          isSendingRef.current = false;
           setPending(false)
-
           if (sources) {
             setQueries(prev => {
-              const up = [...prev]
-              up[up.length - 1].sources = sources
-              return up
+              const up = [...prev];
+              const lastIdx = up.length - 1;
+              up[lastIdx] = { ...up[lastIdx], sources: sources };
+              return up;
             })
           }
         }
       })
-
     } catch (err) {
+      isSendingRef.current = false;
       setPending(false)
       console.error("Regenerate failed", err)
     }
   }
 
-
   const handleEdit = async (targetIndex: number, newContent: string) => {
-
-    if (isPending || (!activeId && !isPrivateMode) || !newContent.trim()) return
+    if (isSendingRef.current || (!activeId && !isPrivateMode) || !newContent.trim()) return
 
     const oldFiles = queries[targetIndex]?.files || []
 
+    isSendingRef.current = true;
     setPending(true)
 
     if (isPrivateMode) {
@@ -302,7 +300,6 @@ const Page = () => {
     }
     setQueries(prev => {
       const truncated = prev.slice(0, targetIndex)
-
       return [
         ...truncated,
         { sender: "user", content: newContent, files: oldFiles, created_at: "" },
@@ -310,10 +307,12 @@ const Page = () => {
       ]
     })
 
-    abortControllerRef.current = new AbortController()
+    abortControllerRef.current = new AbortController();
+
+    let accumulatedContent = "";
+    let accumulatedThinking = "";
 
     try {
-
       await streamChat({
         endpoint: `/chat/${activeId}/edit`,
         body: JSON.stringify({
@@ -322,46 +321,48 @@ const Page = () => {
           modal_name: selectedModel
         }),
         abortController: abortControllerRef.current,
-
         onToken(token) {
+          accumulatedContent += token;
           setQueries(prev => {
-            const up = [...prev]
-            up[up.length - 1].content += token
-            return up
+            const up = [...prev];
+            const lastIdx = up.length - 1;
+            up[lastIdx] = { ...up[lastIdx], content: accumulatedContent };
+            return up;
           })
         },
-
         onThinking(token) {
+          accumulatedThinking += token;
           setQueries(prev => {
-            const up = [...prev]
-            up[up.length - 1].thinking =
-              (up[up.length - 1].thinking || "") + token
-            return up
+            const up = [...prev];
+            const lastIdx = up.length - 1;
+            up[lastIdx] = { ...up[lastIdx], thinking: accumulatedThinking };
+            return up;
           })
         },
-
         onDone(sources) {
+          isSendingRef.current = false;
           setPending(false)
-
           if (sources) {
             setQueries(prev => {
-              const up = [...prev]
-              up[up.length - 1].sources = sources
-              return up
+              const up = [...prev];
+              const lastIdx = up.length - 1;
+              up[lastIdx] = { ...up[lastIdx], sources: sources };
+              return up;
             })
           }
         }
       })
-
     } catch (err) {
+      isSendingRef.current = false;
       setPending(false)
       console.error("Edit failed", err)
     }
   }
 
-
   const handleSend = async (queryText: string, filesData: File[], modal: string) => {
-    if (!queryText.trim()) return
+    if (!queryText.trim() || isSendingRef.current) return;
+
+    isSendingRef.current = true;
     setPending(true)
     setQuery("")
 
@@ -397,54 +398,62 @@ const Page = () => {
 
     if (activeId) form.append("id", activeId)
 
-    abortControllerRef.current = new AbortController()
+    abortControllerRef.current = new AbortController();
+
+    let accumulatedContent = "";
+    let accumulatedThinking = "";
 
     try {
-
       await streamChat({
         endpoint: "/query",
         body: form,
         abortController: abortControllerRef.current,
-
         onToken(token) {
+          accumulatedContent += token;
           setQueries(prev => {
-            const up = [...prev]
-            up[up.length - 1].content += token
-            return up
+            const up = [...prev];
+            const lastIdx = up.length - 1;
+            up[lastIdx] = { ...up[lastIdx], content: accumulatedContent };
+            return up;
           })
         },
-
         onThinking(token) {
+          accumulatedThinking += token;
           setQueries(prev => {
-            const up = [...prev]
-            up[up.length - 1].thinking =
-              (up[up.length - 1].thinking || "") + token
-            return up
+            const up = [...prev];
+            const lastIdx = up.length - 1;
+            up[lastIdx] = { ...up[lastIdx], thinking: accumulatedThinking };
+            return up;
           })
         },
-
-        onDone(sources, id) {
+        onDone(sources, newId) {
+          isSendingRef.current = false;
           setPending(false)
+
           if (sources) {
             setQueries(prev => {
-              const up = [...prev]
-              up[up.length - 1].sources = sources
-              return up
+              const up = [...prev];
+              const lastIdx = up.length - 1;
+              up[lastIdx] = { ...up[lastIdx], sources: sources };
+              return up;
             })
           }
 
-          if (!activeId && id) {
-            setActiveId(id)
-            router.replace(`/${id}`)
+          if (!activeId && newId) {
+            isTransitioningRef.current = true;
+            setActiveId(newId);
+            // 🌟 Use Shallow Routing with search parameters!
+            router.replace(`/?id=${newId}`, { scroll: false });
           }
         },
-
         onBlocked() {
+          isSendingRef.current = false;
           setPending(false)
         }
       })
 
     } catch (err) {
+      isSendingRef.current = false;
       setPending(false)
       console.error("Streaming failed", err)
     }
@@ -455,6 +464,7 @@ const Page = () => {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
+    isSendingRef.current = false;
     setPending(false);
   };
 
@@ -496,7 +506,6 @@ const Page = () => {
             loadOlderChats={loadOlderChats}
             handleRegenerate={handleRegenerate}
             handleEdit={handleEdit}
-
           />
         </motion.div>
       ) : (
@@ -511,7 +520,6 @@ const Page = () => {
           <div className="flex flex-col gap-6 md:gap-10 font-mono">
             <div className="text-center relative">
 
-              {/* Smooth Animation Wrapper for Headings */}
               <div className="min-h-[80px] flex flex-col justify-end mb-3 md:mb-4">
                 <AnimatePresence mode="wait">
                   <motion.div
@@ -553,7 +561,7 @@ const Page = () => {
                 <div className="pt-4 flex justify-center">
                   {!isPrivateMode ? (
                     <button
-                      onClick={() => router.push('/private')}
+                      onClick={() => router.push('/?id=private')}
                       className="text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-colors  hover:text-slate-700 text-slate-500 dark:text-gray-400 dark:hover:text-slate-300"
                     >
                       <Ghost size={14} /> Go Private

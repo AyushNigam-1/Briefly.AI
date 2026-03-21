@@ -223,16 +223,63 @@ async def get_agent(
 
 
 async def generate_chat_title(user_input):
-    agent = await get_agent(user_notion_token="YOUR_NOTION_TOKEN")
+    # 🌟 Use a direct, NON-streaming LLM for the title. No tools needed.
+    llm = ChatGroq(
+        model="llama-3.1-8b-instant", # Use a fast model for this
+        groq_api_key=api_key,
+        temperature=0.3,
+        streaming=False # <--- THIS STOPS THE LEAK
+    )
 
-    res = await agent.ainvoke({
-        "messages": [
-            ("system", "Create a short 3–5 word chat title."),
-            ("human", user_input),
-        ]
-    })
+    messages = [
+        ("system", "Create a short 3–5 word chat title based on the user's input. Reply ONLY with the title, no quotes or prefixes."),
+        ("human", user_input),
+    ]
 
-    return res["messages"][-1].content.strip()
+    res = await llm.ainvoke(messages)
+    return res.content.strip()
+
+
+async def extract_memory(user_input, assistant_output, existing_memories):
+    # 🌟 Use a direct, NON-streaming LLM for memory. No tools needed.
+    llm = ChatGroq(
+        model="llama-3.1-8b-instant",
+        groq_api_key=api_key,
+        temperature=0,
+        streaming=False # <--- THIS STOPS THE LEAK
+    )
+
+    messages = [
+        (
+            "system",
+            f"""
+            You extract durable user traits.
+
+            Existing memories:
+            {existing_memories}
+
+            Rules:
+            - Only NEW info
+            - No duplicates
+            - No emotions
+            - Short bullet points
+            - Return [] if nothing
+            """
+        ),
+        ("human", f"User said: {user_input}\nAssistant replied: {assistant_output}")
+    ]
+    
+    res = await llm.ainvoke(messages)
+    raw = res.content.strip()
+
+    if raw == "[]" or not raw:
+        return []
+
+    return [
+        m.strip("- ").strip()
+        for m in raw.split("\n")
+        if m.strip()
+    ]
 
 def extract_sources(messages):
     sources = []
@@ -255,40 +302,3 @@ def extract_sources(messages):
 
     return sources
 
-async def extract_memory(user_input, assistant_output, existing_memories):
-
-    agent = await get_agent(enable_n8n=False)
-
-    response = await agent.ainvoke({
-        "messages": [
-            (
-                "system",
-                f"""
-                You extract durable user traits.
-
-                Existing memories:
-                {existing_memories}
-
-                Rules:
-                - Only NEW info
-                - No duplicates
-                - No emotions
-                - Short bullet points
-                - Return [] if nothing
-                """
-            ),
-            ("human", user_input),
-            ("assistant", assistant_output)
-        ]
-    })
-
-    raw = response["messages"][-1].content.strip()
-
-    if raw == "[]" or not raw:
-        return []
-
-    return [
-        m.strip("- ").strip()
-        for m in raw.split("\n")
-        if m.strip()
-    ]

@@ -2,7 +2,7 @@
 import { InputProps } from '@/app/types';
 import { MenuButton, MenuItem, MenuItems, Menu } from '@headlessui/react';
 import clsx from 'clsx';
-import { FileText, ImageIcon, Package, Paperclip, PauseCircle, SendHorizontal, X, Lock, CheckCircle } from 'lucide-react';
+import { FileText, ImageIcon, Paperclip, PauseCircle, SendHorizontal, X, Lock, CheckCircle, ChevronDown } from 'lucide-react';
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -15,7 +15,6 @@ const options = [
     { label: "Llama 70B", value: "llama-3.3-70b-versatile", icon: "/meta.webp", isPremium: false, description: "Deep analysis & creative writing" },
 ]
 
-// 🌟 Ultra-smooth, clean fade & slide (No bouncy springs)
 const fileItemVariants = {
     initial: { opacity: 0, y: 10, scale: 0.95 },
     animate: {
@@ -64,70 +63,85 @@ const InputBox = ({ query, setQuery, send, isPending, stop }: InputProps) => {
     };
 
     return (
-        <div className="flex gap-2 sm:gap-4 items-end w-full">
-            <div className="w-full flex-1 space-y-3 sm:space-y-4 min-w-0">
+        // 🌟 FIX 1: Removed `overflow-hidden` so the dropdown can safely break out of the container
+        <div className="w-full flex flex-col rounded-3xl  border transition-all duration-200 bg-white border-slate-300 dark:bg-tertiary dark:border-secondary shadow-sm focus-within:ring-1 focus-within:ring-slate-300 dark:focus-within:ring-slate-600 relative">
 
-                <AnimatePresence initial={false}>
-                    {files?.length > 0 && (
-                        <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.25, ease: "easeInOut" }}
-                            className="overflow-hidden"
-                        >
-                            <div className="flex flex-nowrap w-full items-center gap-3 overflow-x-auto scrollbar-none font-mono pt-1">
-                                <AnimatePresence mode="popLayout">
-                                    {files.map((file, index) => (
-                                        <motion.div
-                                            layout
-                                            key={`${file.name}-${index}-${file.lastModified}`}
-                                            className="relative group flex-shrink-0"
-                                            variants={fileItemVariants}
-                                            initial="initial"
-                                            animate="animate"
-                                            exit="exit"
+            {/* Top Area: File Previews */}
+            <AnimatePresence initial={false}>
+                {files?.length > 0 && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25, ease: "easeInOut" }}
+                        className="overflow-hidden"
+                    >
+                        <div className="flex flex-nowrap w-full items-center gap-3 overflow-x-auto scrollbar-none font-mono px-3 sm:px-4 pt-3 sm:pt-4">
+                            <AnimatePresence mode="popLayout">
+                                {files.map((file, index) => (
+                                    <motion.div
+                                        layout
+                                        key={`${file.name}-${index}-${file.lastModified}`}
+                                        className="relative group flex-shrink-0"
+                                        variants={fileItemVariants}
+                                        initial="initial"
+                                        animate="animate"
+                                        exit="exit"
+                                    >
+                                        <div className='p-1.5 sm:p-2 pr-6 sm:pr-8 flex gap-2 rounded-xl relative border transition-colors
+                                            bg-slate-50 border-slate-200 text-slate-800 
+                                            dark:bg-[#262626] dark:border-secondary dark:text-primary'
                                         >
-                                            <div className='p-1.5 sm:p-2 pr-6 sm:pr-8 flex gap-2 rounded-xl relative border transition-colors
-                                    bg-slate-50 border-slate-200 text-slate-800 
-                                    dark:bg-[#1a1a1a] dark:border-secondary dark:text-primary'
+                                            <div className='p-2 sm:p-3 rounded-full my-auto transition-colors flex items-center justify-center
+                                                bg-slate-200 text-slate-700 
+                                                dark:bg-[#333333] dark:text-tertiary'
                                             >
-                                                <div className='p-2 sm:p-3 rounded-full my-auto transition-colors flex items-center justify-center
-                                        bg-slate-200 text-slate-700 
-                                        dark:bg-primary dark:text-tertiary'
-                                                >
-                                                    {file.type.startsWith('image/') ? <ImageIcon size={16} className="sm:w-5 sm:h-5" /> : <FileText size={16} className="sm:w-5 sm:h-5" />}
-                                                </div>
-
-                                                <div className='flex gap-0.5 sm:gap-1 flex-col justify-center'>
-                                                    <h1 className='font-semibold text-xs sm:text-sm truncate max-w-[100px] sm:max-w-[150px]'>
-                                                        {file.name}
-                                                    </h1>
-                                                    <p className='text-[10px] sm:text-xs text-start opacity-70'>
-                                                        {file.size >= 1048576
-                                                            ? (file.size / 1048576).toFixed(2) + ' MB'
-                                                            : (file.size / 1024).toFixed(2) + ' KB'}
-                                                    </p>
-                                                </div>
+                                                {file.type.startsWith('image/') ? <ImageIcon size={16} className="sm:w-5 sm:h-5" /> : <FileText size={16} className="sm:w-5 sm:h-5" />}
                                             </div>
 
-                                            <button
-                                                type="button"
-                                                onClick={() => removeFile(index)}
-                                                className="absolute top-1.5 right-1.5 p-1 rounded-full shadow-sm transition-colors z-10 bg-slate-200 text-slate-600 hover:bg-red-500 hover:text-white dark:bg-white/15 dark:text-slate-300 dark:hover:bg-white/20 dark:hover:text-white"
-                                            >
-                                                <X size={12} strokeWidth={3} />
-                                            </button>
-                                        </motion.div>
-                                    ))}
-                                </AnimatePresence>
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                                            <div className='flex gap-0.5 sm:gap-1 flex-col justify-center'>
+                                                <h1 className='font-semibold text-xs sm:text-sm truncate max-w-[100px] sm:max-w-[150px]'>
+                                                    {file.name}
+                                                </h1>
+                                                <p className='text-[10px] sm:text-xs text-start opacity-70'>
+                                                    {file.size >= 1048576
+                                                        ? (file.size / 1048576).toFixed(2) + ' MB'
+                                                        : (file.size / 1024).toFixed(2) + ' KB'}
+                                                </p>
+                                            </div>
+                                        </div>
 
-                <div className="flex rounded-[2rem] border transition-colors items-center bg-white border-slate-300 dark:bg-[#1a1a1a] dark:border-secondary">
+                                        <button
+                                            type="button"
+                                            onClick={() => removeFile(index)}
+                                            className="absolute top-1.5 right-1.5 p-1 rounded-full shadow-sm transition-colors z-10 bg-slate-200 text-slate-600 hover:bg-red-500 hover:text-white dark:bg-white/15 dark:text-slate-300 dark:hover:bg-white/20 dark:hover:text-white"
+                                        >
+                                            <X size={12} strokeWidth={3} />
+                                        </button>
+                                    </motion.div>
+                                ))}
+                            </AnimatePresence>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
+            {/* Middle Area: Input Field */}
+            <input
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && query && send(query, files, selected.value)}
+                className="bg-transparent w-full min-w-0 flex-1 outline-none px-4 sm:px-5 pt-4 pb-3 text-base sm:text-[17px] transition-colors
+                    text-slate-900 placeholder:text-slate-400 
+                    dark:text-white dark:placeholder:text-gray-500"
+                placeholder="Ask AI..."
+            />
+
+            {/* Bottom Area: Action Buttons */}
+            <div className="flex justify-between items-center px-3 pb-3">
+
+                {/* Left side actions (Attach, Model Menu) */}
+                <div className="flex items-center gap-2">
                     <input
                         id="file-upload"
                         type="file"
@@ -138,37 +152,27 @@ const InputBox = ({ query, setQuery, send, isPending, stop }: InputProps) => {
                             (e.currentTarget as HTMLInputElement).value = '';
                         }}
                     />
-
                     <label
                         htmlFor="file-upload"
-                        className="cursor-pointer rounded-full p-3 flex items-center justify-center transition-colors flex-shrink-0 bg-slate-900 text-white hover:bg-slate-800 dark:bg-primary dark:text-tertiary dark:hover:bg-primary/90"
+                        className="cursor-pointer rounded-full p-2 flex items-center justify-center transition-colors text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white"
+                        title="Attach Files"
                     >
-                        <Paperclip size={20} className="sm:w-5 sm:h-5" />
+                        <Paperclip size={20} className="sm:w-[22px] sm:h-[22px]" />
                     </label>
 
-                    <input
-                        value={query}
-                        onChange={e => setQuery(e.target.value)}
-                        onKeyDown={e => e.key === "Enter" && query && send(query, files, selected.value)}
-                        className="bg-transparent w-full min-w-0 flex-1 outline-none px-2 sm:px-3 text-base sm:text-lg transition-colors
-                            text-slate-900 placeholder:text-slate-400 
-                            dark:text-white dark:placeholder:text-gray-500"
-                        placeholder="Ask AI..."
-                    />
-
                     <Menu as="div" className="relative flex-shrink-0">
-                        <MenuButton className="flex items-center justify-center p-3 rounded-full border transition-colors
-                            bg-slate-50 border-slate-300 text-slate-600 hover:bg-slate-100
-                            dark:bg-white/5 dark:border-secondary dark:text-slate-300 dark:hover:bg-white/10"
-                        >
-                            <Package size={20} className="sm:w-5 sm:h-5" />
+                        {/* 🌟 FIX 2: Dynamic Pill showing Model Icon & Text */}
+                        <MenuButton className="flex items-center gap-2 p-1.5 pr-3 rounded-full transition-colors text-slate-600 hover:bg-slate-100 dark:text-gray-300 dark:hover:bg-white/10 border border-transparent hover:border-slate-200 dark:hover:border-white/10 select-none">
+                            <img src={selected.icon} className="w-5 h-5 sm:w-6 sm:h-6 object-contain rounded-full" alt={selected.label} />
+                            <span className="text-sm sm:text-base font-medium whitespace-nowrap">{selected.label}</span>
+                            <ChevronDown size={14} className="opacity-50 ml-0.5" />
                         </MenuButton>
 
                         <MenuItems transition className={clsx(
-                            "absolute right-0 bottom-full mb-2 sm:mb-4 rounded-xl p-1 sm:p-2 z-50 w-72 sm:w-80 max-h-[60vh] overflow-y-auto space-y-1 sm:space-y-1 border shadow-lg",
+                            "absolute left-0 bottom-full mb-2 rounded-xl p-1 sm:p-2 z-50 w-72 sm:w-80 max-h-[60vh] overflow-y-auto space-y-1 sm:space-y-1 border shadow-lg",
                             "bg-white border-slate-200 text-slate-800",
                             "dark:bg-tertiary dark:border-secondary dark:text-primary dark:shadow-none",
-                            "origin-bottom-right transition duration-200 ease-out",
+                            "origin-bottom-left transition duration-200 ease-out",
                             "data-[closed]:scale-95 data-[closed]:opacity-0 data-[closed]:translate-y-2"
                         )}
                         >
@@ -214,21 +218,28 @@ const InputBox = ({ query, setQuery, send, isPending, stop }: InputProps) => {
                         </MenuItems>
                     </Menu>
                 </div>
-            </div>
 
-            <button
-                type="button"
-                onClick={() => isPending ? stop() : query && send(query, files, selected.value)}
-                className="p-3 rounded-full flex-shrink-0 transition-colors shadow-sm mb-[2px] sm:mb-1
-                    bg-slate-900 text-white hover:bg-slate-800
-                    dark:bg-primary dark:text-tertiary dark:hover:bg-primary/90 dark:shadow-none"
-            >
-                {isPending ? (
-                    <PauseCircle size={20} className="sm:w-5 sm:h-5" />
-                ) : (
-                    <SendHorizontal size={20} className="sm:w-5 sm:h-5" />
-                )}
-            </button>
+                {/* Right side action (Send/Stop) */}
+                <div className="flex items-center">
+                    <button
+                        type="button"
+                        onClick={() => isPending ? stop() : query && send(query, files, selected.value)}
+                        className={clsx(
+                            "p-2.5 sm:p-3 rounded-full flex-shrink-0 transition-all duration-200 flex items-center justify-center",
+                            query || isPending
+                                ? "bg-slate-900 text-white hover:bg-slate-800 dark:bg-primary dark:text-tertiary dark:hover:bg-primary/90 shadow-md scale-100"
+                                : "bg-slate-100 text-slate-400 dark:bg-white/5 dark:text-gray-500 cursor-default scale-95"
+                        )}
+                    >
+                        {isPending ? (
+                            <PauseCircle size={18} className="sm:w-5 sm:h-5" />
+                        ) : (
+                            <SendHorizontal size={18} className="sm:w-5 sm:h-5" />
+                        )}
+                    </button>
+                </div>
+
+            </div>
         </div>
     )
 }

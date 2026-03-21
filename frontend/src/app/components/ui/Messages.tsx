@@ -1,18 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Copy, FileText, ImageIcon, Link, RefreshCw, Pencil, Check, X, Volume2, Pause, Loader2 } from "lucide-react";
 import remarkGfm from "remark-gfm";
-import { Disclosure, DisclosureButton, DisclosurePanel } from "@headlessui/react";
-import { MessageProps, query } from "@/app/types";
+import { Disclosure, DisclosureButton } from "@headlessui/react";
+import { MessageProps } from "@/app/types";
 
 const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen, onRegenerate, onEdit }: MessageProps) => {
     const isStreaming = isPending && isLastItem && q.sender === "llm";
+
+    const showLoader = isStreaming && !q.thinking && !q.content;
+    const isThinkingActive = isStreaming && Boolean(q.thinking) && !q.content;
+
     const [isEditing, setIsEditing] = useState(false);
     const [copied, setCopied] = useState(false);
     const editRef = useRef<HTMLParagraphElement>(null);
 
-    // 🌟 Voice state and refs
+    // Voice state and refs
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [isAudioLoading, setIsAudioLoading] = useState(false);
@@ -31,7 +35,7 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
         }
     }, [isEditing, q.content]);
 
-    // 🌟 Cleanup audio when component unmounts
+    // Cleanup audio when component unmounts
     useEffect(() => {
         return () => {
             if (audioRef.current) {
@@ -43,9 +47,9 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
         };
     }, []);
 
-    if (!q.content && !isStreaming && (!q.files || q.files.length === 0)) {
-        return <div className="h-0" />;
-    }
+    // if (!q.content && !isStreaming && (!q.files || q.files.length === 0)) {
+    //     return <div className="h-0" />;
+    // }
 
     const handleSaveEdit = () => {
         if (!editRef.current) return;
@@ -72,7 +76,7 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
         setTimeout(() => setCopied(false), 2000);
     };
 
-    // 🌟 Voice functionality
+    // Voice functionality
     const handleToggleAudio = async () => {
         // If already playing, pause it
         if (isPlaying && audioRef.current) {
@@ -121,15 +125,16 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
             setIsAudioLoading(false);
         }
     };
+    const shouldAnimate = !isStreaming;
 
     return (
+
         <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={shouldAnimate ? { opacity: 0, y: 20 } : false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25, ease: "easeOut" }}
             className={`flex w-full ${q.sender === "user" ? "justify-end" : "justify-start"}`}
         >
-            {/* 🌟 Added 'relative' to this wrapper so absolute elements map perfectly to it */}
             <div className={`relative flex flex-col gap-1 p-3 md:py-3 md:p-0 group ${q.sender === "user" ? "items-end w-full max-w-[90%] sm:max-w-[85%]" : "items-start w-full max-w-full"}`}>
 
                 {/* Files badges */}
@@ -166,23 +171,40 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
                                 {q.thinking && (
                                     <Disclosure as="div" className="">
                                         {({ open }) => (
-                                            <div className="rounded-xl overflow-hidden transition-colors space-y-2 mb-2">
+                                            <div className="rounded-xl transition-colors space-y-2 mb-2">
                                                 <DisclosureButton className="flex w-min items-center justify-between text-sm sm:text-md font-semibold gap-1 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors select-none">
-                                                    <span>Thought</span>
+                                                    <span className={isThinkingActive ? "animate-pulse text-slate-800 dark:text-slate-200" : ""}>
+                                                        {isThinkingActive ? "Thinking..." : "Thought"}
+                                                    </span>
                                                     <ChevronDown
                                                         size={16}
-                                                        className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+                                                        className={`transition-transform duration-300 ${open ? 'rotate-180' : ''}`}
                                                     />
                                                 </DisclosureButton>
-                                                <DisclosurePanel
-                                                    transition
-                                                    className="text-sm sm:text-base font-mono whitespace-pre-wrap text-slate-500 dark:text-slate-400 opacity-80 transition duration-200 ease-out data-[closed]:-translate-y-2 data-[closed]:opacity-0"
-                                                >
-                                                    {q.thinking}
-                                                </DisclosurePanel>
+
+                                                <AnimatePresence initial={false}>
+                                                    {open && (
+                                                        <motion.div
+                                                            key="thinking-panel"
+                                                            initial={{ height: 0, opacity: 0 }}
+                                                            animate={{ height: "auto", opacity: 1 }}
+                                                            exit={{ height: 0, opacity: 0 }}
+                                                            transition={{
+                                                                height: { duration: 0.3, ease: "easeInOut" },
+                                                                opacity: { duration: 0.2, ease: "easeInOut" }
+                                                            }}
+                                                            style={{ overflow: "hidden" }}
+                                                        >
+                                                            <div className="text-sm sm:text-base font-mono whitespace-pre-wrap text-slate-500 dark:text-slate-400 opacity-80">
+                                                                {q.thinking}
+                                                            </div>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
                                             </div>
                                         )}
                                     </Disclosure>
+
                                 )}
                                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                     {q.content || ""}
@@ -192,23 +214,31 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
                     </div>
                 </div>
 
-                {isEditing && (
-                    <div className="absolute bottom-0 right-1 flex justify-end gap-3 z-10">
-                        <button
-                            onClick={() => setIsEditing(false)}
-                            className="p-1 text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 transition-colors"
+                <AnimatePresence>
+                    {isEditing && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: -5 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: -5 }}
+                            transition={{ duration: 0.2, ease: "easeOut" }}
+                            className="absolute bottom-3 flex justify-end gap-3 z-10"
                         >
-                            <X size={18} strokeWidth={2.5} />
-                        </button>
-                        <button
-                            onClick={handleSaveEdit}
-                            disabled={isPending}
-                            className="p-1 text-slate-400 hover:text-green-500 dark:text-slate-500 dark:hover:text-green-400 disabled:opacity-40 transition-colors"
-                        >
-                            <Check size={18} strokeWidth={2.5} />
-                        </button>
-                    </div>
-                )}
+                            <button
+                                onClick={() => setIsEditing(false)}
+                                className="p-1 text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 transition-colors"
+                            >
+                                <X size={18} strokeWidth={2.5} />
+                            </button>
+                            <button
+                                onClick={handleSaveEdit}
+                                disabled={isPending}
+                                className="p-1 text-slate-400 hover:text-green-500 dark:text-slate-500 dark:hover:text-green-400 disabled:opacity-40 transition-colors"
+                            >
+                                <Check size={18} strokeWidth={2.5} />
+                            </button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 {!isStreaming && q.content && (
                     <div className={`flex gap-4 mt-1 transition-opacity duration-200 ${isEditing ? "opacity-0 pointer-events-none" : "opacity-100 md:opacity-0 group-hover:opacity-100"}`}>
@@ -264,7 +294,8 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
                     </div>
                 )}
 
-                {isStreaming && (
+                {/* 🌟 Loader ONLY shows if nothing has been spat out yet */}
+                {showLoader && (
                     <div className="flex gap-1.5 mt-4">
                         <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" />
                         <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:0.2s]" />
