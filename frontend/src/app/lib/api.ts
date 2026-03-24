@@ -32,9 +32,8 @@ api.interceptors.response.use(
     }
 )
 
-// Token queue drip system
-const TOKEN_DRIP_INTERVAL = 80  // ms between renders — tune this (20-40 is sweet spot)
-const TOKENS_PER_TICK = 2     // how many chars to release per tick
+const TOKEN_DRIP_INTERVAL = 80
+const TOKENS_PER_TICK = 2
 
 type StreamCallbacks = {
     endpoint: string
@@ -42,7 +41,7 @@ type StreamCallbacks = {
     abortController: AbortController
     onToken: (t: string) => void
     onThinking: (t: string) => void
-    onDone: (sources?: any, id?: string) => void
+    onDone: (sources?: any, id?: string, title?: string) => void
     onBlocked?: () => void
     isPrivate?: boolean
 }
@@ -60,22 +59,20 @@ export async function streamChat({
     const tokenQueue: string[] = []
     let dripInterval: ReturnType<typeof setInterval> | null = null
     let streamDone = false
-    let donePayload: { sources?: any; id?: string } | null = null
+    let donePayload: { sources?: any; id?: string, title?: string } | null = null
 
     const startDrip = () => {
         if (dripInterval) return
 
         dripInterval = setInterval(() => {
             if (tokenQueue.length > 0) {
-                // Release a small chunk per tick
                 const chunk = tokenQueue.splice(0, TOKENS_PER_TICK).join("")
                 onToken(chunk)
             } else if (streamDone) {
-                // Queue empty + stream finished = we're done
                 clearInterval(dripInterval!)
                 dripInterval = null
                 if (donePayload) {
-                    onDone(donePayload.sources, donePayload.id)
+                    onDone(donePayload.sources, donePayload.id, donePayload.title)
                 }
             }
         }, TOKEN_DRIP_INTERVAL)
@@ -110,7 +107,7 @@ export async function streamChat({
 
             if (parsed.type === "done") {
                 streamDone = true
-                donePayload = { sources: parsed.sources, id: parsed.id }
+                donePayload = { sources: parsed.sources, id: parsed.id, title: parsed.title }
                 abortController.abort()
             }
 

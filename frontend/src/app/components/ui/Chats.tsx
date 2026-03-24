@@ -1,9 +1,9 @@
-import React, { Dispatch, SetStateAction, useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { VList, VListHandle } from 'virtua';
 import InputBox from "./InputBox";
 import SourcesSidebar from "./panels/SourcesPanel";
-import { ChatsProps, query } from "@/app/types";
+import { ChatsProps } from "@/app/types";
 import Message from "./Messages";
 
 const Chats = ({
@@ -35,6 +35,7 @@ const Chats = ({
         const { scrollSize, viewportSize } = vlistRef.current;
         atBottomRef.current = scrollSize - (offset + viewportSize) < 100;
     };
+
     useEffect(() => {
         if (!vlistRef.current || queries.length === 0) return;
         if (atBottomRef.current || isPending) {
@@ -51,7 +52,7 @@ const Chats = ({
 
     return (
         <>
-            <div className="flex flex-col items-center w-full h-[calc(100dvh-140px)] relative">
+            <div className="flex flex-col items-center w-full h-[calc(100dvh-190px)] relative">
                 <div className="w-full max-w-6xl h-full relative">
 
                     {isLoadingOlder && (
@@ -73,19 +74,25 @@ const Chats = ({
                         shift={true}
                         className="scrollbar-none overflow-x-hidden h-full w-full py-4"
                     >
-                        {(q, index) => (
-                            <Message
-                                key={q.created_at ? q.created_at : `msg-${index}-${q.content?.length || 0}`}
-                                q={q}
-                                isLastItem={index === queries.length - 1}
-                                isPending={isPending}
-                                onCopy={copyToClipboard}
-                                setSources={setSources}
-                                setSourcesOpen={setSourcesOpen}
-                                onRegenerate={() => handleRegenerate(index)}
-                                onEdit={(newContent: string) => handleEdit(index, newContent)}
-                            />
-                        )}
+                        {(q, index) => {
+                            const uniqueKey = q.id
+                                ? q.id
+                                : `msg-${q.created_at || 'local'}-${q.sender}-${index}`;
+
+                            return (
+                                <Message
+                                    key={uniqueKey}
+                                    q={q}
+                                    isLastItem={index === queries.length - 1}
+                                    isPending={isPending}
+                                    onCopy={copyToClipboard}
+                                    setSources={setSources}
+                                    setSourcesOpen={setSourcesOpen}
+                                    onRegenerate={() => handleRegenerate(index)}
+                                    onEdit={(newContent: string) => handleEdit(index, newContent)}
+                                />
+                            );
+                        }}
                     </VList>
                 </div>
             </div>

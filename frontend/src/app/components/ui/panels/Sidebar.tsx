@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"; // 🌟 Added useRef
+import { useState, useEffect, useRef } from "react";
 import api from "@/app/lib/api";
 import {
     Menu,
@@ -21,7 +21,7 @@ import {
     Loader2
 } from "lucide-react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { SummaryHistoryResponse } from "@/app/types";
 import TaskManagerModal from "../modals/Tasks";
@@ -32,14 +32,13 @@ import SearchModal from "../modals/SearchChatModal";
 const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
 
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [mounted, setMounted] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
-
     const [chats, setChats] = useState<SummaryHistoryResponse[]>([]);
     const [skip, setSkip] = useState(0);
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
-
     const [search, setSearch] = useState("");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -47,10 +46,8 @@ const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
     const [summaryId, setSummaryId] = useState<string>();
     const [shareModalOpen, setShareModalOpen] = useState(false);
     const [shareChatInfo, setShareChatInfo] = useState({ id: "", title: "" });
-    const params = useParams();
-    const activeId = params?.id;
+    const activeId = searchParams.get('id');
 
-    // 🌟 1. Ref to track if we've already done the initial fetch to prevent tab-switching re-renders
     const fetchInitiated = useRef(false);
 
     useEffect(() => {
@@ -78,6 +75,22 @@ const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
             setIsOpen(false);
         }
     };
+    // Inside Sidebar.tsx
+    useEffect(() => {
+        const handleChatTitled = (event: any) => {
+            const { id, title } = event.detail;
+            setChats(prev => {
+                const exists = prev.find(c => c.id === id);
+                if (exists) {
+                    return prev.map(c => c.id === id ? { ...c, title } : c);
+                } else {
+                    return [{ id, title, is_pinned: false, created_at: new Date().toISOString() }, ...prev];
+                }
+            });
+        };
+        window.addEventListener("chat-title", handleChatTitled);
+        return () => window.removeEventListener("chat-title", handleChatTitled);
+    }, []);
 
     const fetchUserSummaries = async (currentSkip = 0, isAppending = false) => {
         if (!user) {
@@ -114,19 +127,16 @@ const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
         }
     };
 
-    // 🌟 1. Updated useEffect to stop fetching every time you switch browser tabs
     useEffect(() => {
         if (!user) {
-            fetchInitiated.current = false; // Reset if user logs out
+            fetchInitiated.current = false;
         }
-
         if (mounted && user?.id && !fetchInitiated.current) {
             fetchInitiated.current = true;
             fetchUserSummaries(0, false);
         } else if (mounted && !user?.id) {
             setLoading(false);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [mounted, user?.id]);
 
     const filtered = chats.filter((s) => s.title.toLowerCase().includes(search.toLowerCase()));
@@ -221,7 +231,7 @@ const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
                 }`}
         >
             <Link
-                href={`/${s.id}`}
+                href={`/?id=${s.id}`}
                 onClick={handleMobileNav}
                 className="flex-1 outline-none focus:outline-none p-2 truncate"
             >
@@ -261,14 +271,22 @@ const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
 
     return (
         <>
-            {isOpen && (
-                <div
-                    className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden transition-opacity"
-                    onClick={() => setIsOpen(false)}
-                />
-            )}
-
-            <div
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden"
+                        onClick={() => setIsOpen(false)}
+                    />
+                )}
+            </AnimatePresence>
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
                 className={`fixed top-0 left-0 h-full w-[70vw] md:w-72 border-r font-mono shadow-2xl md:shadow-lg transform transition-transform duration-300 z-50 
                     bg-white border-slate-200 text-slate-800
                     dark:bg-tertiary dark:border-secondary dark:text-white
@@ -346,9 +364,8 @@ const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
                             )}
                         </div>
                     </div>
-
                 </div>
-            </div>
+            </motion.div>
             <ShareModal
                 isOpen={shareModalOpen}
                 onClose={() => setShareModalOpen(false)}

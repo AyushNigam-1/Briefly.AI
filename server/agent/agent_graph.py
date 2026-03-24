@@ -76,7 +76,7 @@ async def memory_node(state: AgentState):
     if state.get("blocked"):
         return {}
 
-    existing_memories = await get_user_memories(state["user_id"])
+    existing_memories = get_user_memories(state["user_id"])
 
     new_memories = await extract_memory(
         user_input=state["user_input"],
@@ -85,8 +85,8 @@ async def memory_node(state: AgentState):
     )
 
     if new_memories:
-        await save_user_memories(state["user_id"], new_memories)
-
+         save_user_memories(state["user_id"], new_memories)
+    print(new_memories)
     return {"extracted_memory": new_memories}
 
 async def title_node(state: AgentState):
@@ -104,34 +104,20 @@ def postprocess_node(state: AgentState):
     sources = extract_sources(full_msgs)
     return {"sources": sources}
 
-# async def run_agent_with_graph(messages, modal_name, available_apps):
-#     initial_state: AgentState = {
-#         "messages": messages,
-#         "modal_name": modal_name,
-#         "available_apps": available_apps,
-#         "selected_apps": [],
-#         "response": None,
-#         "full_messages": None,
-#     }
-
-#     final_state = await agent_graph.ainvoke(initial_state)
-
-#     return final_state["response"], final_state["sources"]
-
 workflow = StateGraph(AgentState)
 
 workflow.add_node("guard", guard_node)
 workflow.add_node("router", router_node)
 workflow.add_node("agent", agent_node)
-# workflow.add_node("memory", memory_node)
+workflow.add_node("memory", memory_node)
 workflow.add_node("title", title_node)
 workflow.add_node("postprocess", postprocess_node)
 
 workflow.add_edge(START, "guard")
 workflow.add_edge("guard", "router")
 workflow.add_edge("router", "agent")
-workflow.add_edge("agent", "title")
-# workflow.add_edge("memory", "title")
+workflow.add_edge("agent", "memory")
+workflow.add_edge("memory", "title")
 workflow.add_edge("title", "postprocess")
 workflow.add_edge("postprocess", END)
 

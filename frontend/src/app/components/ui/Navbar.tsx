@@ -16,7 +16,10 @@ const Navbar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
                 </div>
 
                 <div className="flex justify-end gap-2 sm:gap-3 items-center">
-                    {user ? (
+                    {/* 🌟 Check isLoading FIRST to prevent the Login button flash */}
+                    {isLoading ? (
+                        <div className="w-9 h-9 sm:w-[42px] sm:h-[42px] rounded-full bg-slate-200 dark:bg-white/10 animate-pulse" />
+                    ) : user ? (
                         <>
                             <button
                                 onClick={() => setOpen(true)}

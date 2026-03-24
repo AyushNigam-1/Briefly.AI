@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-// 🌟 Changed to useSearchParams
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import InputBox from "@/app/components/ui/InputBox";
@@ -15,7 +14,6 @@ const Page = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // 🌟 Read the ID directly from the URL query parameter (e.g. /?id=123)
   const rawId = searchParams.get("id");
 
   const { data } = authClient.useSession();
@@ -30,8 +28,6 @@ const Page = () => {
   const [selectedModel, setSelectedModel] = useState("default_model");
 
   const isSendingRef = useRef(false);
-
-  // 🌟 This ref stops the useEffect from fetching when we create a new chat
   const isTransitioningRef = useRef(false);
 
   useEffect(() => {
@@ -80,7 +76,6 @@ const Page = () => {
   }, [rawId, isPrivateMode]);
 
   useEffect(() => {
-    // 🌟 Handle "New Chat" (No ID in URL)
     if (!rawId) {
       setQueries([]);
       setActiveId(undefined);
@@ -99,14 +94,12 @@ const Page = () => {
       return;
     }
 
-    // 🌟 We just created this chat! Skip the wipe and fetch.
     if (isTransitioningRef.current) {
       isTransitioningRef.current = false;
       setActiveId(rawId);
       return;
     }
 
-    // Normal load (Clicking a chat in the sidebar)
     setQueries([]);
     setActiveId(rawId);
     setHasMore(true);
@@ -426,7 +419,7 @@ const Page = () => {
             return up;
           })
         },
-        onDone(sources, newId) {
+        onDone(sources, newId, title) {
           isSendingRef.current = false;
           setPending(false)
 
@@ -442,7 +435,9 @@ const Page = () => {
           if (!activeId && newId) {
             isTransitioningRef.current = true;
             setActiveId(newId);
-            // 🌟 Use Shallow Routing with search parameters!
+            window.dispatchEvent(new CustomEvent("chat-title", {
+              detail: { id: newId, title: title || "New Chat" }
+            }));
             router.replace(`/?id=${newId}`, { scroll: false });
           }
         },
@@ -484,8 +479,9 @@ const Page = () => {
           </div>
         </motion.div>
       ) : queries.length > 0 ? (
+
         <motion.div
-          key="chat"
+          key={`chat-${activeId}`}
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
@@ -518,33 +514,43 @@ const Page = () => {
           className="fixed top-1/2 left-1/2 w-full max-w-3xl px-4 sm:px-6 transition-colors duration-300 text-slate-800 dark:text-white"
         >
           <div className="flex flex-col gap-6 md:gap-10 font-mono">
-            <div className="text-center relative">
+            <div className="text-center relative w-full">
 
-              <div className="min-h-[80px] flex flex-col justify-end mb-3 md:mb-4">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={isExplicitPrivate ? "private" : "normal"}
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -15 }}
-                    transition={{ duration: 0.4, ease: "easeInOut" }}
-                  >
-                    {isExplicitPrivate ? (
+              <div className="relative h-[110px] sm:h-[120px] mb-3 md:mb-4 w-full">
+                <AnimatePresence>
+                  {isExplicitPrivate ? (
+                    <motion.div
+                      key="private"
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -15 }}
+                      transition={{ duration: 0.4, ease: "easeInOut" }}
+                      className="absolute bottom-0 inset-x-0 w-full flex flex-col items-center justify-end"
+                    >
                       <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
                         Incognito Session
                       </h3>
-                    ) : (
+                      <p className="text-sm sm:text-base transition-colors text-slate-500 dark:text-gray-400 mt-2">
+                        Your history won't be saved. Close the tab to erase this session.
+                      </p>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="normal"
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -15 }}
+                      transition={{ duration: 0.4, ease: "easeInOut" }}
+                      className="absolute bottom-0 inset-x-0 w-full flex flex-col items-center justify-end"
+                    >
                       <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
                         How can I help you today?
                       </h3>
-                    )}
-
-                    <p className="text-sm sm:text-base transition-colors text-slate-500 dark:text-gray-400 mt-2">
-                      {isExplicitPrivate
-                        ? "Your history won't be saved. Close the tab to erase this session."
-                        : "Ask anything, upload docs, brainstorm, or chat."}
-                    </p>
-                  </motion.div>
+                      <p className="text-sm sm:text-base transition-colors text-slate-500 dark:text-gray-400 mt-2">
+                        Ask anything, upload docs, brainstorm, or chat.
+                      </p>
+                    </motion.div>
+                  )}
                 </AnimatePresence>
               </div>
 
@@ -557,23 +563,36 @@ const Page = () => {
                 stop={handleStop}
               />
 
-              {user && (!activeId || isPrivateMode) && (
-                <div className="pt-4 flex justify-center">
-                  {!isPrivateMode ? (
-                    <button
-                      onClick={() => router.push('/?id=private')}
-                      className="text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-colors  hover:text-slate-700 text-slate-500 dark:text-gray-400 dark:hover:text-slate-300"
-                    >
-                      <Ghost size={14} /> Go Private
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => router.push('/')}
-                      className="text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-colors  hover:text-slate-700 text-slate-500 dark:text-gray-400 dark:hover:text-slate-300"
-                    >
-                      <Ghost size={14} className="opacity-60" /> Exit Private Mode
-                    </button>
-                  )}
+              {user && (
+                <div className="relative mt-4 h-[44px] w-full flex justify-center">
+                  <AnimatePresence>
+                    {!isPrivateMode ? (
+                      <motion.button
+                        key="btn-private"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.2 }}
+                        onClick={() => router.push('/?id=private', { scroll: false })}
+                        className="absolute top-0 text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-colors hover:text-slate-700 text-slate-500 dark:text-gray-400 dark:hover:text-slate-300"
+                      >
+                        <Ghost size={14} /> Go Private
+                      </motion.button>
+                    ) : (
+                      <motion.button
+                        key="btn-normal"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.2 }}
+                        // 🌟 FIX: Added {scroll: false} here as well
+                        onClick={() => router.push('/', { scroll: false })}
+                        className="absolute top-0 text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-colors hover:text-slate-700 text-slate-500 dark:text-gray-400 dark:hover:text-slate-300"
+                      >
+                        <Ghost size={14} className="opacity-60" /> Exit Private Mode
+                      </motion.button>
+                    )}
+                  </AnimatePresence>
                 </div>
               )}
 

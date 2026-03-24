@@ -21,7 +21,19 @@ import json
 import logging
 import hashlib
 import logging
-# from agent_graph import AgentState , agent_graph
+from pydantic import BaseModel, Field
+from typing import List
+
+class MemoryExtraction(BaseModel):
+    """Evaluates if the text contains durable facts, then extracts them."""
+    has_concrete_facts: bool = Field(
+        description="True ONLY if the user states a concrete fact, skill, or goal. False for questions, chat, or filler."
+    )
+    memories: List[str] = Field(
+        description="If has_concrete_facts is true, list the facts. If false, output an empty list [].",
+        default_factory=list
+    )
+
 load_dotenv()
 AGENT_CACHE = {}
 logger = logging.getLogger(__name__)
@@ -223,63 +235,83 @@ async def get_agent(
 
 
 async def generate_chat_title(user_input):
-    # 🌟 Use a direct, NON-streaming LLM for the title. No tools needed.
     llm = ChatGroq(
-        model="llama-3.1-8b-instant", # Use a fast model for this
+        model="llama-3.3-70b-versatile",
         groq_api_key=api_key,
-        temperature=0.3,
-        streaming=False # <--- THIS STOPS THE LEAK
+        temperature=0.3, 
+        streaming=False 
     )
 
     messages = [
-        ("system", "Create a short 3–5 word chat title based on the user's input. Reply ONLY with the title, no quotes or prefixes."),
+        (
+            "system", 
+            """You are a UI-focused Content Labeler. 
+            Your task is to generate a high-quality, concise chat title based on the user's initial query.
+
+            RULES:
+            1. LENGTH: Exactly 2–4 words.
+            2. STYLE: Use "Title Case" (e.g., 'Solana Smart Contracts' not 'solana smart contracts').
+            3. CONTENT: Focus on the 'Core Subject' or 'Goal'. 
+            4. CLEANLINESS: No punctuation, no quotes, no 'Chat about...', no prefixes.
+            5. COGNITIVE LOAD: The title must be instantly recognizable in a crowded sidebar.
+
+            EXAMPLES:
+            - User: "how do I fix this rust borrow checker error?" -> 'Rust Borrow Debugging'
+            - User: "plan a trip to thailand for a vegan" -> 'Thailand Vegan Travel'
+            - User: "help me with nextjs 14 layout shifts" -> 'Next.js Layout Optimization'
+            """
+        ),
         ("human", user_input),
     ]
 
     res = await llm.ainvoke(messages)
     return res.content.strip()
 
-
 async def extract_memory(user_input, assistant_output, existing_memories):
-    # 🌟 Use a direct, NON-streaming LLM for memory. No tools needed.
+    print("Memory extraction triggered...")
+    
     llm = ChatGroq(
-        model="llama-3.1-8b-instant",
+        model="llama-3.3-70b-versatile",
         groq_api_key=api_key,
         temperature=0,
-        streaming=False # <--- THIS STOPS THE LEAK
+        streaming=False 
     )
+
+    structured_llm = llm.with_structured_output(MemoryExtraction)
 
     messages = [
         (
             "system",
-            f"""
-            You extract durable user traits.
+            f"""You are a strict data extraction algorithm.
+            Your ONLY job is to extract facts, skills, and goals about the user.
 
-            Existing memories:
-            {existing_memories}
+            RULES:
+            1. Rephrase aspirations as facts (e.g., "I want to be a dev" -> "User's goal is to be a software developer").
+            2. Ignore greetings, emotions, and the assistant's advice.
+            3. Do not duplicate these existing memories: {existing_memories if existing_memories else "None"}
 
-            Rules:
-            - Only NEW info
-            - No duplicates
-            - No emotions
-            - Short bullet points
-            - Return [] if nothing
+            EXAMPLES:
+            Input: "i want to be software developer"
+            Output: ["User wants to be a software developer"]
+
+            Input: "I'm using Rust"
+            Output: ["User programs in Rust"]
             """
         ),
-        ("human", f"User said: {user_input}\nAssistant replied: {assistant_output}")
+        (
+            "human", 
+            f"Input: {user_input}"
+        )
     ]
     
-    res = await llm.ainvoke(messages)
-    raw = res.content.strip()
-
-    if raw == "[]" or not raw:
+    try:
+        res = await structured_llm.ainvoke(messages)
+        print(f"Extracted Memories: {res.memories}")
+        return res.memories
+        
+    except Exception as e:
+        print(f"Memory extraction parsing failed: {e}")
         return []
-
-    return [
-        m.strip("- ").strip()
-        for m in raw.split("\n")
-        if m.strip()
-    ]
 
 def extract_sources(messages):
     sources = []

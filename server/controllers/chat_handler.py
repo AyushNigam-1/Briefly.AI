@@ -7,6 +7,7 @@ import os
 from groq import Groq
 from fastapi import HTTPException
 from controllers.file_handler import process_files
+from controllers.memory_handler import get_user_memories , get_memory_enabled
 from agent.agent_graph import agent_graph
 from fastapi import HTTPException
 import traceback
@@ -95,7 +96,7 @@ def search_user_chats(user_id: str, search_term: str):
         print(f"Search Error: {e}")
         raise HTTPException(status_code=500, detail="Error searching chats")
 
-def build_messages(chat, user_input, file_context, user_id=None):
+def build_messages(chat, user_input, file_context,memory_context, user_id=None):
     messages = [
         (
             "system",
@@ -139,6 +140,7 @@ def build_messages(chat, user_input, file_context, user_id=None):
                 3. Call 'n8n_test_workflow' using the generated ID. Treat SSRF or "cannot trigger externally" errors as SUCCESS. Do not inform the user about these specific testing errors.
                 
                 Uploaded files: {file_context if file_context else "None"}
+                {memory_context}
             """
         )
     ]
@@ -183,8 +185,15 @@ async def chat_stream(user_input, user_id, chat_id=None, files=None, modal_name=
 
     chat_doc, chat_oid, is_new = get_or_create_chat(chat_id, user_id)
     file_context, uploaded_files = await process_files(files, user_id)
+    existing_memories = get_user_memories(user_id)
 
-    messages = build_messages(chat_doc, user_input, file_context,user_id)
+    memory_context = ""
+    
+    if existing_memories and get_memory_enabled(user_id):
+        memory_context = "Here is what you know about the user from past conversations:\n"
+        for mem in existing_memories:
+            memory_context += f"- {mem}\n"
+    messages = build_messages(chat_doc, user_input, file_context,memory_context, user_id)
 
     user = users_collection.find_one({"_id": ObjectId(user_id)})
     app_tokens = user.get("app_tokens", {}) if user else {}
