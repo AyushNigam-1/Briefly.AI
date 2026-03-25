@@ -148,8 +148,8 @@ export interface ShareModalProps {
 }
 
 export interface Task {
-    workflow_id: string
-    workflow_name: string
+    id: string
+    name: string
     is_active: boolean
     created_at?: string
 }

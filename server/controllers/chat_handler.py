@@ -96,51 +96,18 @@ def search_user_chats(user_id: str, search_term: str):
         print(f"Search Error: {e}")
         raise HTTPException(status_code=500, detail="Error searching chats")
 
-def build_messages(chat, user_input, file_context,memory_context, user_id=None):
+def build_messages(chat, user_input, file_context, memory_context, user_id=None):
     messages = [
         (
             "system",
-            f"""
-                You are Briefly AI.
-                CURRENT USER ID: {user_id} 
-                
-                AUTOMATION RULES (USE OFFICIAL N8N TOOLS):
-                1. Call 'get_workflow_blueprint' to retrieve the base JSON structure.
-                2. You MUST dynamically edit the "connections" object and parameters in this JSON before passing it to 'n8n_create_workflow'.
-                
-                CHOOSE THE CORRECT WIRING SCENARIO BASED ON USER INTENT:
-                
-                SCENARIO A: Simple Reminder (No URL, just a recurring text message)
-                - WIRING: "Schedule" -> "Push" (or "Email").
-                - DATA: Inject the exact reminder text directly into the Push/Email node.
-                
-                SCENARIO B: Simple Scraper (Fetch a URL on a timer, send raw data, NO AI)
-                - WIRING: "Schedule" -> "Fetch Website" -> "Push" (or "Email").
-                - DATA: Change the text variable in the Push/Email node to '$json.data'.
-                
-                SCENARIO C: Smart Content Generator (AI creates content on a schedule, NO URL)
-                - WIRING: "Schedule" -> "Ask LLM Brain" -> "Push" (or "Email").
-                - DATA: Inject the user's prompt into 'Ask LLM Brain' (replace 'USER_RULE').
-                
-                SCENARIO D: Smart Summarizer (Fetch a URL + AI summarizes it + Send EVERY time)
-                - WIRING: "Schedule" -> "Fetch Website" -> "Ask LLM Brain" -> "Push" (or "Email").
-                - DATA: Inject the summary instructions into 'USER_RULE'.
-                
-                SCENARIO E: Smart Evaluator (Fetch a URL + AI checks a condition + ONLY send if true)
-                - WIRING: "Schedule" -> "Fetch Website" -> "Ask LLM Brain" -> "Should I Notify?" -> "Push" (or "Email").
-                - DATA: Inject the exact condition/rule into 'USER_RULE'.
-                
-                CRITICAL JSON CLEANUP RULES - YOU MUST DO THIS:
-                - You MUST completely remove the unused nodes and paths in the "connections" dictionary based on your chosen Scenario.
-                - MANDATORY REPLACEMENTS:
-                    - Replace 'TARGET_URL' with the requested URL.
-                    - Replace 'TARGET_USER_ID' with this exact string: {user_id}
-                - ALWAYS set "active": false and "settings": {{}} at the root of the JSON payload.
-                
-                3. Call 'n8n_test_workflow' using the generated ID. Treat SSRF or "cannot trigger externally" errors as SUCCESS. Do not inform the user about these specific testing errors.
-                
-                Uploaded files: {file_context if file_context else "None"}
-                {memory_context}
+            f"""You are Briefly AI, an intelligent, helpful, and versatile AI assistant. 
+            You provide clear, concise, and accurate answers.
+            
+            CURRENT USER ID: {user_id} 
+            
+            Uploaded files context: {file_context if file_context else "None"}
+            
+            {memory_context}
             """
         )
     ]
@@ -150,6 +117,7 @@ def build_messages(chat, user_input, file_context,memory_context, user_id=None):
         messages.append((role, q["content"]))
 
     messages.append(("human", user_input))
+    
     return messages
 
 
@@ -249,8 +217,22 @@ async def chat_stream(user_input, user_id, chat_id=None, files=None, modal_name=
                 yield f"data: {json.dumps({'type': 'tool_status', 'tool': event['name'], 'status': 'running'})}\n\n"
 
             elif kind == "on_tool_end":
+                tool_name = event['name']
                 yield f"data: {json.dumps({'type': 'tool_status', 'tool': event['name'], 'status': 'completed'})}\n\n"
-
+                if tool_name == "n8n_create_workflow":
+                    try:
+                        msg = event['data'].get('output')
+                        if msg and hasattr(msg, 'content'):
+                            raw_text = msg.content[0].get("text", "{}") if isinstance(msg.content, list) else msg.content
+                            data = json.loads(raw_text).get("data", {})                            
+                            if wf_id := data.get("id"):
+                                users_collection.update_one(
+                                    {"_id": ObjectId(user_id)},
+                                    {"$push": {"n8n_workflows": {"id": wf_id, "name": data.get("name", "AI Automation")}}}
+                                )
+                                print(f"✅ GUARANTEED SAVE: Workflow {wf_id} saved!")
+                    except Exception as e:
+                        print(f"⚠️ Auto-save failed: {e}")
             elif kind == "on_chain_end":
                 output = event["data"]["output"]
                 if isinstance(output, dict):

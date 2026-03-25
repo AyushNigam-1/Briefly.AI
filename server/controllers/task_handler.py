@@ -1,7 +1,8 @@
 import os
 import json
 import logging
-from controllers.mongo import  workflows_collection
+from controllers.mongo import users_collection
+from bson import ObjectId 
 import requests
 from redis_client import redis_client, CACHE_TTL
 
@@ -12,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 def get_user_workflows(user_id: str):
     """
-    Returns all workflows created by this user.
+    Returns all workflows created by this user from their nested profile array.
     """
     cache_key = f"user_workflows:{user_id}"
 
@@ -24,13 +25,15 @@ def get_user_workflows(user_id: str):
     except Exception as e:
         logger.warning(f"Redis get error for {cache_key}: {e}")
 
-    # 2. Fallback to MongoDB
-    workflows = list(
-        workflows_collection.find(
-            {"user_id": user_id},
-            {"_id": 0}  # Excluding _id makes this instantly JSON serializable!
+    try:
+        user = users_collection.find_one(
+            {"_id": ObjectId(user_id)},
+            {"n8n_workflows": 1, "_id": 0} # Only fetch the workflows array
         )
-    )
+        workflows = user.get("n8n_workflows", []) if user else []
+    except Exception as e:
+        logger.error(f"Failed to fetch workflows from DB: {e}")
+        workflows = []
 
     # 3. Save to Redis gracefully
     try:
@@ -42,15 +45,15 @@ def get_user_workflows(user_id: str):
 
 def delete_workflow(user_id: str, workflow_id: str):
     """
-    Deletes workflow from n8n and DB (only if owned by user).
+    Deletes workflow from n8n and pulls it from the user's DB profile.
     """
-    # Verify ownership
-    wf = workflows_collection.find_one({
-        "workflow_id": workflow_id,
-        "user_id": user_id
+    # 🌟 Verify ownership by checking if the ID exists in the user's array
+    user = users_collection.find_one({
+        "_id": ObjectId(user_id),
+        "n8n_workflows.id": workflow_id
     })
 
-    if not wf:
+    if not user:
         return {"status": "error", "message": "Workflow not found or not owned by user"}
 
     headers = {
@@ -70,11 +73,11 @@ def delete_workflow(user_id: str, workflow_id: str):
             "message": f"n8n delete failed: {res.text}"
         }
 
-    # Delete from Mongo
-    workflows_collection.delete_one({
-        "workflow_id": workflow_id,
-        "user_id": user_id
-    })
+    # 🌟 Delete from Mongo using $pull to remove it from the nested array
+    users_collection.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$pull": {"n8n_workflows": {"id": workflow_id}}}
+    )
 
     # Invalidate the cache so the next fetch reflects the deletion
     try:
@@ -82,19 +85,19 @@ def delete_workflow(user_id: str, workflow_id: str):
     except Exception as e:
         logger.warning(f"Redis delete error for user_workflows:{user_id}: {e}")
 
-    return {"status": "success", "message": "Workflow deleted"}
+    return {"status": "success", "message": "Workflow deleted successfully"}
 
 def execute_workflow(user_id: str, workflow_id: str):
     """
     Manually executes workflow (only if owned by user).
     """
-    # Ownership check
-    wf = workflows_collection.find_one({
-        "workflow_id": workflow_id,
-        "user_id": user_id
+    # 🌟 Ownership check against the nested array
+    user = users_collection.find_one({
+        "_id": ObjectId(user_id),
+        "n8n_workflows.id": workflow_id
     })
 
-    if not wf:
+    if not user:
         return {"status": "error", "message": "Workflow not found or not owned by user"}
 
     headers = {
@@ -113,6 +116,4 @@ def execute_workflow(user_id: str, workflow_id: str):
             "message": res.text
         }
 
-    # Note: No cache invalidation is needed here because executing a workflow 
-    # doesn't change the list of saved workflows.
-    return {"status": "success", "message": "Workflow executed"}
+    return {"status": "success", "message": "Workflow executed successfully"}

@@ -6,7 +6,6 @@ import {
     Dialog,
     DialogBackdrop,
     DialogPanel,
-    DialogTitle,
 } from "@headlessui/react"
 import { Trash2, Play, X, Workflow, Search, Loader2, Calendar } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -18,6 +17,9 @@ export default function TaskManagerModal({ onCloseSidebar }: SearchModalProps) {
     const [workflows, setWorkflows] = useState<Task[]>([])
     const [loading, setLoading] = useState(false)
     const [query, setQuery] = useState("")
+
+    // 🌟 NEW: Track exactly which task is being deleted
+    const [deletingId, setDeletingId] = useState<string | null>(null)
 
     const load = async () => {
         setLoading(true)
@@ -37,22 +39,26 @@ export default function TaskManagerModal({ onCloseSidebar }: SearchModalProps) {
 
     const runWorkflow = async (id: string) => {
         try {
-            await api.post("/workflows/execute", { workflow_id: id })
+            await api.post("/workflows/execute", { id: id })
         } catch (error) {
             console.error("Failed to execute workflow", error)
         }
     }
 
+    // 🌟 UPDATED: Set the loading state before API call and clear it after
     const deleteWorkflow = async (id: string) => {
+        setDeletingId(id)
         try {
             await api.delete(`/workflows/${id}`)
-            setWorkflows(prev => prev.filter(w => w.workflow_id !== id))
+            setWorkflows(prev => prev.filter(w => (w.id || w.id) !== id))
         } catch (error) {
             console.error("Failed to delete workflow", error)
+        } finally {
+            setDeletingId(null)
         }
     }
 
-    // 🌟 Sleek Date Formatter
+    // Sleek Date Formatter
     const formatDate = (dateString?: string) => {
         if (!dateString) return ""
         return new Date(dateString).toLocaleDateString('en-US', {
@@ -63,9 +69,10 @@ export default function TaskManagerModal({ onCloseSidebar }: SearchModalProps) {
         })
     }
 
-    const filtered = workflows.filter(w =>
-        w.workflow_name.toLowerCase().includes(query.toLowerCase())
-    )
+    const filtered = workflows.filter(w => {
+        const name = w.name || w.name || ""
+        return name.toLowerCase().includes(query.toLowerCase())
+    })
 
     return (
         <>
@@ -97,7 +104,7 @@ export default function TaskManagerModal({ onCloseSidebar }: SearchModalProps) {
                             bg-white border-slate-200 font-sans
                             dark:bg-[#0f0f0f] dark:border-white/10"
                     >
-                        {/* 🌟 Command Palette Style Header */}
+                        {/* Command Palette Style Header */}
                         <div className="relative flex shrink-0 items-center p-4 border-b border-slate-200 dark:border-white/10 z-20">
                             <Search className="absolute left-5 text-slate-400 dark:text-gray-500" size={20} strokeWidth={2} />
                             <input
@@ -114,7 +121,7 @@ export default function TaskManagerModal({ onCloseSidebar }: SearchModalProps) {
                             </button>
                         </div>
 
-                        {/* 🌟 Results Body with AnimatePresence */}
+                        {/* Results Body */}
                         <div className="flex-1 relative overflow-hidden">
                             <AnimatePresence mode="wait">
                                 {loading ? (
@@ -140,58 +147,82 @@ export default function TaskManagerModal({ onCloseSidebar }: SearchModalProps) {
                                         initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
                                         className="absolute inset-0 overflow-y-auto p-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-200 dark:scrollbar-thumb-white/10"
                                     >
-                                        {filtered.map(w => (
-                                            <div
-                                                key={w.workflow_id}
-                                                className="mb-3 bg-white dark:bg-[#161616] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm group"
-                                            >
-                                                <div className="flex items-center justify-between p-4">
-                                                    <div className="space-y-1.5 flex-1 min-w-0">
-                                                        <div className="flex items-center gap-2">
-                                                            <p className="text-base font-bold text-slate-800 dark:text-slate-200 truncate">
-                                                                {w.workflow_name}
-                                                            </p>
-                                                            <span className={clsx(
-                                                                "h-2 w-2 rounded-full",
-                                                                w.is_active ? "bg-green-500" : "bg-slate-400"
-                                                            )} />
-                                                        </div>
-                                                        <div className="flex items-center gap-3 text-[11px] font-medium text-slate-400 dark:text-gray-500 uppercase tracking-tight">
-                                                            <span className="flex items-center gap-1">
-                                                                <Calendar size={12} />
-                                                                {formatDate(w.created_at)}
-                                                            </span>
-                                                            <span>•</span>
-                                                            <span className={w.is_active ? "text-green-600 dark:text-green-400" : ""}>
-                                                                {w.is_active ? "Active" : "Disabled"}
-                                                            </span>
-                                                        </div>
-                                                    </div>
+                                        {filtered.map(w => {
+                                            const taskId = w.id || w.id || "unknown";
+                                            const taskName = w.name || w.name || "Unnamed Task";
+                                            const isActive = w.is_active !== undefined ? w.is_active : true;
+                                            const isDeleting = deletingId === taskId;
 
-                                                    <div className="flex items-center gap-2 ml-4">
-                                                        <button
-                                                            onClick={() => runWorkflow(w.workflow_id)}
-                                                            className="p-2 rounded-lg transition-colors border border-transparent
-                                                                bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:border-slate-200
-                                                                dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white dark:hover:border-white/10"
-                                                            title="Run Task"
-                                                        >
-                                                            <Play size={16} fill="currentColor" />
-                                                        </button>
+                                            return (
+                                                <div
+                                                    key={taskId}
+                                                    className={clsx(
+                                                        "mb-3 bg-white dark:bg-[#161616] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm group transition-opacity",
+                                                        isDeleting && "opacity-50 pointer-events-none" // Disable the row visually while deleting
+                                                    )}
+                                                >
+                                                    <div className="flex items-center justify-between p-3">
+                                                        <div className="space-y-1.5 flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="text-base font-bold text-slate-800 dark:text-slate-200 truncate">
+                                                                    {taskName}
+                                                                </p>
 
-                                                        <button
-                                                            onClick={() => deleteWorkflow(w.workflow_id)}
-                                                            className="p-2 rounded-lg transition-colors border border-transparent
-                                                                bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 hover:border-red-200
-                                                                dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 dark:hover:text-red-300 dark:hover:border-red-500/20"
-                                                            title="Delete Task"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
+                                                            </div>
+                                                            <div className="flex items-center gap-3 text-[11px] font-medium text-slate-400 dark:text-gray-500 uppercase tracking-tight">
+                                                                {w.created_at && (
+                                                                    <>
+                                                                        <span className="flex items-center gap-1">
+                                                                            <Calendar size={12} />
+                                                                            {formatDate(w.created_at)}
+                                                                        </span>
+                                                                        <span>•</span>
+                                                                    </>
+                                                                )}
+                                                                <span className={clsx(
+                                                                    "h-2 w-2 rounded-full",
+                                                                    isActive ? "bg-green-500" : "bg-slate-400"
+                                                                )} />
+                                                                <span className={isActive ? "text-green-600 dark:text-green-400" : ""}>
+                                                                    {isActive ? "Active" : "Disabled"}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-center gap-2 ml-4">
+                                                            <button
+                                                                onClick={() => runWorkflow(taskId)}
+                                                                disabled={isDeleting}
+                                                                className="p-2 rounded-lg transition-colors border border-transparent
+                                                                    bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:border-slate-200
+                                                                    dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white dark:hover:border-white/10
+                                                                    disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                title="Run Task"
+                                                            >
+                                                                <Play size={16} fill="currentColor" />
+                                                            </button>
+
+                                                            {/* 🌟 UPDATED: Dynamic Icon rendering based on loading state */}
+                                                            <button
+                                                                onClick={() => deleteWorkflow(taskId)}
+                                                                disabled={isDeleting}
+                                                                className="p-2 rounded-lg transition-colors border border-transparent
+                                                                    bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 hover:border-red-200
+                                                                    dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 dark:hover:text-red-300 dark:hover:border-red-500/20
+                                                                    disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                title="Delete Task"
+                                                            >
+                                                                {isDeleting ? (
+                                                                    <Loader2 size={16} className="animate-spin" />
+                                                                ) : (
+                                                                    <Trash2 size={16} />
+                                                                )}
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            )
+                                        })}
                                     </motion.div>
                                 )}
                             </AnimatePresence>

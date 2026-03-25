@@ -146,29 +146,55 @@ def _build_agent_cache_key(
 
     return hashlib.md5(raw.encode()).hexdigest()
 
+def get_tool_prompts(user_id: str):
+    return {
+        "n8n": (
+            "N8N AUTOMATION RULES:\n"
+            "- You can create, test, get, and delete n8n workflows.\n"
+            "- CRITICAL: Before creating a workflow, you MUST call `get_workflow_blueprint()`.\n"
+            f"- You MUST replace the string 'TARGET_USER_ID' in the blueprint with the actual user ID: {user_id}\n"
+            "- You MUST replace 'TARGET_URL', 'USER_RULE', and 'TARGET_EMAIL' in the blueprint with the user's requested criteria before calling `n8n_create_workflow`."
+        ),
+        "notion": (
+            "NOTION RULES:\n"
+            "- You can read and interact with Notion databases and pages.\n"
+            "- Format all retrieved Notion data as clean Markdown tables or bulleted lists for readability."
+        ),
+        "gdrive": (
+            "GOOGLE DRIVE RULES:\n"
+            "- You can search, read, create, update, and delete Google Drive files.\n"
+            "- When creating a file, ensure the title is descriptive.\n"
+            "- When referencing files, provide clear names and avoid dumping raw file IDs to the user unless requested."
+        ),
+        "linear": (
+            "LINEAR RULES:\n"
+            "- You can search issues/projects, get teams/users, create/delete issues, and manage comments.\n"
+            "- Always tag specific Linear issues with their ID (e.g., ENG-123).\n"
+            "- When creating an issue, ensure the title is concise and the description includes necessary context."
+        ),
+        "slack": (
+            "SLACK RULES:\n"
+            "- You can read history, list channels, post messages, reply to threads, add reactions, and get user profiles.\n"
+            "- Keep generated Slack messages concise and professional.\n"
+            "- Use the <@username> syntax if mentioning specific users."
+        )
+    }
 
 async def get_agent(
     modal_name="meta-llama/llama-4-scout-17b-16e-instruct",
+    user_id=None,
     user_notion_token=None, enable_notion=False,
     user_gdrive_token=None, enable_gdrive=False,
     user_linear_token=None, enable_linear=False,
     user_slack_token=None, enable_slack=False,
-    enable_n8n=False,
+     enable_n8n=False,
 ):
     if not modal_name:
-            modal_name = "meta-llama/llama-4-scout-17b-16e-instruct"
+        modal_name = "meta-llama/llama-4-scout-17b-16e-instruct"
             
     cache_key = _build_agent_cache_key(
-        modal_name,
-        enable_notion,
-        enable_gdrive,
-        enable_linear,
-        enable_slack,
-        enable_n8n,
-        user_notion_token,
-        user_gdrive_token,
-        user_linear_token,
-        user_slack_token,
+        modal_name, enable_notion, enable_gdrive, enable_linear, enable_slack, enable_n8n,
+        user_notion_token, user_gdrive_token, user_linear_token, user_slack_token,
     )
 
     if cache_key in AGENT_CACHE:
@@ -184,6 +210,9 @@ async def get_agent(
     )
 
     tools = []
+    active_tool_prompts = [] 
+    
+    tool_instructions = get_tool_prompts(user_id=str(user_id))
 
     cached_search = get_cached_tools("search")
     if not cached_search:
@@ -192,9 +221,10 @@ async def get_agent(
 
     if cached_search:
         tools.extend(cached_search)
+        active_tool_prompts.append("SEARCH RULES: Synthesize web information concisely. Do not list raw URLs unless explicitly asked.")
 
     mcp_configs = [
-        ("n8n", enable_n8n, "default", get_n8n_tools, False),
+        ("n8n", enable_n8n, user_id, get_n8n_tools, False), 
         ("notion", enable_notion, user_notion_token, get_notion_tools, True),
         ("gdrive", enable_gdrive, user_gdrive_token, get_gdrive_tools, True),
         ("linear", enable_linear, user_linear_token, get_linear_tools, True),
@@ -206,6 +236,7 @@ async def get_agent(
             continue
 
         if requires_token and not token:
+            logger.warning(f"Tool {name} enabled but missing token. Skipping.")
             continue
 
         cache_key_token = token if token else "default"
@@ -219,16 +250,28 @@ async def get_agent(
                     cached_tool = await fetch_func()
 
                 set_cached_tools(name, cached_tool, cache_key_token)
-            except Exception:
+            except Exception as e:
+                logger.error(f"Failed to fetch {name} tools: {e}")
                 cached_tool = []
 
         if cached_tool:
             tools.extend(cached_tool)
+            if name in tool_instructions:
+                active_tool_prompts.append(tool_instructions[name])
 
-    agent = create_agent(llm, tools=tools)
+    dynamic_system_message = (
+        "You are an intelligent workflow and utility agent.\n\n"
+        "### ACTIVE TOOL CAPABILITIES & RULES ###\n" + 
+        "\n\n".join(active_tool_prompts)
+    )
+
+    agent = create_agent(
+        llm, 
+        tools=tools, 
+        system_prompt=dynamic_system_message
+    )
 
     AGENT_CACHE[cache_key] = agent
-
     logger.info("Agent cached", extra={"cache_key": cache_key})
 
     return agent

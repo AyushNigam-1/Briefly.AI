@@ -10,4 +10,4 @@ db = client['briefly']  # Database name
 fs = gridfs.GridFS(db)
 users_collection = db['user']  # Users collection
 summary_collection = db['summary']
-workflows_collection = db['workflows']   # 👈 ADD THIS
+workflows_collection = db['workflows']  
