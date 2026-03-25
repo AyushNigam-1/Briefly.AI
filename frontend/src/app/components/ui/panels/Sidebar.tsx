@@ -2,26 +2,10 @@
 
 import { useState, useEffect, useRef } from "react";
 import api from "@/app/lib/api";
-import {
-    Menu,
-    MenuButton,
-    MenuItem,
-    MenuItems,
-} from "@headlessui/react";
-import {
-    ChevronLeft,
-    ChevronRight,
-    EllipsisVertical,
-    Ghost,
-    MessageSquareDashed,
-    Pin,
-    Plus,
-    Share2,
-    Trash,
-    Loader2
-} from "lucide-react";
+import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
+import { ChevronLeft, ChevronRight, EllipsisVertical, Ghost, Pin, Plus, Share2, Trash, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { SummaryHistoryResponse } from "@/app/types";
 import TaskManagerModal from "../modals/Tasks";
@@ -75,7 +59,7 @@ const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
             setIsOpen(false);
         }
     };
-    // Inside Sidebar.tsx
+
     useEffect(() => {
         const handleChatTitled = (event: any) => {
             const { id, title } = event.detail;
@@ -84,13 +68,15 @@ const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
                 if (exists) {
                     return prev.map(c => c.id === id ? { ...c, title } : c);
                 } else {
+                    // Update the Browser URL immediately!
+                    router.push(`/?id=${id}`);
                     return [{ id, title, is_pinned: false, created_at: new Date().toISOString() }, ...prev];
                 }
             });
         };
         window.addEventListener("chat-title", handleChatTitled);
         return () => window.removeEventListener("chat-title", handleChatTitled);
-    }, []);
+    }, [router]);
 
     const fetchUserSummaries = async (currentSkip = 0, isAppending = false) => {
         if (!user) {

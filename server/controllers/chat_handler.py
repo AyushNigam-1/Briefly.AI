@@ -1,7 +1,7 @@
 from controllers.mongo import users_collection
+from controllers.mongo import summary_collection
 from bson import ObjectId
 from datetime import datetime, timezone
-from controllers.mongo import summary_collection
 from typing import Optional
 import os
 from groq import Groq
@@ -182,9 +182,10 @@ def save_chat_turn(chat_id, user_input, assistant_text, files, sources, title=No
     summary_collection.update_one({"_id": chat_id}, payload)
 
 async def chat_stream(user_input, user_id, chat_id=None, files=None, modal_name=None):
-
+    print(files)
     chat_doc, chat_oid, is_new = get_or_create_chat(chat_id, user_id)
     file_context, uploaded_files = await process_files(files, user_id)
+    print(file_context)
     existing_memories = get_user_memories(user_id)
 
     memory_context = ""
@@ -480,7 +481,6 @@ async def regenerate_chat_stream(chat_id: str, user_id: str, modal_name: Optiona
         # saved file metadata, you might need to handle files differently here.
         files = last_user_query.get("files", []) 
 
-        # 5. Yield from the existing chat_stream function seamlessly
         async for event in chat_stream(
             user_input=user_input,
             user_id=user_id,

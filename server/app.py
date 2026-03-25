@@ -10,6 +10,7 @@ from routes.profile import router as profile_router
 from routes.tasks import router as tasks_router
 from routes.payments import router as payment_router
 from routes.integrations import router as integrations_router
+from routes.voice import router as voice_router
 from utils.websocket_manager import manager
 from pydantic import BaseModel
 from groq import Groq
@@ -112,6 +113,7 @@ app.include_router(profile_router)
 app.include_router(tasks_router)
 app.include_router(payment_router)
 app.include_router(integrations_router)
+app.include_router(voice_router)
 
 if __name__ == "__main__":
     import uvicorn

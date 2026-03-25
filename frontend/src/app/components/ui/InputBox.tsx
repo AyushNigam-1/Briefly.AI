@@ -1,10 +1,14 @@
 "use client"
+
 import { InputProps } from '@/app/types';
 import { MenuButton, MenuItem, MenuItems, Menu } from '@headlessui/react';
 import clsx from 'clsx';
-import { FileText, ImageIcon, Plus, PauseCircle, SendHorizontal, X, Lock, CheckCircle, ChevronDown } from 'lucide-react';
+import { FileText, ImageIcon, Plus, PauseCircle, SendHorizontal, X, Lock, CheckCircle, ChevronDown, AudioLines } from 'lucide-react';
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
+
+// 🌟 FIX: We only need the Next.js router hooks now!
+import { useRouter, useSearchParams } from 'next/navigation';
 
 const options = [
     { label: "GPT OSS 20B", value: "openai/gpt-oss-20b", icon: "/openai.webp", isPremium: false, description: "Fast & efficient for everyday tasks" },
@@ -30,9 +34,12 @@ const fileItemVariants = {
     }
 };
 
-
-
 const InputBox = ({ query, setQuery, send, isPending, stop }: InputProps) => {
+    // 🌟 FIX: Initialize the router
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const activeId = searchParams.get("id");
+
     const [selected, setSelected] = useState(options[0])
     const [files, setFiles] = useState<File[]>([]);
 
@@ -46,7 +53,7 @@ const InputBox = ({ query, setQuery, send, isPending, stop }: InputProps) => {
             setFiles((prev) => [...prev, ...newFiles]);
             e.target.value = '';
         }
-    }
+    };
 
     useEffect(() => {
         const savedModelValue = typeof window !== 'undefined' ? localStorage.getItem('selectedModel') : null;
@@ -64,10 +71,12 @@ const InputBox = ({ query, setQuery, send, isPending, stop }: InputProps) => {
         localStorage.setItem('selectedModel', item.value);
     };
 
+    const isInputEmpty = !query.trim();
+
     return (
-        // 🌟 Removed the focus-within ring classes to prevent the strange browser glow
         <div className="w-full flex flex-col rounded-3xl border transition-all duration-200 bg-white border-slate-300 dark:bg-tertiary dark:border-secondary shadow-sm relative">
 
+            {/* File Attachments Previews */}
             <AnimatePresence initial={false}>
                 {files?.length > 0 && (
                     <motion.div
@@ -89,17 +98,10 @@ const InputBox = ({ query, setQuery, send, isPending, stop }: InputProps) => {
                                         animate="animate"
                                         exit="exit"
                                     >
-                                        <div className='p-1.5 sm:p-2 pr-6 sm:pr-8 flex gap-2 rounded-xl relative border transition-colors
-                                            bg-slate-50 border-slate-200 text-slate-800 
-                                            dark:bg-[#262626] dark:border-secondary dark:text-primary'
-                                        >
-                                            <div className='p-2 sm:p-3 rounded-full my-auto transition-colors flex items-center justify-center
-                                                bg-slate-200 text-slate-700 
-                                                dark:bg-[#333333] dark:text-tertiary'
-                                            >
+                                        <div className='p-1.5 sm:p-2 pr-6 sm:pr-8 flex gap-2 rounded-xl relative border transition-colors bg-slate-50 border-slate-200 text-slate-800 dark:bg-[#262626] dark:border-secondary dark:text-primary'>
+                                            <div className='p-2 sm:p-3 rounded-full my-auto transition-colors flex items-center justify-center bg-slate-200 text-slate-700 dark:bg-[#333333] dark:text-tertiary'>
                                                 {file.type.startsWith('image/') ? <ImageIcon size={16} className="sm:w-5 sm:h-5" /> : <FileText size={16} className="sm:w-5 sm:h-5" />}
                                             </div>
-
                                             <div className='flex gap-0.5 sm:gap-1 flex-col justify-center'>
                                                 <h1 className='font-semibold text-xs sm:text-sm truncate max-w-[100px] sm:max-w-[150px]'>
                                                     {file.name}
@@ -111,7 +113,6 @@ const InputBox = ({ query, setQuery, send, isPending, stop }: InputProps) => {
                                                 </p>
                                             </div>
                                         </div>
-
                                         <button
                                             type="button"
                                             onClick={() => removeFile(index)}
@@ -127,23 +128,17 @@ const InputBox = ({ query, setQuery, send, isPending, stop }: InputProps) => {
                 )}
             </AnimatePresence>
 
-            {/* Middle Area: Input Field */}
-            {/* 🌟 Added border-none and focus:ring-0 to guarantee no browser outlines */}
             <input
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && query && send(query, files, selected.value)}
-                className="bg-transparent w-full min-w-0 flex-1 border-none outline-none focus:outline-none focus:ring-0 px-4 sm:px-5 pt-4 pb-3 text-base sm:text-[17px] transition-colors
-                    text-slate-900 placeholder:text-slate-400 
-                    dark:text-white dark:placeholder:text-gray-500"
+                className="bg-transparent w-full min-w-0 flex-1 border-none outline-none focus:outline-none focus:ring-0 px-4 sm:px-5 pt-4 pb-3 text-base sm:text-[17px] transition-colors text-slate-900 placeholder:text-slate-400 dark:text-white dark:placeholder:text-gray-500"
                 placeholder="Ask AI..."
             />
 
-            {/* Bottom Area: Action Buttons */}
             <div className="flex justify-between items-center px-3 pb-3">
 
-                {/* Left side actions (Attach) */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                     <input
                         id="file-upload"
                         type="file"
@@ -159,15 +154,11 @@ const InputBox = ({ query, setQuery, send, isPending, stop }: InputProps) => {
                         className="cursor-pointer rounded-full p-2 flex items-center justify-center transition-colors text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white"
                         title="Attach Files"
                     >
-                        {/* 🌟 Replaced Paperclip with Plus */}
                         <Plus size={20} className="sm:w-[22px] sm:h-[22px]" />
                     </label>
                 </div>
 
-                {/* Right side actions (Model Menu + Send/Stop) */}
                 <div className="flex items-center gap-1 sm:gap-2">
-
-                    {/* 🌟 Moved Model Selector Here */}
                     <Menu as="div" className="relative flex-shrink-0">
                         <MenuButton className="flex items-center gap-2 p-1.5 pr-3 rounded-full transition-colors text-slate-600 hover:bg-slate-100 dark:text-gray-300 dark:hover:bg-white/10 border border-transparent hover:border-slate-200 dark:hover:border-white/10 select-none">
                             <img src={selected.icon} className="w-5 h-5 sm:w-6 sm:h-6 object-contain rounded-full" alt={selected.label} />
@@ -175,15 +166,13 @@ const InputBox = ({ query, setQuery, send, isPending, stop }: InputProps) => {
                             <ChevronDown size={14} className="opacity-50 ml-0.5" />
                         </MenuButton>
 
-                        {/* 🌟 Switched origin to right-0 and origin-bottom-right so it opens inward */}
                         <MenuItems transition className={clsx(
                             "absolute right-0 bottom-full mb-2 rounded-xl p-1 sm:p-2 z-50 w-72 sm:w-80 max-h-[60vh] overflow-y-auto space-y-1 sm:space-y-1 border shadow-lg",
                             "bg-white border-slate-200 text-slate-800",
                             "dark:bg-tertiary dark:border-secondary dark:text-primary dark:shadow-none",
                             "origin-bottom-right transition duration-200 ease-out",
                             "data-[closed]:scale-95 data-[closed]:opacity-0 data-[closed]:translate-y-2"
-                        )}
-                        >
+                        )}>
                             {options.map((item) => (
                                 <MenuItem key={item.value} disabled={item.isPremium}>
                                     {({ close, disabled }) => (
@@ -198,7 +187,6 @@ const InputBox = ({ query, setQuery, send, isPending, stop }: InputProps) => {
                                             )}
                                         >
                                             <img src={item.icon} className='w-5 h-5 sm:w-6 sm:h-6 object-contain flex-shrink-0' alt={item.label} />
-
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex justify-between items-center gap-1">
                                                     <span className={clsx(
@@ -207,13 +195,11 @@ const InputBox = ({ query, setQuery, send, isPending, stop }: InputProps) => {
                                                     )}>
                                                         {item.label}
                                                     </span>
-
                                                     {item.isPremium ? (
                                                         <Lock size={14} className="text-amber-500 flex-shrink-0" />
                                                     ) : selected.value === item.value ? (
                                                         <CheckCircle size={16} className="text-slate-800 dark:text-slate-200 flex-shrink-0" />
                                                     ) : null}
-
                                                 </div>
                                                 <p className="text-sm text-slate-500 dark:text-slate-400 truncate mt-0.5">
                                                     {item.description}
@@ -226,24 +212,62 @@ const InputBox = ({ query, setQuery, send, isPending, stop }: InputProps) => {
                         </MenuItems>
                     </Menu>
 
-                    <button
-                        type="button"
-                        onClick={() => isPending ? stop() : query && send(query, files, selected.value)}
-                        className={clsx(
-                            "p-2.5 sm:p-3 rounded-full flex-shrink-0 transition-all duration-200 flex items-center justify-center",
-                            query || isPending
-                                ? "bg-slate-900 text-white hover:bg-slate-800 dark:bg-primary dark:text-tertiary dark:hover:bg-primary/90 shadow-md scale-100"
-                                : "bg-slate-100 text-slate-400 dark:bg-white/5 dark:text-gray-500 cursor-default scale-95"
-                        )}
-                    >
-                        {isPending ? (
-                            <PauseCircle size={18} className="sm:w-5 sm:h-5" />
+                    <AnimatePresence mode="wait">
+                        {isInputEmpty ? (
+                            <motion.div
+                                key="voice-mic"
+                                initial={{ opacity: 0, scale: 0.85, y: 5 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.85, y: -5 }}
+                                transition={{ duration: 0.25, ease: "easeOut" }}
+                                className="flex-shrink-0"
+                            >
+                                <button
+                                    type="button"
+                                    // 🌟 FIX: Click goes straight to the /voice page!
+                                    onClick={() => {
+                                        if (activeId) {
+                                            router.push(`/voice?id=${activeId}`);
+                                        } else {
+                                            router.push('/voice');
+                                        }
+                                    }}
+                                    className={clsx(
+                                        "p-2.5 rounded-full flex-shrink-0 transition-all duration-200 flex items-center justify-center",
+                                        "bg-slate-900 text-white hover:bg-slate-800 dark:bg-primary dark:text-tertiary dark:hover:bg-primary/90 shadow-md scale-100"
+                                    )}
+                                    title="Start Voice Chat"
+                                >
+                                    <AudioLines size={16} className="sm:w-5 sm:h-5" />
+                                </button>
+                            </motion.div>
                         ) : (
-                            <SendHorizontal size={18} className="sm:w-5 sm:h-5" />
+                            <motion.div
+                                key="text-send"
+                                initial={{ opacity: 0, scale: 0.85, y: 5 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.85, y: -5 }}
+                                transition={{ duration: 0.25, ease: "easeOut" }}
+                                className="flex-shrink-0"
+                            >
+                                <button
+                                    type="button"
+                                    onClick={() => isPending ? stop() : send(query, files, selected.value)}
+                                    className={clsx(
+                                        "p-2.5 rounded-full flex-shrink-0 transition-all duration-200 flex items-center justify-center",
+                                        "bg-slate-900 text-white hover:bg-slate-800 dark:bg-primary dark:text-tertiary dark:hover:bg-primary/90 shadow-md scale-100"
+                                    )}
+                                >
+                                    {isPending ? (
+                                        <PauseCircle size={18} className="sm:w-5 sm:h-5" />
+                                    ) : (
+                                        <SendHorizontal size={18} className="sm:w-5 sm:h-5" />
+                                    )}
+                                </button>
+                            </motion.div>
                         )}
-                    </button>
+                    </AnimatePresence>
                 </div>
-
             </div>
         </div>
     )
