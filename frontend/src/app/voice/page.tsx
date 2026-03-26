@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { PhoneOff, ShieldCheck, Loader2 } from "lucide-react";
+import { PhoneOff, Loader2 } from "lucide-react";
 import {
     LiveKitRoom,
     RoomAudioRenderer,
@@ -22,14 +22,25 @@ const THEME = {
     speaking: { color: "#10b981", label: "Speaking" },
 };
 
-function PerfectSyncWave({ state, assistantTrack, localTrackPublication }: { state: string; assistantTrack: any; localTrackPublication: any }) {
+// One spring config shared by logo, end-button, and visualizer
+// so all three arrive with identical feel — just opposite directions
+const ENTRANCE_SPRING = { type: "spring", stiffness: 80, damping: 20 };
+
+function PerfectSyncWave({
+    state,
+    assistantTrack,
+    localTrackPublication,
+}: {
+    state: string;
+    assistantTrack: any;
+    localTrackPublication: any;
+}) {
     const containerRef = useRef<HTMLDivElement>(null);
     const activeTheme = THEME[state as keyof typeof THEME] || THEME.disconnected;
 
     useEffect(() => {
         if (!containerRef.current) return;
 
-        // 1. Initialize Context & Analyzer
         const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
         const analyzer = audioCtx.createAnalyser();
         analyzer.fftSize = 128;
@@ -37,46 +48,35 @@ function PerfectSyncWave({ state, assistantTrack, localTrackPublication }: { sta
 
         let animationFrame: number;
         const dataArray = new Uint8Array(analyzer.frequencyBinCount);
-        const pillars = containerRef.current.querySelectorAll('.wave-pillar');
+        const pillars = containerRef.current.querySelectorAll(".wave-pillar");
 
-        // 2. Resolve the correct track based on state
-        // speaking -> AI track | anything else -> Your Mic track
-        const track = (state === "speaking")
-            ? assistantTrack?.publication?.track?.mediaStreamTrack
-            : localTrackPublication?.track?.mediaStreamTrack;
+        const track =
+            state === "speaking"
+                ? assistantTrack?.publication?.track?.mediaStreamTrack
+                : localTrackPublication?.track?.mediaStreamTrack;
 
         if (track) {
             try {
-                const source = audioCtx.createMediaStreamSource(new MediaStream([track]));
-                source.connect(analyzer);
-            } catch (e) {
-                console.error("Visualizer: Failed to create source", e);
-            }
+                audioCtx.createMediaStreamSource(new MediaStream([track])).connect(analyzer);
+            } catch { }
         }
 
         const animate = () => {
-            // 🌟 CRITICAL FIX: Resume context if browser suspended it
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
+            if (audioCtx.state === "suspended") audioCtx.resume();
 
             if (state === "thinking") {
-                // Hardcoded Thinking Animation
                 const time = Date.now() / 250;
                 pillars.forEach((pillar, i) => {
-                    const sineHeight = Math.sin(time + i * 0.7) * 25 + 30;
-                    (pillar as HTMLElement).style.height = `${sineHeight}px`;
+                    const h = Math.sin(time + i * 0.7) * 25 + 30;
+                    (pillar as HTMLElement).style.height = `${h}px`;
                     (pillar as HTMLElement).style.opacity = "0.5";
                 });
             } else {
-                // Real-time voice sync (Yours or the AI's)
                 analyzer.getByteFrequencyData(dataArray);
                 pillars.forEach((pillar, i) => {
-                    const dataIndex = Math.floor((i / pillars.length) * (analyzer.frequencyBinCount / 2));
-                    const value = dataArray[dataIndex];
-
-                    const height = Math.max(8, (value / 255) * 65);
-                    (pillar as HTMLElement).style.height = `${height}px`;
+                    const idx = Math.floor((i / pillars.length) * (analyzer.frequencyBinCount / 2));
+                    const value = dataArray[idx];
+                    (pillar as HTMLElement).style.height = `${Math.max(8, (value / 255) * 65)}px`;
                     (pillar as HTMLElement).style.opacity = `${Math.max(0.2, value / 255)}`;
                 });
             }
@@ -84,11 +84,7 @@ function PerfectSyncWave({ state, assistantTrack, localTrackPublication }: { sta
         };
 
         animate();
-
-        return () => {
-            cancelAnimationFrame(animationFrame);
-            audioCtx.close();
-        };
+        return () => { cancelAnimationFrame(animationFrame); audioCtx.close(); };
     }, [state, assistantTrack, localTrackPublication]);
 
     return (
@@ -104,7 +100,7 @@ function PerfectSyncWave({ state, assistantTrack, localTrackPublication }: { sta
                     <div
                         key={i}
                         className="wave-pillar w-2 rounded-full transition-colors duration-700"
-                        style={{ backgroundColor: activeTheme.color, height: '8px' }}
+                        style={{ backgroundColor: activeTheme.color, height: "8px" }}
                     />
                 ))}
             </div>
@@ -125,25 +121,41 @@ function VoiceRoomUI({ onNewChatId }: { onNewChatId: (id: string) => void }) {
     });
 
     return (
-        <div className="flex flex-col items-center gap-14">
+        // Visualizer + pill: scale up from center, same spring timing as logo & button
+        <motion.div
+            className="flex flex-col items-center gap-14"
+            initial={{ opacity: 0, scale: 0.55 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.65 }}
+            transition={{ ...ENTRANCE_SPRING, delay: 0.08 }}
+            style={{ transformOrigin: "center center" }}
+        >
             <PerfectSyncWave
                 state={state}
                 assistantTrack={audioTrack}
                 localTrackPublication={microphoneTrack}
             />
 
-            <motion.div
-                key={state}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-3 px-5 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-xl shadow-2xl"
-            >
-                <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: activeTheme.color }} />
-                <span className="text-[10px] font-black uppercase tracking-[0.5em] text-white/90">
-                    {activeTheme.label}
-                </span>
-            </motion.div>
-        </div>
+            {/* Status pill — swaps out on each state change */}
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={state}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.25 }}
+                    className="flex items-center gap-3 px-5 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-xl shadow-2xl"
+                >
+                    <div
+                        className="w-2 h-2 rounded-full animate-pulse"
+                        style={{ backgroundColor: activeTheme.color }}
+                    />
+                    <span className="text-lg tracking-wider font-black uppercase animate-pulse text-white/90">
+                        {activeTheme.label}
+                    </span>
+                </motion.div>
+            </AnimatePresence>
+        </motion.div>
     );
 }
 
@@ -159,7 +171,9 @@ export default function VoicePage() {
     useEffect(() => {
         const getToken = async () => {
             try {
-                const url = initialChatId ? `/voice/token?chat_id=${initialChatId}` : `/voice/token`;
+                const url = initialChatId
+                    ? `/voice/token?chat_id=${initialChatId}`
+                    : `/voice/token`;
                 const res = await api.get(url);
                 setToken(res.data.token);
             } catch { router.push("/"); }
@@ -175,23 +189,28 @@ export default function VoicePage() {
     return (
         <div className="relative flex flex-col items-center justify-between min-h-screen bg-[#020204] overflow-hidden">
 
-            <div className="w-full flex justify-center pt-12 z-10">
+            {/* Logo — slides in from top */}
+            <header className="w-full flex justify-center pt-20 z-10">
                 <AnimatePresence>
-                    =                        <motion.div
-                        initial={{ opacity: 0, y: -16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                        className="flex items-center gap-2 px-5 py-2 rounded-full"
-
-                    >
-                        <div className="flex-shrink-0 flex items-center">
-                            <img src="/logo.png" alt="Logo" className='w-32 sm:w-32 md:w-40 h-auto' />
-                        </div>
-                    </motion.div>
+                    {token && (
+                        <motion.div
+                            key="logo"
+                            initial={{ opacity: 0, y: -52 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -36 }}
+                            transition={ENTRANCE_SPRING}
+                        >
+                            <img
+                                src="/logo.png"
+                                alt="Logo"
+                                className="w-32 sm:w-32 md:w-40 h-auto"
+                            />
+                        </motion.div>
+                    )}
                 </AnimatePresence>
-            </div>
+            </header>
 
+            {/* Main — loader fades out, room scales in */}
             <main className="flex-1 flex items-center justify-center w-full z-10">
                 <AnimatePresence mode="wait">
                     {!token ? (
@@ -200,18 +219,24 @@ export default function VoicePage() {
                             initial={{ opacity: 0, filter: "blur(10px)" }}
                             animate={{ opacity: 1, filter: "blur(0px)" }}
                             exit={{ opacity: 0, scale: 1.1, filter: "blur(15px)" }}
-                            transition={{ duration: 0.6 }}
+                            transition={{ duration: 0.5 }}
                             className="flex flex-col items-center gap-8"
                         >
-                            <Loader2 className="text-blue-500/20 animate-spin" size={56} strokeWidth={1} />
-                            <span className="text-white/10 text-[9px] font-black uppercase tracking-[0.7em]">Syncing</span>
+                            <Loader2
+                                className="text-blue-500/20 animate-spin"
+                                size={56}
+                                strokeWidth={1}
+                            />
+                            <span className="text-white/10 text-[9px] font-black uppercase tracking-[0.7em]">
+                                Syncing
+                            </span>
                         </motion.div>
                     ) : (
                         <motion.div
                             key="interface"
-                            initial={{ opacity: 0, y: 50, filter: "blur(30px)" }}
-                            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                            transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.15 }}
                         >
                             <LiveKitRoom
                                 serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL || "ws://127.0.0.1:7880"}
@@ -232,13 +257,15 @@ export default function VoicePage() {
                 <AnimatePresence>
                     {token && (
                         <motion.button
-                            initial={{ opacity: 0, y: 40 }}
+                            key="end-btn"
+                            initial={{ opacity: 0, y: 64 }}
                             animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 30 }}
+                            exit={{ opacity: 0, y: 48 }}
+                            transition={ENTRANCE_SPRING}
                             whileHover={{ scale: 1.15 }}
                             whileTap={{ scale: 0.9 }}
                             onClick={() => setShouldConnect(false)}
-                            className="group flex items-center justify-center w-20 h-20 rounded-full bg-red-500 hover:bg-red-600 transition-all duration-500 shadow-[0_0_60px_rgba(239,68,68,0.2)]"
+                            className="flex items-center justify-center w-20 h-20 rounded-full bg-red-500 hover:bg-red-600 transition-colors duration-300 shadow-[0_0_60px_rgba(239,68,68,0.2)]"
                         >
                             <PhoneOff size={28} className="text-white" />
                         </motion.button>

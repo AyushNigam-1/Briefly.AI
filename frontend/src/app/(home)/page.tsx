@@ -574,43 +574,42 @@ const Page = () => {
                 stop={handleStop}
               />
 
-              {user && (
-                <div className="relative mt-4 h-[44px] w-full flex justify-center">
-                  <AnimatePresence>
-                    {!isPrivateMode ? (
-                      <motion.button
-                        key="btn-private"
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        transition={{ duration: 0.2 }}
-                        onClick={() => router.push('/?id=private', { scroll: false })}
-                        className="absolute top-0 text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-colors hover:text-slate-700 text-slate-500 dark:text-gray-400 dark:hover:text-slate-300"
-                      >
-                        <Ghost size={14} /> Go Private
-                      </motion.button>
-                    ) : (
-                      <motion.button
-                        key="btn-normal"
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        transition={{ duration: 0.2 }}
-                        onClick={() => router.push('/', { scroll: false })}
-                        className="absolute top-0 text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-colors hover:text-slate-700 text-slate-500 dark:text-gray-400 dark:hover:text-slate-300"
-                      >
-                        <Ghost size={14} className="opacity-60" /> Exit Private Mode
-                      </motion.button>
-                    )}
-                  </AnimatePresence>
-                </div>
-              )}
+              <div className="relative mt-4 h-[44px] w-full flex justify-center">
+                <AnimatePresence initial={false}>
+                  {user && !isPrivateMode ? (
+                    <motion.button
+                      key="btn-private"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.2 }}
+                      onClick={() => router.push('/?id=private', { scroll: false })}
+                      className="absolute top-0 text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-colors hover:text-slate-700 text-slate-500 dark:text-gray-400 dark:hover:text-slate-300"
+                    >
+                      <Ghost size={14} /> Go Private
+                    </motion.button>
+                  ) : user && isPrivateMode ? (
+                    <motion.button
+                      key="btn-normal"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.2 }}
+                      onClick={() => router.push('/', { scroll: false })}
+                      className="absolute top-0 text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-colors hover:text-slate-700 text-slate-500 dark:text-gray-400 dark:hover:text-slate-300"
+                    >
+                      <Ghost size={14} className="opacity-60" /> Exit Private Mode
+                    </motion.button>
+                  ) : null}
+                </AnimatePresence>
+              </div>
 
             </div>
           </div>
         </motion.div>
-      )}
-    </AnimatePresence>
+      )
+      }
+    </AnimatePresence >
   );
 };
 

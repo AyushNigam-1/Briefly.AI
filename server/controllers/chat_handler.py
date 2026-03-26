@@ -231,6 +231,11 @@ async def chat_stream(user_input, user_id, chat_id=None, files=None, modal_name=
                                     {"$push": {"n8n_workflows": {"id": wf_id, "name": data.get("name", "AI Automation")}}}
                                 )
                                 print(f"✅ GUARANTEED SAVE: Workflow {wf_id} saved!")
+                                try:
+                                    redis_client.delete(f"user_workflows:{user_id}")
+                                    print(f"🧹 Cache cleared for user {user_id}")
+                                except Exception as e:
+                                    print(f"⚠️ Redis cache clear failed: {e}")
                     except Exception as e:
                         print(f"⚠️ Auto-save failed: {e}")
             elif kind == "on_chain_end":
@@ -294,7 +299,7 @@ def get_chat_history(
                                     "cond": {"$lt": ["$$chat.created_at", before]}
                                 }
                             },
-                            -limit          # take the newest 'limit' among older chats
+                            -limit         
                         ]
                     }
                 }}
@@ -309,8 +314,7 @@ def get_chat_history(
         raise e
     
 def get_chats_by_user(user_id: str, skip: int = 0, limit: int = 10):
-    # Sort by is_pinned (True first), then timestamp (Newest first)
-    time.sleep(1.5)
+
     summaries = list(
         summary_collection.find(
             {"user_id": user_id},
@@ -532,7 +536,15 @@ async def private_chat_stream(user_input, files=None, modal_name=None, chat_hist
     file_context, uploaded_files = await process_files(files, user_id="guest")
 
     mock_chat_doc = {"queries": chat_history if chat_history else []}
-    messages = build_messages(mock_chat_doc, user_input, file_context)
+    
+    # 🌟 THE FIX: Pass an empty string for memory_context, and "guest" for user_id
+    messages = build_messages(
+        chat=mock_chat_doc, 
+        user_input=user_input, 
+        file_context=file_context, 
+        memory_context="", 
+        user_id="guest"
+    )
 
     initial_state = {
         "messages": messages,

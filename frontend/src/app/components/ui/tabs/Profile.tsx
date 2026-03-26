@@ -2,6 +2,8 @@
 
 import api from "@/app/lib/api"
 import { useEffect, useRef, useState } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import { Loader2 } from "lucide-react"
 
 interface UserProfile {
     username?: string
@@ -14,24 +16,25 @@ interface UserProfile {
 
 export default function ProfilePanel() {
     const [profile, setProfile] = useState<UserProfile>({})
+    const [isLoading, setIsLoading] = useState(true)
     const debounceRef = useRef<NodeJS.Timeout | null>(null)
 
     useEffect(() => {
+        setIsLoading(true)
         api.get("/profile").then(res => {
             setProfile(res.data)
+        }).finally(() => {
+            setIsLoading(false)
         })
     }, [])
 
     const updateField = (field: keyof UserProfile, value: string) => {
-        // 1. Update UI immediately
         setProfile(prev => ({ ...prev, [field]: value }))
 
-        // 2. Clear previous debounce
         if (debounceRef.current) {
             clearTimeout(debounceRef.current)
         }
 
-        // 3. Debounce backend call
         debounceRef.current = setTimeout(async () => {
             try {
                 await api.put("/profile", {
@@ -40,80 +43,103 @@ export default function ProfilePanel() {
             } catch (err) {
                 console.error("Profile update failed:", err)
             }
-        }, 800) // 800ms feels natural
+        }, 800)
     }
 
     return (
-        <div className="space-y-6 font-mono">
-            {/* Profile Header Card */}
-            <div className="flex items-center gap-4 md:p-4 p-2  rounded-xl border transition-colors
-                bg-white border-slate-200 shadow-sm
-                dark:bg-white/5 dark:border-secondary dark:shadow-none"
-            >
-                {/* Avatar */}
-                <div className="h-14 w-14 rounded-full flex items-center justify-center font-bold text-xl transition-colors
-                    bg-slate-100 text-slate-700
-                    dark:bg-primary dark:text-tertiary"
-                >
-                    {"A"}
-                </div>
-                <div>
-                    <p className="font-bold text-lg text-slate-900 dark:text-white">
-                        {profile.username}
-                    </p>
-                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                        {profile.email}
-                    </p>
-                </div>
-            </div>
+        <div className="flex w-full font-mono">
+            <AnimatePresence mode="wait">
+                {isLoading ? (
+                    <motion.div
+                        key="loader"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex flex-col items-center justify-center flex-1 w-full h-[80vh] sm:h-[65vh]   z-10"
+                    >
+                        <Loader2 className="w-8 h-8 animate-spin text-slate-400 dark:text-slate-500" />
+                    </motion.div>
+                ) : (
+                    <motion.div
+                        key="content"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="space-y-6 w-full pb-8 flex-1"
+                    >
+                        {/* Profile Header Card */}
+                        <div className="flex items-center gap-4 md:p-4 p-2 rounded-xl border transition-colors
+                            bg-white border-slate-200 shadow-sm
+                            dark:bg-white/5 dark:border-secondary dark:shadow-none"
+                        >
+                            <div className="h-14 w-14 rounded-full flex items-center justify-center font-bold text-xl transition-colors
+                                bg-slate-100 text-slate-700
+                                dark:bg-primary dark:text-tertiary"
+                            >
+                                {profile.username?.charAt(0)?.toUpperCase() || "A"}
+                            </div>
+                            <div>
+                                <p className="font-bold text-lg text-slate-900 dark:text-white">
+                                    {profile.username || "User"}
+                                </p>
+                                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                                    {profile.email || "No email provided"}
+                                </p>
+                            </div>
+                        </div>
 
-            <div className="space-y-5">
-                <Field
-                    label="Username"
-                    value={profile.username}
-                    onChange={(v) => updateField("username", v)}
-                />
-                <Field
-                    label="Email"
-                    value={profile.email}
-                    onChange={(v) => updateField("email", v)}
-                />
+                        <div className="space-y-5">
+                            <Field
+                                label="Username"
+                                value={profile.username}
+                                onChange={(v) => updateField("username", v)}
+                            />
+                            <Field
+                                label="Email"
+                                value={profile.email}
+                                onChange={(v) => updateField("email", v)}
+                            />
 
-                <Field
-                    label="Phone"
-                    value={profile.phone}
-                    onChange={(v) => updateField("phone", v)}
-                />
-            </div>
+                            <Field
+                                label="Phone"
+                                value={profile.phone}
+                                onChange={(v) => updateField("phone", v)}
+                            />
+                        </div>
 
-            <div className="pt-4">
-                <h3 className="text-xl font-bold text-slate-900 dark:text-slate-200">
-                    About You
-                </h3>
-                <p className="text-xs sm:text-sm mt-1 transition-colors text-slate-500 dark:text-slate-400">
-                    This helps personalize your AI experience.
-                </p>
-            </div>
+                        <div className="pt-4">
+                            <h3 className="text-xl font-bold text-slate-900 dark:text-slate-200">
+                                About You
+                            </h3>
+                            <p className="text-xs sm:text-sm mt-1 transition-colors text-slate-500 dark:text-slate-400">
+                                This helps personalize your AI experience.
+                            </p>
+                        </div>
 
-            <div className="space-y-5">
-                <Field
-                    label="Nickname"
-                    value={profile.nickname}
-                    onChange={(v) => updateField("nickname", v)}
-                />
+                        <div className="space-y-5">
+                            <Field
+                                label="Nickname"
+                                value={profile.nickname}
+                                onChange={(v) => updateField("nickname", v)}
+                            />
 
-                <Field
-                    label="Occupation"
-                    value={profile.occupation}
-                    onChange={(v) => updateField("occupation", v)}
-                />
+                            <Field
+                                label="Occupation"
+                                value={profile.occupation}
+                                onChange={(v) => updateField("occupation", v)}
+                            />
 
-                <Textarea
-                    label="More About You"
-                    value={profile.about}
-                    onChange={(v) => updateField("about", v)}
-                />
-            </div>
+                            <Textarea
+                                label="More About You"
+                                value={profile.about}
+                                onChange={(v) => updateField("about", v)}
+                            />
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     )
 }

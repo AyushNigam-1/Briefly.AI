@@ -47,10 +47,6 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
         };
     }, []);
 
-    // if (!q.content && !isStreaming && (!q.files || q.files.length === 0)) {
-    //     return <div className="h-0" />;
-    // }
-
     const handleSaveEdit = () => {
         if (!editRef.current) return;
         const newText = editRef.current.innerText.trim();
@@ -78,21 +74,18 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
 
     // Voice functionality
     const handleToggleAudio = async () => {
-        // If already playing, pause it
         if (isPlaying && audioRef.current) {
             audioRef.current.pause();
             setIsPlaying(false);
             return;
         }
 
-        // If audio is already fetched and paused, resume playing
         if (audioRef.current && audioRef.current.src) {
             audioRef.current.play();
             setIsPlaying(true);
             return;
         }
 
-        // Otherwise, fetch from backend (No token sent!)
         if (!q.content) return;
         setIsAudioLoading(true);
 
@@ -125,21 +118,27 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
             setIsAudioLoading(false);
         }
     };
+
     const shouldAnimate = !isStreaming;
 
-    return (
+    // 🌟 THE FIX: Pure opacity fade. Zero Y-axis movement for EVERYTHING.
+    const getInitialAnimation = () => {
+        if (!shouldAnimate) return false;
+        return { opacity: 0 };
+    };
 
+    return (
         <motion.div
-            initial={shouldAnimate ? { opacity: 0, y: 20 } : false}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, ease: "easeOut" }}
+            initial={getInitialAnimation()}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
             className={`flex w-full ${q.sender === "user" ? "justify-end" : "justify-start"}`}
         >
             <div className={`relative flex flex-col gap-1 p-3 md:py-3 md:p-0 group ${q.sender === "user" ? "items-end w-full max-w-[90%] sm:max-w-[85%]" : "items-start w-full max-w-full"}`}>
 
                 {/* Files badges */}
                 {q?.files && q.files.length > 0 && (
-                    <div className="flex gap-2 flex-wrap mb-1">
+                    <motion.div layout="position" className="flex gap-2 flex-wrap mb-1">
                         {q.files.map((file, idx) => (
                             <div key={idx} className="flex items-center gap-2 p-2 rounded-xl border bg-white dark:bg-tertiary dark:border-secondary shadow-sm">
                                 <div className="p-1.5 sm:p-2 bg-slate-100 dark:bg-primary rounded-lg text-slate-600 dark:text-tertiary">
@@ -151,7 +150,7 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
                                 </div>
                             </div>
                         ))}
-                    </div>
+                    </motion.div>
                 )}
 
                 <div className={`flex flex-col gap-1.5 transition-all duration-200 ${q.sender === "user" ? "items-end w-fit max-w-full" : "items-start w-full"}`}>
@@ -252,8 +251,6 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
                             </button>
                         )}
 
-
-
                         <button
                             onClick={handleCopy}
                             className={`p-1 transition-colors ${copied ? "text-green-500 dark:text-green-400" : "text-slate-400 hover:text-slate-900 dark:hover:text-white"}`}
@@ -294,9 +291,8 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
                     </div>
                 )}
 
-                {/* 🌟 Loader ONLY shows if nothing has been spat out yet */}
                 {showLoader && (
-                    <div className="flex gap-1.5 mt-4">
+                    <div className="flex gap-1.5 mt-4 ml-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" />
                         <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:0.2s]" />
                         <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:0.4s]" />

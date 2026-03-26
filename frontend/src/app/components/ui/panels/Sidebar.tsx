@@ -289,7 +289,9 @@ const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
                     <div className="flex items-center justify-between">
                         <h2 className="text-xl font-bold">Chats</h2>
                         <button
-                            onClick={() => { router.push("/private"); handleMobileNav(); }}
+                            onClick={() => {
+                                router.push("/?id=private"); handleMobileNav();
+                            }}
                             title="Incognito Chat"
                             className="transition-colors hover:text-slate-600 dark:hover:text-gray-300"
                         >

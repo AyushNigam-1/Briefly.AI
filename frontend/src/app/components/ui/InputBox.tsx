@@ -3,11 +3,10 @@
 import { InputProps } from '@/app/types';
 import { MenuButton, MenuItem, MenuItems, Menu } from '@headlessui/react';
 import clsx from 'clsx';
-import { FileText, ImageIcon, Plus, PauseCircle, SendHorizontal, X, Lock, CheckCircle, ChevronDown, AudioLines } from 'lucide-react';
+// 🌟 Added FileVideo to the lucide-react imports
+import { FileText, ImageIcon, FileVideo, Plus, PauseCircle, SendHorizontal, X, Lock, CheckCircle, ChevronDown, AudioLines, Video, Image } from 'lucide-react';
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
-
-// 🌟 FIX: We only need the Next.js router hooks now!
 import { useRouter, useSearchParams } from 'next/navigation';
 
 const options = [
@@ -35,7 +34,6 @@ const fileItemVariants = {
 };
 
 const InputBox = ({ query, setQuery, send, isPending, stop }: InputProps) => {
-    // 🌟 FIX: Initialize the router
     const router = useRouter();
     const searchParams = useSearchParams();
     const activeId = searchParams.get("id");
@@ -99,8 +97,14 @@ const InputBox = ({ query, setQuery, send, isPending, stop }: InputProps) => {
                                         exit="exit"
                                     >
                                         <div className='p-1.5 sm:p-2 pr-6 sm:pr-8 flex gap-2 rounded-xl relative border transition-colors bg-slate-50 border-slate-200 text-slate-800 dark:bg-[#262626] dark:border-secondary dark:text-primary'>
-                                            <div className='p-2 sm:p-3 rounded-full my-auto transition-colors flex items-center justify-center bg-slate-200 text-slate-700 dark:bg-[#333333] dark:text-tertiary'>
-                                                {file.type.startsWith('image/') ? <ImageIcon size={16} className="sm:w-5 sm:h-5" /> : <FileText size={16} className="sm:w-5 sm:h-5" />}
+                                            <div className='p-2 sm:p-3 rounded-full my-auto transition-colors flex items-center justify-center bg-slate-200 text-slate-700 dark:text-gray-200 dark:bg-[#333333]'>
+                                                {file.type.startsWith('image/') ? (
+                                                    <Image size={16} className="sm:w-5 sm:h-5" />
+                                                ) : file.type.startsWith('video/') ? (
+                                                    <Video size={16} className="sm:w-5 sm:h-5" />
+                                                ) : (
+                                                    <FileText size={16} className="sm:w-5 sm:h-5" />
+                                                )}
                                             </div>
                                             <div className='flex gap-0.5 sm:gap-1 flex-col justify-center'>
                                                 <h1 className='font-semibold text-xs sm:text-sm truncate max-w-[100px] sm:max-w-[150px]'>
@@ -144,6 +148,8 @@ const InputBox = ({ query, setQuery, send, isPending, stop }: InputProps) => {
                         type="file"
                         className="hidden"
                         multiple
+                        // 🌟 STRICT FILE RESTRICTION: Only allows Google-supported formats
+                        accept="image/*,video/*,text/*,application/pdf,application/json,text/markdown,text/csv,application/rtf,application/x-javascript,application/x-python-code"
                         onChange={handleFileChange}
                         onClick={(e) => {
                             (e.currentTarget as HTMLInputElement).value = '';
@@ -213,7 +219,7 @@ const InputBox = ({ query, setQuery, send, isPending, stop }: InputProps) => {
                     </Menu>
 
                     <AnimatePresence mode="wait">
-                        {isInputEmpty ? (
+                        {isInputEmpty && !isPending ? (
                             <motion.div
                                 key="voice-mic"
                                 initial={{ opacity: 0, scale: 0.85, y: 5 }}
@@ -224,7 +230,6 @@ const InputBox = ({ query, setQuery, send, isPending, stop }: InputProps) => {
                             >
                                 <button
                                     type="button"
-                                    // 🌟 FIX: Click goes straight to the /voice page!
                                     onClick={() => {
                                         if (activeId) {
                                             router.push(`/voice?id=${activeId}`);
@@ -257,6 +262,7 @@ const InputBox = ({ query, setQuery, send, isPending, stop }: InputProps) => {
                                         "p-2.5 rounded-full flex-shrink-0 transition-all duration-200 flex items-center justify-center",
                                         "bg-slate-900 text-white hover:bg-slate-800 dark:bg-primary dark:text-tertiary dark:hover:bg-primary/90 shadow-md scale-100"
                                     )}
+                                    title={isPending ? "Stop generating" : "Send message"}
                                 >
                                     {isPending ? (
                                         <PauseCircle size={18} className="sm:w-5 sm:h-5" />

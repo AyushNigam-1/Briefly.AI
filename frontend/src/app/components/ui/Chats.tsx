@@ -29,6 +29,7 @@ const Chats = ({
 
     const handleScroll = (offset: number) => {
         if (!vlistRef.current) return;
+        // Load older chats when scrolling near the top
         if (offset < 50 && hasMore && !isLoadingOlder) {
             loadOlderChats();
         }
@@ -77,7 +78,7 @@ const Chats = ({
                         {(q, index) => {
                             const uniqueKey = q.id
                                 ? q.id
-                                : `msg-${q.created_at || 'local'}-${q.sender}-${index}`;
+                                : `msg-${q.created_at || 'local'}-${q.sender}-${(q.content.length)}`;
 
                             return (
                                 <Message

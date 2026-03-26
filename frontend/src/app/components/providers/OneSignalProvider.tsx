@@ -29,12 +29,10 @@ export default function OneSignalSetup() {
         };
 
         initOneSignal();
-    }, []); // Empty array ensures this only ever runs once
+    }, []);
 
-    // EFFECT 2: Log the user in whenever we get their userId from Better Auth
     useEffect(() => {
         const loginToOneSignal = async () => {
-            // Wait until OneSignal is ready AND we have a userId
             if (hasInitialized.current && userId) {
                 try {
                     console.log("✅ Logging into OneSignal with ID:", userId);

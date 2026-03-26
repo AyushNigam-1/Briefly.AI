@@ -9,6 +9,7 @@ export type metadata = {
 };
 
 export type query = {
+    id?: string
     blocked?: boolean
     sender: string;
     content: string;

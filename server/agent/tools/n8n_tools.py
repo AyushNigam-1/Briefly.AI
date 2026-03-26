@@ -6,7 +6,7 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 load_dotenv()
 logger = logging.getLogger(__name__)
 
-ALLOWED_N8N_TOOLS = {"n8n_create_workflow", "n8n_test_workflow", "n8n_get_workflow", "n8n_delete_workflow"}
+ALLOWED_N8N_TOOLS = {"n8n_create_workflow", "n8n_test_workflow", "n8n_get_workflow", "n8n_delete_workflow","n8n_update_workflow"}
 
 client = MultiServerMCPClient({ 
         "n8n": { "transport": "stdio", "command": "npx", "args": ["-y", "n8n-mcp"], 
@@ -18,7 +18,26 @@ client = MultiServerMCPClient({
 UNIVERSAL_BLUEPRINT = {
     "nodes": [
         { "id": "1", "name": "Schedule", "type": "n8n-nodes-base.scheduleTrigger", "typeVersion": 1.1, "position": [0, 0], "parameters": { "rule": { "interval": [ { "field": "minutes", "expression": 60 } ] } } },
-        { "id": "2", "name": "Fetch Website", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.1, "position": [200, 0], "parameters": { "url": "TARGET_URL", "options": {} } },
+   { 
+            "id": "2", 
+            "name": "Fetch Website", 
+            "type": "n8n-nodes-base.httpRequest", 
+            "typeVersion": 4.1, 
+            "position": [200, 0], 
+            "parameters": { 
+                "url": "https://r.jina.ai/TARGET_URL", 
+                "sendHeaders": True, 
+                "headerParameters": { 
+                    "parameters": [ 
+                        { 
+                            "name": "Authorization", 
+                            "value": "Bearer " + os.getenv('JINA_API_KEY', '') 
+                        } 
+                    ] 
+                }, 
+                "options": {} 
+            } 
+        },
         { "id": "3", "name": "Ask LLM Brain", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.1, "position": [400, 0], "parameters": { "method": "POST", "url": "http://172.17.0.1:8000/api/n8n-llm", "sendBody": True, "specifyBody": "json", "jsonBody": "={{ JSON.stringify({ user_rule: 'USER_RULE', website_data: typeof $json.data === 'string' ? $json.data : JSON.stringify($json) }) }}" } },
         { "id": "4", "name": "Should I Notify?", "type": "n8n-nodes-base.if", "typeVersion": 1, "position": [600, 0], "parameters": { "conditions": { "string": [ { "value1": "={{ $json.response }}", "operation": "notEqual", "value2": "SKIP" } ] } } },
         { "id": "5", "name": "Email", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.1, "position": [800, -100], "parameters": { "method": "POST", "url": "https://api.resend.com/emails", "sendHeaders": True, "headerParameters": { "parameters": [ { "name": "Authorization", "value": "Bearer " + os.getenv('RESEND_API_KEY', '') }, { "name": "Content-Type", "value": "application/json" } ] }, "sendBody": True, "specifyBody": "json", "jsonBody": "={{ JSON.stringify({ from: 'Briefly AI <onboarding@resend.dev>', to: ['TARGET_EMAIL'], subject: 'Briefly Alert', html: '<p>' + $json.response + '</p>' }) }}" } },
@@ -28,7 +47,7 @@ UNIVERSAL_BLUEPRINT = {
         "Schedule": { "main": [ [ { "node": "Fetch Website", "type": "main", "index": 0 } ] ] },
         "Fetch Website": { "main": [ [ { "node": "Ask LLM Brain", "type": "main", "index": 0 } ] ] },
         "Ask LLM Brain": { "main": [ [ { "node": "Should I Notify?", "type": "main", "index": 0 } ] ] },
-        "Should I Notify?": { "main": [ [ {"node": "Push", "type": "main", "index": 0} ] ] } # Defaults to Push
+        "Should I Notify?": { "main": [ [ {"node": "Push", "type": "main", "index": 0} ] ] }
     }
 }
 

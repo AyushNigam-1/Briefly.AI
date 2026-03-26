@@ -87,11 +87,10 @@ def delete_workflow(user_id: str, workflow_id: str):
 
     return {"status": "success", "message": "Workflow deleted successfully"}
 
-def execute_workflow(user_id: str, workflow_id: str):
+def toggle_workflow(user_id: str, workflow_id: str):
     """
-    Manually executes workflow (only if owned by user).
+    Toggles a workflow between Active and Inactive (for scheduled/recurring tasks).
     """
-    # 🌟 Ownership check against the nested array
     user = users_collection.find_one({
         "_id": ObjectId(user_id),
         "n8n_workflows.id": workflow_id
@@ -100,20 +99,28 @@ def execute_workflow(user_id: str, workflow_id: str):
     if not user:
         return {"status": "error", "message": "Workflow not found or not owned by user"}
 
-    headers = {
-        "X-N8N-API-KEY": N8N_API_KEY,
-        "Content-Type": "application/json"
-    }
+    workflows = user.get("n8n_workflows", [])
+    target_wf = next((w for w in workflows if w.get("id") == workflow_id), {})
+    is_currently_active = target_wf.get("is_active", False)
 
+    action = "deactivate" if is_currently_active else "activate"
+    headers = {"X-N8N-API-KEY": N8N_API_KEY}
+    
     res = requests.post(
-        f"{N8N_HOST}/api/v1/workflows/{workflow_id}/execute",
+        f"{N8N_HOST}/api/v1/workflows/{workflow_id}/{action}",
         headers=headers
     )
 
     if not res.ok:
         return {
             "status": "error",
-            "message": res.text
+            "message": f"Failed to {action} in n8n: {res.text}"
         }
 
-    return {"status": "success", "message": "Workflow executed successfully"}
+    new_state = not is_currently_active
+    users_collection.update_one(
+        {"_id": ObjectId(user_id), "n8n_workflows.id": workflow_id},
+        {"$set": {"n8n_workflows.$.is_active": new_state}}
+    )
+
+    return {"status": "success", "message": f"Workflow {action}d successfully", "is_active": new_state}

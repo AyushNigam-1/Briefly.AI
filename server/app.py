@@ -61,12 +61,12 @@ async def handle_n8n_llm(req: N8NLLMRequest):
     n8n sends raw website data and a user prompt here. 
     The LLM parses the data and decides what to return.
     """
-    
+    print(req.user_rule, req.website_data)
     if not req.user_rule:
         return {"response": "SKIP"}
 
     try:
-        clean_data = req.website_data[:12000].strip()
+        clean_data = req.website_data[:5000].strip()
         system_prompt = """
         You are a strict, robotic data-processing engine. 
         Your ONLY job is to evaluate website data against a user's rule.
@@ -86,7 +86,7 @@ async def handle_n8n_llm(req: N8NLLMRequest):
         """
         
         response = groq_client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model="openai/gpt-oss-20b",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
@@ -97,9 +97,9 @@ async def handle_n8n_llm(req: N8NLLMRequest):
         
         final_response = response.choices[0].message.content.strip()
         print(final_response)
-        if "SKIP" in final_response.upper() and len(final_response) < 15:
+        if not final_response or ("SKIP" in final_response.upper() and len(final_response) < 15):
             final_response = "SKIP" 
-            
+                        
         return {"response": final_response}
 
     except Exception as e:

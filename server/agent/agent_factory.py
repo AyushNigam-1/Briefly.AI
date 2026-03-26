@@ -150,10 +150,18 @@ def get_tool_prompts(user_id: str):
     return {
         "n8n": (
             "N8N AUTOMATION RULES:\n"
-            "- You can create, test, get, and delete n8n workflows.\n"
+            "- You can create, test, get, delete, and update n8n workflows.\n"
             "- CRITICAL: Before creating a workflow, you MUST call `get_workflow_blueprint()`.\n"
-            f"- You MUST replace the string 'TARGET_USER_ID' in the blueprint with the actual user ID: {user_id}\n"
-            "- You MUST replace 'TARGET_URL', 'USER_RULE', and 'TARGET_EMAIL' in the blueprint with the user's requested criteria before calling `n8n_create_workflow`."
+            "- The blueprint is a SUPERSET of available nodes. You MUST heavily customize it based on the user's request:\n"
+            "  1. PRUNING: Delete any nodes the user didn't explicitly ask for. (e.g., If they only want an Email, completely delete the 'Push' node from the JSON).\n"
+            "  2. REWIRING: You MUST update the 'connections' dictionary. The 'true' branch of 'Should I Notify?' MUST connect ONLY to the notification nodes the user requested.\n"
+            "  3. SCHEDULING: Modify the 'Schedule' node parameters to match the requested timeframe (e.g., change field to 'seconds' and expression to 10).\n"
+            f"  4. VARIABLES: Replace 'TARGET_USER_ID' with: {user_id}. Replace 'TARGET_EMAIL' with their email. For 'TARGET_URL', replace it ONLY with the raw website URL. Do NOT add Jina manually, it is already in the blueprint!\n"
+            "  5. RULE EXTRACTION: Replace 'USER_RULE' with ONLY the logical condition. (e.g., If user says 'Email me about Unnao news', the USER_RULE should simply be 'News about Unnao').\n"
+            "💡 PRO TIP: If the user asks to monitor 'news' about a topic, DO NOT use a specific newspaper website. Instead, construct a Google News URL. Example: If they ask for 'Unnao news', replace TARGET_URL with 'https://news.google.com/search?q=unnao%20news'.\n"
+            "- DATA HANDLING: NEVER output raw data, raw HTML, or raw JSON from external sources directly to the user. You MUST parse the data, pass it through your own reasoning, and explain it conversationally.\n"
+            "- EXTERNAL RESOURCES: NEVER guess or assume URLs, API endpoints, or external websites. If the user asks for an automation involving a website but does not provide the exact URL, you MUST stop and ask them for the exact URL before building the workflow.\n"
+            "- UPDATE PROTOCOL: If modifying an existing workflow, ALWAYS call `n8n_get_workflow` first to get the current state, modify the parameters, then call `n8n_update_workflow`.\n"
         ),
         "notion": (
             "NOTION RULES:\n"
@@ -325,20 +333,28 @@ async def extract_memory(user_input, assistant_output, existing_memories):
     messages = [
         (
             "system",
-            f"""You are a strict data extraction algorithm.
-            Your ONLY job is to extract facts, skills, and goals about the user.
+            f"""You are a strict LONG-TERM memory extraction algorithm.
+            Your ONLY job is to extract core identity facts, skills, and long-term preferences about the user.
 
-            RULES:
-            1. Rephrase aspirations as facts (e.g., "I want to be a dev" -> "User's goal is to be a software developer").
-            2. Ignore greetings, emotions, and the assistant's advice.
-            3. Do not duplicate these existing memories: {existing_memories if existing_memories else "None"}
+            CRITICAL RULES:
+            1. ONLY extract long-term facts (e.g., career, location, programming languages, dietary preferences, long-term goals).
+            2. IGNORE ALL TRANSIENT TASKS AND COMMANDS. Do NOT save what the user is asking you to build, create, or automate right now. 
+            3. IGNORE TEMPORARY DATA like specific URLs, timers, or target email addresses used for a single task.
+            4. STRICT NO DUPLICATION: Carefully review these existing memories: {existing_memories if existing_memories else "None"}. If the input fact is already known, or means the exact same thing, DO NOT extract it again.
+            5. IF NO NEW LONG-TERM FACTS EXIST, return an empty array: []
 
             EXAMPLES:
-            Input: "i want to be software developer"
-            Output: ["User wants to be a software developer"]
+            Input: "I want to be a software developer"
+            Output: ["User's goal is to be a software developer"]
 
             Input: "I'm using Rust"
             Output: ["User programs in Rust"]
+
+            Input: "Create an email notifier for unnao news to ayush@gmail.com every 10 secs"
+            Output: [] 
+            
+            Input: "Delete the 10-second workflow"
+            Output: []
             """
         ),
         (
