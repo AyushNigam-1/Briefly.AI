@@ -16,13 +16,10 @@ async def get_gdrive_tools(token: str):
     """
     client = MultiServerMCPClient({
         "google_drive": {
-            # 1. Switch transport to SSE (Server-Sent Events) for HTTP connections
-            "transport": "sse", # Use "http" if your specific LangChain version requires it (like your Notion setup)
+            "transport": "sse", 
             
-            # 2. Point to the local multi-tenant server you just built
-            "url": "http://localhost:3334/mcp",
+            "url": "https://ayush456-mcp-gateway.hf.space/gdrive/mcp",
             
-            # 3. Securely pass the user's unique token via the Authorization header
             "headers": {
                 "Authorization": f"Bearer {token}",
             }

@@ -3,6 +3,7 @@ from .mongo import users_collection  # Correct import from the conn module
 from fastapi import HTTPException
 from pydantic import BaseModel
 import os
+from bson.objectid import ObjectId
 
 class AppTokenPayload(BaseModel):
     app_name: str
@@ -108,15 +109,16 @@ async def save_app_token(payload: AppTokenPayload, current_username: str):
     return {"message": f"Token for {payload.app_name} saved successfully", "status_code": 200}
 
 
-async def get_all_app_tokens(current_username: str):
+async def get_all_app_tokens(user_id: str):
     """
     Retrieves all connected app tokens for the current user.
     """
-    user = users_collection.find_one({"name": current_username}, {"app_tokens": 1, "_id": 0})
+    print(user_id)
+    user = users_collection.find_one({"_id": ObjectId(user_id)}, {"app_tokens": 1, "_id": 0})
     app_tokens = user.get("app_tokens")
-
+    print(user,app_tokens)
     if app_tokens is None:
-        app_tokens = []
+        app_tokens = {}
 
     return {"app_tokens": app_tokens,"status_code": 200}
 

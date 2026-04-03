@@ -26,7 +26,7 @@ async def add_app_token(payload: AppTokenPayload, current_user: dict = Depends(g
 
 @router.get("/tokens")
 async def get_all_tokens(current_user: dict = Depends(get_current_user)):
-    return await get_all_app_tokens(current_user.get("name"))
+    return await get_all_app_tokens(current_user.get("user_id"))
 
 @router.get("/tokens/{app_name}")
 async def get_single_token(app_name: str, current_user: dict = Depends(get_current_user)):

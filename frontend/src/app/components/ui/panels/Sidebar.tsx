@@ -68,9 +68,20 @@ const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
                 if (exists) {
                     return prev.map(c => c.id === id ? { ...c, title } : c);
                 } else {
-                    // Update the Browser URL immediately!
                     router.push(`/?id=${id}`);
-                    return [{ id, title, is_pinned: false, created_at: new Date().toISOString() }, ...prev];
+                    return [
+                        {
+                            id,
+                            title,
+                            is_pinned: false,
+                            timestamp: new Date().toISOString(),
+                            url: "",
+                            queries: 0,
+                            type: "chat",
+                            thumbnail: ""
+                        },
+                        ...prev
+                    ];
                 }
             });
         };

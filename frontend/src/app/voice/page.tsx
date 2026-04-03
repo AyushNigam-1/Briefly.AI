@@ -187,7 +187,7 @@ export default function VoicePage() {
     }, [activeChatId, router]);
 
     return (
-        <div className="relative flex flex-col items-center justify-between min-h-screen bg-[#020204] overflow-hidden">
+        <div className="relative flex flex-col items-center justify-between min-h-screen dark:bg-[#0b0b0b] overflow-hidden">
 
             {/* Logo — slides in from top */}
             <header className="w-full flex justify-center pt-20 z-10">

@@ -2,6 +2,7 @@ from langgraph.graph import StateGraph, START, END
 from typing import TypedDict, Optional, List
 from agent.agent_factory import route_tools, get_agent, extract_sources , extract_memory , generate_chat_title , run_guard
 from controllers.memory_handler import get_user_memories, save_user_memories
+from controllers.integrations_handler import get_all_app_tokens
 from typing import TypedDict, Optional, List
 
 class AgentState(TypedDict):
@@ -36,35 +37,98 @@ async def guard_node(state: AgentState):
 
     return {"blocked": False}   
 
+import traceback # Add this at the top of your file
+
 async def router_node(state: AgentState):
-    selected = await route_tools(
-        user_prompt=state["messages"][-1][1],
-        available_apps=state["available_apps"],
-    )
-    return {"selected_apps": selected}
+    print("\n" + "🚦"*20)
+    print("🚦 [ROUTER NODE] STARTED")
+    
+    try:
+        # BUG FIX: Safely extract the user prompt whether it's a tuple or a LangChain object
+        last_message = state["messages"][-1]
+        user_prompt = last_message.content if hasattr(last_message, 'content') else last_message[-1]
+        
+        print(f"🚦 [ROUTER NODE] User Prompt: '{user_prompt}'")
+        print(f"🚦 [ROUTER NODE] Available Apps to Choose From: {state.get('available_apps')}")
+
+        selected = await route_tools(
+            user_prompt=user_prompt,
+            available_apps=state.get("available_apps", []),
+        )
+        
+        print(f"🚦 [ROUTER NODE] RAW LLM OUTPUT: {selected}")
+        print(f"🚦 [ROUTER NODE] OUTPUT TYPE: {type(selected)}")
+        
+        # Guardrail: Ensure it's a list. If LLM returned a string, wrap it or parse it
+        if isinstance(selected, str):
+            print("⚠️ [ROUTER NODE] WARNING: Router returned a string instead of a list! Fixing...")
+            selected = [app.strip() for app in selected.replace('[','').replace(']','').replace('"','').replace("'",'').split(',') if app.strip()]
+            print(f"🚦 [ROUTER NODE] FIXED LIST: {selected}")
+
+        print("🚦" * 20 + "\n")
+        return {"selected_apps": selected}
+        
+    except Exception as e:
+        print(f"❌ [ROUTER NODE FATAL ERROR] {e}")
+        traceback.print_exc()
+        return {"selected_apps": []}
+
 
 async def agent_node(state: AgentState):
     if state.get("blocked"):
         return {}
 
-    agent = await get_agent(
-        modal_name=state["modal_name"],
-        enable_notion="notion" in state["selected_apps"],
-        enable_gdrive="google_drive" in state["selected_apps"],
-        enable_linear="linear" in state["selected_apps"],
-        enable_slack="slack" in state["selected_apps"],
-        enable_n8n="n8n" in state["selected_apps"],
-    )
+    print("\n" + "🤖"*20)
+    print("🤖 [AGENT NODE] STARTED")
+    print(f"🤖 [AGENT NODE] Apps Selected By Router: {state.get('selected_apps', [])}")
 
-    response = await agent.ainvoke({"messages": state["messages"]})
+    token_data = await get_all_app_tokens(user_id=state["user_id"])
+    app_tokens = token_data.get("app_tokens", {})
+    
+    print(f"🤖 [AGENT NODE] Database Tokens Found For: {list(app_tokens.keys())}")
 
-    assistant_text = response["messages"][-1].content
+    # Explicitly calculate flags so we can log them
+    selected_apps = state.get("selected_apps", [])
+    
+    enable_notion = "notion" in selected_apps
+    enable_gdrive = "google_drive" in selected_apps
+    enable_linear = "linear" in selected_apps
+    enable_slack = "slack" in selected_apps
+    enable_n8n = "n8n" in selected_apps
 
-    return {
-        "response": assistant_text,
-        "assistant_text": assistant_text,
-        "full_messages": response["messages"],
-    }
+    print(f"🤖 [AGENT NODE] Enabling Tools -> Notion:{enable_notion} | GDrive:{enable_gdrive} | Linear:{enable_linear} | Slack:{enable_slack} | n8n:{enable_n8n}")
+
+    try:
+        agent = await get_agent(
+            modal_name=state["modal_name"],
+            user_id=state["user_id"],
+            enable_notion=enable_notion,
+            user_notion_token=app_tokens.get("notion"),
+            enable_gdrive=enable_gdrive,
+            user_gdrive_token=app_tokens.get("google_drive"),
+            enable_linear=enable_linear,
+            user_linear_token=app_tokens.get("linear"),
+            enable_slack=enable_slack,
+            user_slack_token=app_tokens.get("slack"),
+            enable_n8n=enable_n8n,
+        )
+
+        print("🤖 [AGENT NODE] Invoking LangChain Agent...")
+        response = await agent.ainvoke({"messages": state["messages"]})
+        
+        assistant_text = response["messages"][-1].content
+        print("🤖 [AGENT NODE] Agent Execution Complete!")
+        print("🤖" * 20 + "\n")
+
+        return {
+            "response": assistant_text,
+            "assistant_text": assistant_text,
+            "full_messages": response["messages"],
+        }
+    except Exception as e:
+        print(f"❌ [AGENT NODE FATAL ERROR] {e}")
+        traceback.print_exc()
+        raise e
 
 def postprocess_node(state: AgentState):
     sources = extract_sources(state["full_messages"])

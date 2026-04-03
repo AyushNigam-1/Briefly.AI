@@ -2,3 +2,7 @@ myenv
 .venv
 venv
 .env
+echo "__pycache__/" > .gitignore
+echo "*.pyc" >> .gitignore
+echo "temp_image.jpg" >> .gitignore
+echo ".env" >> .gitignore

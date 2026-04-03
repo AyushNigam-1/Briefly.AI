@@ -27,3 +27,7 @@ redis
 fastapi-limiter
 stripe
 resend
+livekit
+livekit-agents
+livekit-plugins-silero
+livekit-plugins-deepgram

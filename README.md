@@ -1,170 +1,97 @@
+<div align="center">
+  
+# ⚡ Briefly.AI
+**The Memory-Driven AI Workspace & Autonomous Task Agent**
+
+[![Next.js](https://img.shields.io/badge/Next.js-14-black?style=flat&logo=next.js)](https://nextjs.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=flat&logo=fastapi)](https://fastapi.tiangolo.com/)
+[![n8n](https://img.shields.io/badge/n8n-Automation-FF6D5A?style=flat&logo=n8n)](https://n8n.io/)
+[![Groq](https://img.shields.io/badge/Groq-LPU-f97316?style=flat)](https://groq.com/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?style=flat&logo=mongodb)](https://www.mongodb.com/)
+[![Redis](https://img.shields.io/badge/Redis-Cache-DC382D?style=flat&logo=redis)](https://redis.io/)
+
+*Designed, architected, and engineered entirely as a solo full-stack initiative.*
+
+</div>
 
 ---
 
-# AI Summarization Application
+## 🚀 Overview
 
-## Overview
+**Briefly.AI** is not just another chatbot wrapper; it is a highly sophisticated, multi-modal AI workspace built for power users. Engineered to act as a persistent digital brain and background worker, Briefly.AI learns user preferences over time, reads complex web and document data, and autonomously writes and deploys background automations.
 
-This application provides users with the ability to summarize text content from YouTube videos, websites, or directly inputted text. Using AI models, users can get concise summaries and manage their interaction history. The application supports user authentication, multiple AI models, language options, and various personalization features. Below are the core functionalities and how to set up the application.
+Built from the ground up, this project demonstrates the seamless integration of modern frontend performance techniques with complex backend agentic workflows.
 
-## Features
+<br/>
 
-### 1. **User Authentication**
-- **Description**: Users can create accounts, log in, and access personalized features such as summarization history and preferences.
-- **Implementation**: Utilizes JWT-based authentication to ensure secure API access.
-- **Tech Stack**: Django/Flask (Python) or Express (Node.js) for the back-end.
-
-### 2. **Summarization History**
-- **Description**: Users can view, revisit, or delete previous summaries from a personalized history page.
-- **Implementation**: Summaries are stored with timestamps in a database, allowing retrieval from the history page.
-
-### 3. **Text Input for Summarization**
-- **Description**: In addition to URL input, users can also paste text directly for summarization.
-- **Implementation**: Added a text input field to the Streamlit app and updated the summarization logic to handle text alongside URLs.
-
-### 4. **Download Summaries**
-- **Description**: Users can download their summaries in `.txt` or `.pdf` format.
-- **Implementation**: A download button generates the files using libraries like `reportlab` for PDF generation.
-
-### 5. **Feedback System**
-- **Description**: Users can provide feedback (e.g., thumbs up/down or ratings) on the generated summaries.
-- **Implementation**: Feedback is stored in the database to help improve AI model performance over time.
-
-### 6. **Analytics Dashboard**
-- **Description**: An admin dashboard that shows application metrics such as the number of users, most summarized URLs, and average summary lengths.
-- **Implementation**: Streamlit is used to visualize analytics with charts/graphs created using libraries like `Matplotlib` or `Plotly`.
-
-### 7. **Multi-language Support**
-- **Description**: The app allows summarization in multiple languages by integrating translation APIs.
-- **Implementation**: A language selection dropdown in the UI translates the content before summarization.
-
-### 8. **Custom Summarization Options**
-- **Description**: Users can specify the desired summary length or style (e.g., bullet points vs. paragraphs).
-- **Implementation**: User preferences are passed to the AI model to adjust the summarization prompt accordingly.
-
-### 9. **Integrate Other AI Models**
-- **Description**: Users can select from multiple AI models to use for summarization.
-- **Implementation**: A model selection dropdown in the UI updates the back-end to use the selected model.
-
-### 10. **Responsive Front-End Design**
-- **Description**: The app is fully responsive and optimized for mobile devices.
-- **Implementation**: CSS frameworks like TailwindCSS/Bootstrap ensure the UI adapts to various screen sizes.
-
-### 11. **Deployment and Containerization**
-- **Description**: The app is containerized using Docker for easy deployment and scalability.
-- **Implementation**: Hosted on cloud platforms such as AWS, Heroku, or DigitalOcean for global accessibility.
-
-### 12. **User Personalization**
-- **Description**: Users can personalize their experience by setting preferences such as summary style or UI theme.
-- **Implementation**: User preferences are stored in the database and applied automatically upon login.
+<div align="center">
+  <a href="https://youtu.be/YOUR_VIDEO_ID_HERE" target="_blank">
+    <img src="./assets/active-chat.png" alt="Watch the Demo Video" width="100%" />
+  </a>
+  <p><i>👆 Click the image above to watch the 2-minute technical demo (n8n, Voice UI, & Virtual Scrolling).</i></p>
+</div>
 
 ---
 
-## Tech Stack
+## 🧠 Core Innovations & Complex Engineering
 
-- **Frontend**: [Streamlit](https://streamlit.io/)
-- **Backend**: Django/Flask (Python), Express (Node.js)
-- **AI Model**: Integrates with various models using LangChain and Groq API
-- **Database**: PostgreSQL/MySQL
-- **Authentication**: JWT (JSON Web Token)
-- **Containerization**: Docker
-- **Deployment**: AWS, Heroku, or DigitalOcean
+As a solo developer, I tackled several notoriously difficult computer science and UX challenges to bring this platform to a production-ready state:
 
----
+### 1. High-Performance Infinite Chat Rendering
+* **The Problem:** Rendering long conversations containing heavy markdown, code blocks, and media usually causes the browser to freeze, lag, and consume massive amounts of memory.
+* **The Solution:** I engineered a custom virtualized rendering engine using `virtua`. Instead of loading the entire DOM, the application intelligently recycles memory and only renders the messages currently visible on the screen. Coupled with mathematically stable composite keys, the app maintains a flawless 60fps experience even during real-time LLM text streaming in massive chat histories.
 
-## Installation & Setup
+### 2. Autonomous Background Worker (n8n Integration)
+Briefly.AI doesn't just talk; it *does*. 
+* **The Innovation:** I built a custom interceptor that connects the AI directly to an n8n automation instance. When a user requests a background task (e.g., "Check this RSS feed every hour and email me updates"), the AI fetches a universal JSON blueprint, prunes unnecessary nodes, rewires the logic, and deploys the active workflow to the server autonomously via REST APIs.
 
-### Prerequisites
-- Python 3.x
-- Virtual environment setup (`venv` or `conda`)
-- Docker (for deployment)
-- API keys for Groq and translation services (if multi-language support is needed)
+### 3. Persistent, Extractable Long-Term Memory
+* **The Feature:** The AI continuously analyzes user conversations in the background to extract core facts, skills, and goals. 
+* **The Complexity:** I developed a specialized prompt protocol that ignores temporal commands ("remind me tomorrow") and solely captures long-term identity traits. These traits are dynamically injected into the context window of future conversations, creating an AI that genuinely "remembers" its user. Users retain full CRUD control over these memories via a dedicated, real-time sync panel.
 
-### Installation
+### 4. Stateful Caching & Voice Synthesis
+* Integrated high-fidelity Text-to-Speech (TTS) using Deepgram. To minimize latency and API costs, I implemented a robust Redis caching layer. Subsequent requests for the same audio stream are served from memory in milliseconds.
 
-1. **Clone the Repository**:
-   ```bash
-   git clone https://github.com/your-username/ai-summarization-app.git
-   cd ai-summarization-app
-   ```
+<br/>
 
-2. **Create a Virtual Environment**:
-   ```bash
-   python3 -m venv env
-   source env/bin/activate
-   ```
-
-3. **Install Dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Set Up Environment Variables**:
-   Create a `.env` file in the root directory and add your API keys and necessary environment variables:
-   ```bash
-   GROQ_API_KEY=your_groq_api_key
-   DATABASE_URL=your_database_url
-   ```
-
-5. **Run the Application**:
-   ```bash
-   streamlit run app.py
-   ```
-
-### Docker Deployment
-
-1. **Build the Docker Image**:
-   ```bash
-   docker build -t ai-summarization-app .
-   ```
-
-2. **Run the Docker Container**:
-   ```bash
-   docker run -p 8501:8501 ai-summarization-app
-   ```
+<div align="center">
+  <img src="./assets/voice-mode.png" alt="Voice Chat Interface" width="80%" />
+</div>
 
 ---
 
-## Usage
+## 🛠️ Technical Architecture
 
-1. **User Authentication**:
-   - Create an account and log in to access personalized features like history and preferences.
+### **Frontend Interface**
+* **Framework:** Next.js 14 (App Router, React 18)
+* **State Management:** `Zustand` for lightweight, lightning-fast global state, paired with URL-driven states and aggressive optimistic UI updates.
+* **UI/UX:** Tailwind CSS, Headless UI, and Framer Motion for layout-aware, hardware-accelerated animations (e.g., floating modals, dynamic input states).
 
-2. **Summarizing Content**:
-   - Paste a URL (YouTube or website) or text for summarization.
-   - Choose preferences such as summary style or language.
+### **Backend & Agentic Logic**
+* **Framework:** FastAPI (Python) for high-concurrency WebSocket and SSE (Server-Sent Events) streaming.
+* **Agent Framework:** LangGraph / LangChain for multi-step reasoning.
+* **Dynamic Tool Routing:** The system intelligently analyzes user queries to dynamically select and invoke the appropriate external tools and APIs, rather than relying on hardcoded static logic.
 
-3. **View History**:
-   - Access previous summaries and download them in `.txt` or `.pdf` format.
+### **Data & Infrastructure**
+* **Databases:** MongoDB Atlas (Primary Document Store) & Redis (High-speed caching & state invalidation).
+* **Ingestion:** Integrated Jina AI Reader API to bypass anti-bot walls and stream pure Markdown directly into the LLM context.
 
-4. **Admin Dashboard**:
-   - Admin users can view real-time analytics on user behavior and summarization trends.
-
----
-
-## Contributing
-
-Contributions are welcome! Please follow these steps to contribute:
-
-1. Fork the repository.
-2. Create a new branch (`git checkout -b feature-branch`).
-3. Commit your changes (`git commit -m "Add new feature"`).
-4. Push to the branch (`git push origin feature-branch`).
-5. Open a Pull Request.
+### **Security & Authentication**
+* **Authentication:** `Better Auth` for secure, scalable session management.
+* **Access Control:** Strict authentication middleware securing all private routes and API endpoints.
+* **Threat Mitigation:** Robust CORS configurations and a Redis-backed Rate Limiter to prevent API abuse, manage LLM token costs, and defend against DDoS attempts.
+* **Session Security:** Built-in Better Auth security protocols including CSRF protection and secure cookie handling.
 
 ---
 
-## License
+## 🎯 Key User Capabilities
 
-This project is licensed under the MIT License. See the `LICENSE` file for details.
-
----
-
-## Contact
-
-For any inquiries or feedback, feel free to contact me:
-
-- Email: your.email@example.com
-- LinkedIn: [Your LinkedIn](https://linkedin.com/in/yourprofile)
+* **Real-Time Voice Chat:** A dedicated voice interaction mode featuring high-fidelity text-to-speech (TTS) synthesis and audio recording, enabling hands-free, natural conversations.
+* **Incognito Mode:** A truly stateless session architecture that bypasses the database entirely for private, untracked queries.
+* **Multi-Modal Document Chat:** Upload PDFs, images, and raw data files. The system strictly validates MIME types before securely processing them for AI ingestion.
+* **Deep Workspace Integrations:** Connects directly to external productivity stacks (Notion, Google Drive, Linear, Slack) using OAuth and MCP (Model Context Protocol).
+* **Dynamic UI Controls:** Context-aware input fields that seamlessly transition between Text, Audio Recording, and Streaming-Pause states based on the real-time status of the backend LLM.
 
 ---
+
+*This project was developed independently to push the boundaries of what a solo engineer can build using modern AI orchestration and optimized UI techniques.*

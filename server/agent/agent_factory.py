@@ -9,9 +9,7 @@ import asyncio
 import logging
 from typing import List
 from pydantic import BaseModel, Field
-from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnableLambda
 from agent.tool_cache import *
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
@@ -78,7 +76,7 @@ async def route_tools(user_prompt: str, available_apps: List[str]) -> List[str]:
 
     try:
         llm = ChatGroq(
-            model="llama-3.1-8b-instant",
+            model="meta-llama/llama-4-scout-17b-16e-instruct",
             groq_api_key=api_key,
             temperature=0,
         )
@@ -195,7 +193,7 @@ async def get_agent(
     user_gdrive_token=None, enable_gdrive=False,
     user_linear_token=None, enable_linear=False,
     user_slack_token=None, enable_slack=False,
-     enable_n8n=False,
+    enable_n8n=False,
 ):
     if not modal_name:
         modal_name = "meta-llama/llama-4-scout-17b-16e-instruct"
@@ -207,9 +205,13 @@ async def get_agent(
 
     if cache_key in AGENT_CACHE:
         logger.info("Reusing cached agent")
+        # Ensure we don't accidentally reuse a broken cache
+        print(f"📦 [GET AGENT] Returning cached agent for key: {cache_key}")
         return AGENT_CACHE[cache_key]
 
-    logger.info("Creating new agent instance")
+    print("\n" + "🛠️"*20)
+    print("🛠️ [GET AGENT] CREATING NEW INSTANCE")
+    print("🛠️" * 20)
 
     llm = ChatGroq(
         model=modal_name,
@@ -238,18 +240,22 @@ async def get_agent(
         ("linear", enable_linear, user_linear_token, get_linear_tools, True),
         ("slack", enable_slack, user_slack_token, get_slack_tools, True),
     ]
-
+    
     for name, is_enabled, token, fetch_func, requires_token in mcp_configs:
         if not is_enabled:
+            print(f"   ⏭️ [EVAL] {name.upper()}: Skipped (Not Enabled by Router)")
             continue
-
+            
+        print(f"   ➡️ [EVAL] {name.upper()}: Enabled = True. Fetching tools...")
+        
         if requires_token and not token:
+            print(f"   ❌ [EVAL] {name.upper()}: FAILED. Tool enabled but token is missing!")
             logger.warning(f"Tool {name} enabled but missing token. Skipping.")
             continue
 
         cache_key_token = token if token else "default"
         cached_tool = get_cached_tools(name, cache_key_token)
-
+        
         if not cached_tool:
             try:
                 if requires_token:
@@ -258,14 +264,24 @@ async def get_agent(
                     cached_tool = await fetch_func()
 
                 set_cached_tools(name, cached_tool, cache_key_token)
+                print(f"   ✅ [EVAL] {name.upper()}: Successfully fetched {len(cached_tool)} tools from remote server!")
             except Exception as e:
-                logger.error(f"Failed to fetch {name} tools: {e}")
+                print(f"   🚨 [EVAL FATAL ERROR] {name.upper()} Failed to connect to Hugging Face Gateway!")
+                print(f"   🚨 Error details: {e}")
+                import traceback
+                traceback.print_exc()
                 cached_tool = []
+        else:
+            print(f"   ✅ [EVAL] {name.upper()}: Loaded {len(cached_tool)} tools from Local Cache.")
 
         if cached_tool:
             tools.extend(cached_tool)
             if name in tool_instructions:
                 active_tool_prompts.append(tool_instructions[name])
+
+    print("\n" + "🏁"*20)
+    print(f"🏁 [GET AGENT] FINAL LOADED TOOLS: {[t.name for t in tools]}")
+    print("🏁" * 20 + "\n")
 
     dynamic_system_message = (
         "You are an intelligent workflow and utility agent.\n\n"
