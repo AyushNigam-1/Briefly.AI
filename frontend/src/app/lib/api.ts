@@ -1,6 +1,6 @@
 import { fetchEventSource } from "@microsoft/fetch-event-source"
 import axios, { AxiosError, AxiosInstance, AxiosResponse } from "axios"
-import { authClient } from "./auth-client" // your Better Auth client instance
+import { authClient } from "./auth-client"
 
 const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -13,7 +13,6 @@ class StopRetryError extends Error {
 
 const api: AxiosInstance = axios.create({
     baseURL,
-    // withCredentials removed — cookies are no longer the mechanism
     headers: {
         "Content-Type": "application/json",
     },
@@ -68,6 +67,18 @@ export async function streamChat({
     let streamDone = false
     let donePayload: { sources?: any; id?: string, title?: string } | null = null
 
+    const { data } = await authClient.getSession()
+    const token = data?.session?.token
+
+    const headers: Record<string, string> = {}
+    if (token) {
+        headers["Authorization"] = `Bearer ${token}`
+    }
+
+    if (typeof body === "string") {
+        headers["Content-Type"] = "application/json"
+    }
+
     const startDrip = () => {
         if (dripInterval) return
 
@@ -87,8 +98,7 @@ export async function streamChat({
 
     await fetchEventSource(`${baseURL}${endpoint}`, {
         method: "POST",
-        credentials: "include",
-        headers: {},
+        headers: headers,
         body,
         signal: abortController.signal,
 

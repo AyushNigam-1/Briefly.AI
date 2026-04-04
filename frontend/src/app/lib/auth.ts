@@ -4,16 +4,7 @@ import { db } from "./mongodb";
 
 export const auth = betterAuth({
     database: mongodbAdapter(db),
-    cookies: {
-        sessionToken: {
-            name: "__Secure-better-auth.session_token",
-            options: {
-                httpOnly: true,
-                secure: true,
-                sameSite: "none",
-            },
-        },
-    },
+
     emailAndPassword: {
         enabled: true,
         requireEmailVerification: false,
