@@ -1,25 +1,32 @@
 import { fetchEventSource } from "@microsoft/fetch-event-source"
-import axios, {
-    AxiosError,
-    AxiosInstance,
-    AxiosResponse,
-} from "axios"
+import axios, { AxiosError, AxiosInstance, AxiosResponse } from "axios"
+import { authClient } from "./auth-client" // your Better Auth client instance
 
 const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
 class StopRetryError extends Error {
     constructor(message: string) {
-        super(message);
-        this.name = "StopRetryError";
+        super(message)
+        this.name = "StopRetryError"
     }
 }
 
 const api: AxiosInstance = axios.create({
     baseURL,
-    withCredentials: true,
+    // withCredentials removed — cookies are no longer the mechanism
     headers: {
         "Content-Type": "application/json",
     },
+})
+
+// Attach Bearer token on every outgoing request
+api.interceptors.request.use(async (config) => {
+    const { data } = await authClient.getSession()
+    const token = data?.session?.token
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
 })
 
 api.interceptors.response.use(
