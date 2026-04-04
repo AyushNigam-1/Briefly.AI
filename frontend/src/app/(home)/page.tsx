@@ -9,8 +9,9 @@ import { query as QueryType } from "@/app/types";
 import { Ghost, Loader2 } from "lucide-react";
 import api, { streamChat } from "@/app/lib/api";
 import { authClient } from "@/app/lib/auth-client";
+import { Suspense } from "react";
 
-const Page = () => {
+const Home = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -25,7 +26,6 @@ const Page = () => {
   const [queries, setQueries] = useState<QueryType[]>([]);
   const [activeId, setActiveId] = useState<string | undefined>();
 
-  // 🌟 FIX 1: Create a dedicated key just for animations
   const [chatKey, setChatKey] = useState<string>("new-chat");
 
   const [isPending, setPending] = useState(false);
@@ -55,8 +55,7 @@ const Page = () => {
     if (before) params.append("before", before);
 
     try {
-      const res = await api(`http://localhost:8000/history/${rawId}?${params}`);
-
+      const res = await api.get(`/history/${rawId}?${params}`);
       const newHistory: QueryType[] = res.data?.history || [];
       const serverHasMore = res.data?.has_more ?? (newHistory.length === 30);
 
@@ -83,7 +82,7 @@ const Page = () => {
     if (!rawId) {
       setQueries([]);
       setActiveId(undefined);
-      setChatKey("new-chat"); // 🌟 Set animation key for new chats
+      setChatKey("new-chat");
       setHasMore(true);
       setOldestCreatedAt(null);
       setIsInitialLoad(false);
@@ -93,25 +92,22 @@ const Page = () => {
     if (isExplicitPrivate) {
       setQueries([]);
       setActiveId("private");
-      setChatKey("private-chat"); // 🌟 Set animation key for private
+      setChatKey("private-chat");
       setHasMore(false);
       setOldestCreatedAt(null);
       setIsInitialLoad(false);
       return;
     }
 
-    // 🌟 FIX 2: If we are just transitioning an undefined chat to a saved chat, 
-    // DO NOT update the chatKey. This stops the double-animation!
     if (isTransitioningRef.current) {
       isTransitioningRef.current = false;
       setActiveId(rawId);
       return;
     }
 
-    // Normal load (Clicking a different chat in the sidebar)
     setQueries([]);
     setActiveId(rawId);
-    setChatKey(rawId); // 🌟 Update animation key to trigger the slide-up animation!
+    setChatKey(rawId);
     setHasMore(true);
     setOldestCreatedAt(null);
     setIsInitialLoad(true);
@@ -491,7 +487,6 @@ const Page = () => {
       ) : queries.length > 0 ? (
 
         <motion.div
-          // 🌟 FIX 3: Use the decoupled chatKey here!
           key={`chat-${chatKey}`}
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -613,4 +608,16 @@ const Page = () => {
   );
 };
 
-export default Page;
+export default function Page() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center w-full h-[80vh]">
+          <Loader2 size={28} className="animate-spin text-slate-400" />
+        </div>
+      }
+    >
+      <Home />
+    </Suspense>
+  );
+}

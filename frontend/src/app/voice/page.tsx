@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { PhoneOff, Loader2 } from "lucide-react";
@@ -22,8 +22,6 @@ const THEME = {
     speaking: { color: "#10b981", label: "Speaking" },
 };
 
-// One spring config shared by logo, end-button, and visualizer
-// so all three arrive with identical feel — just opposite directions
 const ENTRANCE_SPRING = { type: "spring", stiffness: 80, damping: 20 };
 
 function PerfectSyncWave({
@@ -121,7 +119,6 @@ function VoiceRoomUI({ onNewChatId }: { onNewChatId: (id: string) => void }) {
     });
 
     return (
-        // Visualizer + pill: scale up from center, same spring timing as logo & button
         <motion.div
             className="flex flex-col items-center gap-14"
             initial={{ opacity: 0, scale: 0.55 }}
@@ -136,7 +133,6 @@ function VoiceRoomUI({ onNewChatId }: { onNewChatId: (id: string) => void }) {
                 localTrackPublication={microphoneTrack}
             />
 
-            {/* Status pill — swaps out on each state change */}
             <AnimatePresence mode="wait">
                 <motion.div
                     key={state}
@@ -159,7 +155,7 @@ function VoiceRoomUI({ onNewChatId }: { onNewChatId: (id: string) => void }) {
     );
 }
 
-export default function VoicePage() {
+function VoiceInterface() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const initialChatId = searchParams.get("id");
@@ -273,5 +269,19 @@ export default function VoicePage() {
                 </AnimatePresence>
             </footer>
         </div>
+    );
+}
+
+export default function VoicePage() {
+    return (
+        <Suspense
+            fallback={
+                <div className="flex items-center justify-center w-full h-[80vh]">
+                    <Loader2 size={28} className="animate-spin text-slate-400" />
+                </div>
+            }
+        >
+            <VoiceInterface />
+        </Suspense>
     );
 }
