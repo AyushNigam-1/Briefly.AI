@@ -1,32 +1,14 @@
 import redis
 import os
 
-# Environment variables
-REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
-REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
-REDIS_DB = int(os.getenv("REDIS_DB", 0))
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 
-
-# Connection Pool
-pool = redis.ConnectionPool(
-    host=REDIS_HOST,
-    port=REDIS_PORT,
-    db=REDIS_DB,
-    decode_responses=False  # IMPORTANT: keep raw bytes
+redis_client = redis.from_url(
+    REDIS_URL, 
+    decode_responses=False 
 )
 
-
-# Global client
-redis_client = redis.Redis(connection_pool=pool)
-
-
-# Central TTL
 CACHE_TTL = 3600
-
-
-# -------------------------
-# Clean Decoding Utilities
-# -------------------------
 
 def decode_if_bytes(value):
     """

@@ -10,6 +10,7 @@ import { FaSlack } from "react-icons/fa"
 import { CgLinear } from "react-icons/cg"
 import Cookies from 'js-cookie'
 import { motion, AnimatePresence } from "framer-motion" // 🌟 Imported Framer Motion
+import { authClient } from "@/app/lib/auth-client"
 
 const INTEGRATIONS = [
     {
@@ -64,11 +65,23 @@ export default function Integrations() {
         }
     }, [searchParams])
 
-    const handleConnect = (appId: string) => {
+    // In your Integrations.tsx
+    const handleConnect = async (appId: string) => {
         setConnectingTo(appId)
-        const backendBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
-        const token = Cookies.get('access_token')
-        window.location.href = `${backendBaseUrl}/${appId}/login?token=${token}`
+
+        try {
+            const res = await api.get(`/${appId}/login`)
+
+            if (res.data && res.data.auth_url) {
+                window.location.href = res.data.auth_url
+            } else {
+                throw new Error("Did not receive an auth_url from the backend")
+            }
+
+        } catch (error) {
+            console.error(`Failed to initiate connection for ${appId}`, error)
+            setConnectingTo(null)
+        }
     }
 
     const handleDisconnect = async (appId: string) => {

@@ -49,7 +49,7 @@ async def oauth_login(app_id: str, current_user: dict = Depends(get_current_user
     params = {**config["auth_params"], "state": state_token}
     query_string = urllib.parse.urlencode(params)
     
-    return RedirectResponse(f"{config['auth_url']}?{query_string}")
+    return {"auth_url": f"{config['auth_url']}?{query_string}"}
 
 @router.get("/{app_id}/callback")
 async def generic_oauth_callback(app_id: str, code: str, state: str = None):
