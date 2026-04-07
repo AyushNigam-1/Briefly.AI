@@ -16,6 +16,8 @@ import {
     Settings2,
     LogOut,
     X,
+    Stars,
+    Star,
 } from "lucide-react"
 import clsx from "clsx"
 import Memory from "../tabs/Memory"
@@ -23,6 +25,7 @@ import CustomInstructions from "../tabs/Preference"
 import Profile from "../tabs/Profile"
 import Integrations from "../tabs/Integrations"
 import { authClient } from "@/app/lib/auth-client"
+import Link from "next/link"
 
 const tabs = [
     { name: "Profile", icon: User },
@@ -99,20 +102,28 @@ export default function SettingsDialog({
                                         </Tab>
                                     ))}
                                 </TabList>
-
-                                <button
-                                    onClick={async () => {
-                                        await authClient.signOut();
-                                        window.location.href = "/account/login";
-                                    }}
-                                    className="mt-auto w-full flex justify-center items-center gap-0 sm:gap-2 p-3 sm:px-3 sm:py-2.5 rounded-xl outline-none transition-colors
-                                        bg-red-50 text-red-600 hover:bg-red-100
-                                        dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
-                                    title="Logout"
-                                >
-                                    <LogOut className="w-5 h-5 sm:w-4 sm:h-4 flex-shrink-0" />
-                                    <span className="hidden sm:inline">Logout</span>
-                                </button>
+                                <div className="mt-auto space-y-4 w-full">
+                                    <Link
+                                        href="subscription/plans"
+                                        className="w-full flex items-center justify-center gap-0 sm:gap-2 p-3 sm:px-6 sm:py-3 bg-primary text-tertiary rounded-xl font-bold hover:bg-white/90 transition-colors disabled:opacity-50"
+                                    >
+                                        <Stars className="w-5 h-5 sm:w-4 sm:h-4 flex-shrink-0" />
+                                        <span className="hidden sm:inline">Upgrade</span>
+                                    </Link>
+                                    <button
+                                        onClick={async () => {
+                                            await authClient.signOut();
+                                            window.location.href = "/account/login";
+                                        }}
+                                        className="w-full flex justify-center items-center gap-0 sm:gap-2 p-3 sm:px-3 sm:py-2.5 rounded-xl outline-none transition-colors
+        bg-red-50 text-red-600 hover:bg-red-100
+        dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
+                                        title="Logout"
+                                    >
+                                        <LogOut className="w-5 h-5 sm:w-4 sm:h-4 flex-shrink-0" />
+                                        <span className="hidden sm:inline">Logout</span>
+                                    </button>
+                                </div>
                             </div>
 
                             {/* RIGHT CONTENT AREA */}

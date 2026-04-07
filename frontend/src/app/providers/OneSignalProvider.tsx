@@ -18,7 +18,7 @@ export default function OneSignalSetup() {
                     appId: "5a02c188-e5b6-40df-b48f-6c74ae820fcd",
                     allowLocalhostAsSecureOrigin: true,
                     notifyButton: {
-                        enable: true,
+                        enable: false,
                     } as any,
                 });
                 hasInitialized.current = true;

@@ -478,7 +478,7 @@ const Home = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
-          className="flex items-center justify-center w-full h-[80vh]"
+          className="flex items-center justify-center w-full h-[85vh]"
         >
           <div className="flex justify-center items-center py-2">
             <Loader2 size={28} className="animate-spin text-slate-400" />

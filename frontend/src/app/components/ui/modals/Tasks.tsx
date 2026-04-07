@@ -92,9 +92,9 @@ export default function TaskManagerModal({ onCloseSidebar }: SearchModalProps) {
         <>
             <button
                 onClick={() => { setOpen(true); onCloseSidebar() }}
-                className="p-3 flex items-center w-full justify-center gap-2 font-bold rounded-xl transition-colors
-                    bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100
-                    dark:bg-white/5 dark:text-primary dark:border-secondary dark:hover:bg-white/10"
+                className="p-2 md:p-3 flex items-center w-full justify-center gap-2 font-bold text-sm md:text-base rounded-xl transition-colors
+                            bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100
+                            dark:bg-white/5 dark:border-secondary dark:text-primary dark:hover:bg-white/10"
             >
                 <Workflow size={18} />
                 Manage Tasks

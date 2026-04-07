@@ -6,7 +6,8 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Loader2 } from "lucide-react"
 
 interface UserProfile {
-    username?: string
+    name?: string
+    image?: string
     nickname?: string
     occupation?: string
     about?: string
@@ -20,8 +21,8 @@ export default function ProfilePanel() {
     const debounceRef = useRef<NodeJS.Timeout | null>(null)
 
     useEffect(() => {
-        setIsLoading(true)
-        api.get("/profile").then(res => {
+        api("/profile/").then(res => {
+            console.log(res.data)
             setProfile(res.data)
         }).finally(() => {
             setIsLoading(false)
@@ -56,7 +57,7 @@ export default function ProfilePanel() {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.2 }}
-                        className="flex flex-col items-center justify-center flex-1 w-full h-[80vh] sm:h-[65vh]   z-10"
+                        className="flex flex-col items-center justify-center flex-1 w-full h-[80vh] sm:h-[65vh] z-10"
                     >
                         <Loader2 className="w-8 h-8 animate-spin text-slate-400 dark:text-slate-500" />
                     </motion.div>
@@ -69,20 +70,22 @@ export default function ProfilePanel() {
                         transition={{ duration: 0.2 }}
                         className="space-y-6 w-full pb-8 flex-1"
                     >
-                        {/* Profile Header Card */}
                         <div className="flex items-center gap-4 md:p-4 p-2 rounded-xl border transition-colors
                             bg-white border-slate-200 shadow-sm
                             dark:bg-white/5 dark:border-secondary dark:shadow-none"
                         >
-                            <div className="h-14 w-14 rounded-full flex items-center justify-center font-bold text-xl transition-colors
+                            {
+                                profile.image ? <img src={profile.image} className="h-12 w-12 rounded-full" /> : <div className="h-14 w-14 rounded-full flex items-center justify-center font-bold text-xl transition-colors
                                 bg-slate-100 text-slate-700
                                 dark:bg-primary dark:text-tertiary"
-                            >
-                                {profile.username?.charAt(0)?.toUpperCase() || "A"}
-                            </div>
+                                >
+                                    {profile.name?.charAt(0)?.toUpperCase()}
+                                </div>
+                            }
+
                             <div>
                                 <p className="font-bold text-lg text-slate-900 dark:text-white">
-                                    {profile.username || "User"}
+                                    {profile.name || "User"}
                                 </p>
                                 <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
                                     {profile.email || "No email provided"}
@@ -92,9 +95,9 @@ export default function ProfilePanel() {
 
                         <div className="space-y-5">
                             <Field
-                                label="Username"
-                                value={profile.username}
-                                onChange={(v) => updateField("username", v)}
+                                label="Name"
+                                value={profile.name}
+                                onChange={(v) => updateField("name", v)}
                             />
                             <Field
                                 label="Email"

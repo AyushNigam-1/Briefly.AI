@@ -72,7 +72,7 @@ const InputBox = ({ query, setQuery, send, isPending, stop }: InputProps) => {
     const isInputEmpty = !query.trim();
 
     return (
-        <div className="w-full flex flex-col rounded-3xl border transition-all duration-200 bg-white border-slate-300 dark:bg-tertiary dark:border-secondary shadow-sm relative">
+        <div className="w-full flex flex-col rounded-2xl border transition-all duration-200 bg-white border-slate-300 dark:bg-tertiary dark:border-secondary shadow-sm relative">
 
             {/* File Attachments Previews */}
             <AnimatePresence initial={false}>

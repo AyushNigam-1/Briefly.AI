@@ -2,7 +2,7 @@
 import React, { Suspense } from "react";
 import Sidebar from "../components/ui/panels/Sidebar";
 import Navbar from "../components/ui/Navbar";
-import OneSignalSetup from "../components/providers/OneSignalProvider";
+import OneSignalSetup from "../providers/OneSignalProvider";
 import { authClient } from "../lib/auth-client";
 import { Loader2 } from "lucide-react";
 
@@ -19,13 +19,16 @@ export default function DashboardLayout({
                 <Loader2 size={28} className="animate-spin text-slate-400" />
             </div>
         }>
-            <div className="flex h-full w-full relative max-w-4xl mx-auto">
+            {/* 1. Changed h-full to h-screen to lock the dashboard to the viewport height */}
+            <div className="flex h-screen w-full relative max-w-4xl mx-auto">
                 <OneSignalSetup />
                 <Sidebar user={session?.user} isLoading={isPending} />
 
-                <div className="flex flex-col flex-1 h-full w-full">
+                <div className="flex flex-col flex-1 h-full w-full overflow-hidden">
                     <Navbar user={session?.user} isLoading={isPending} />
-                    <main className="flex-1 overflow-none relative z-10 ">
+
+                    {/* 2. Changed overflow-none to overflow-y-auto to enable scrolling */}
+                    <main className="flex-1 overflow-y-auto relative z-10">
                         <div className="w-full h-full">
                             {children}
                         </div>
