@@ -8,7 +8,7 @@ from utils.auth import get_current_user
 
 router = APIRouter(prefix="/workflows", tags=["Workflows"])
 
-@router.get("/")
+@router.get("")
 def list_workflows(current_user=Depends(get_current_user)):
     """
     Returns all workflows created by logged-in user.

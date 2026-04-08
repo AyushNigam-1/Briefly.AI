@@ -6,7 +6,7 @@ from bson import ObjectId
 import requests
 from redis_client import redis_client, CACHE_TTL
 
-N8N_HOST = "http://localhost:5678"
+N8N_HOST = os.getenv("N8N_API_URL")
 N8N_API_KEY = os.getenv("N8N_API_KEY")
 
 logger = logging.getLogger(__name__)

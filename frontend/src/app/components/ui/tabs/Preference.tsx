@@ -113,13 +113,12 @@ export default function Preference() {
                                     Persistent behavior across all chats.
                                 </p>
                             </div>
-
                             <textarea
                                 value={instruction}
                                 onChange={e => setInstruction(e.target.value)}
                                 className="w-full h-40 rounded-xl p-4 custom-scrollbar text-sm outline-none resize-none transition-colors border
-                                    bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:bg-white
-                                    dark:bg-[#0b0b0b] dark:border-white/10 dark:text-slate-200 dark:placeholder:text-slate-500 dark:focus:border-white/30"
+        bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-slate-400
+        dark:bg-[#0b0b0b] dark:border-white/10 dark:text-slate-200 dark:placeholder:text-slate-500 dark:focus:border-white/30"
                                 placeholder="I am a developer. Prefer concise answers. Show code examples."
                             />
                         </div>
@@ -131,7 +130,7 @@ export default function Preference() {
                                     Verbosity
                                 </h4>
                                 <p className="text-xs sm:text-sm mt-1 transition-colors text-slate-500 dark:text-slate-400">
-                                    Controls how long and detailed replies should be.
+                                    Choose how long responses should be.
                                 </p>
                             </div>
 

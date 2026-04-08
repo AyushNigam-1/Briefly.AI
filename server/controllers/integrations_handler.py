@@ -1,9 +1,10 @@
-
-from .mongo import users_collection  # Correct import from the conn module
+from .mongo import users_collection  
 from fastapi import HTTPException
 from pydantic import BaseModel
 import os
 from bson.objectid import ObjectId
+
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 class AppTokenPayload(BaseModel):
     app_name: str
@@ -17,22 +18,21 @@ OAUTH_CONFIG = {
             "client_id": os.getenv("NOTION_CLIENT_ID"),
             "response_type": "code",
             "owner": "user",
-            "redirect_uri": "http://localhost:8000/notion/callback",
+            "redirect_uri": f"{BACKEND_URL}/notion/callback", 
         },
-        # Notion uses JSON body and Basic Auth
         "get_token_kwargs": lambda code, cfg: {
-            "auth": (os.getenv("NOTION_CLIENT_ID"), "secret_43gxzrplC0ATp55aDmYU5h84dBoU3YfYiLQxz0NhJKF"),
+            "auth": (os.getenv("NOTION_CLIENT_ID"), os.getenv("NOTION_CLIENT_SECRET")),
             "json": {"grant_type": "authorization_code", "code": code, "redirect_uri": cfg["auth_params"]["redirect_uri"]}
         }
         },
-    "google": {
+    "google_drive": {
         "auth_url": "https://accounts.google.com/o/oauth2/v2/auth",
         "token_url": "https://oauth2.googleapis.com/token",
         "auth_params": {
             "client_id": os.getenv("GOOGLE_CLIENT_ID"),
             "response_type": "code",
             "scope": "https://www.googleapis.com/auth/drive",
-            "redirect_uri": "http://localhost:8000/google/callback",
+            "redirect_uri": f"{BACKEND_URL}/google_drive/callback", 
             "access_type": "offline",
             "prompt": "consent",
         },
@@ -53,10 +53,8 @@ OAUTH_CONFIG = {
         "auth_params": {
             "client_id": os.getenv("LINEAR_CLIENT_ID"),
             "response_type": "code",
-            # Linear uses comma-separated scopes. 'read,write' gives full access to their workspace.
-            # You can downgrade this to just 'read' if you only want the AI to fetch data, not create issues.
             "scope": "read,write", 
-            "redirect_uri": "http://localhost:8000/linear/callback",
+            "redirect_uri": f"{BACKEND_URL}/linear/callback",
             "prompt": "consent"
         },
         "get_token_kwargs": lambda code, cfg: {
@@ -78,7 +76,7 @@ OAUTH_CONFIG = {
         "auth_params": {
             "client_id": os.getenv("SLACK_CLIENT_ID"),
             "scope": "channels:read,groups:read,users:read,users.profile:read,chat:write,reactions:write,channels:history,groups:history",
-            "redirect_uri": "http://localhost:8000/slack/callback",
+            "redirect_uri": f"{BACKEND_URL}/slack/callback",
         },
         "get_token_kwargs": lambda code, cfg: {
             "headers": {"Content-Type": "application/x-www-form-urlencoded"},
@@ -93,11 +91,6 @@ OAUTH_CONFIG = {
 }
 
 async def save_app_token(payload: AppTokenPayload, current_username: str):
-    """
-    Saves or updates a token for a specific app (e.g., Notion, Google Drive).
-    Requires the current logged-in user's username.
-    """
-    # Uses dot notation to update a specific key within the app_tokens dictionary
     result = users_collection.update_one(
         {"name": current_username},
         {"$set": {f"app_tokens.{payload.app_name}": payload.token}}
@@ -108,24 +101,18 @@ async def save_app_token(payload: AppTokenPayload, current_username: str):
         
     return {"message": f"Token for {payload.app_name} saved successfully", "status_code": 200}
 
-
 async def get_all_app_tokens(user_id: str):
-    """
-    Retrieves all connected app tokens for the current user.
-    """
-    print(user_id)
+    if user_id == "guest":
+        return {"app_tokens": {}}
     user = users_collection.find_one({"_id": ObjectId(user_id)}, {"app_tokens": 1, "_id": 0})
-    app_tokens = user.get("app_tokens")
-    print(user,app_tokens)
+    app_tokens = user.get("app_tokens") if user else None
+    print(user, app_tokens)
     if app_tokens is None:
         app_tokens = {}
 
     return {"app_tokens": app_tokens,"status_code": 200}
 
 async def get_specific_app_token(app_name: str, current_username: str):
-    """
-    Retrieves the token for one specific app.
-    """
     user = users_collection.find_one({"name": current_username}, {f"app_tokens.{app_name}": 1, "_id": 0})
     
     if not user or "app_tokens" not in user or app_name not in user["app_tokens"]:
@@ -136,4 +123,3 @@ async def get_specific_app_token(app_name: str, current_username: str):
         "token": user["app_tokens"][app_name], 
         "status_code": 200
     }
-

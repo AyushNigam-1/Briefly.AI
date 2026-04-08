@@ -31,3 +31,4 @@ livekit
 livekit-agents
 livekit-plugins-silero
 livekit-plugins-deepgram
+markitdown[all]

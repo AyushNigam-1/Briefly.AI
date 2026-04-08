@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import api from "@/app/lib/api"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Loader2, Blocks, Unplug, Plug } from "lucide-react"
@@ -8,9 +8,8 @@ import { RiNotionFill } from "react-icons/ri"
 import { FaGoogleDrive } from "react-icons/fa"
 import { FaSlack } from "react-icons/fa"
 import { CgLinear } from "react-icons/cg"
-import Cookies from 'js-cookie'
-import { motion, AnimatePresence } from "framer-motion" // 🌟 Imported Framer Motion
-import { authClient } from "@/app/lib/auth-client"
+import { motion, AnimatePresence } from "framer-motion"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 
 const INTEGRATIONS = [
     {
@@ -20,7 +19,7 @@ const INTEGRATIONS = [
         icon: RiNotionFill,
     },
     {
-        id: "google",
+        id: "google_drive",
         name: "Google Drive",
         company: "Google LLC",
         icon: FaGoogleDrive,
@@ -40,71 +39,66 @@ const INTEGRATIONS = [
 ]
 
 export default function Integrations() {
-    const [connectedApps, setConnectedApps] = useState<Record<string, string>>({})
-    const [isLoading, setIsLoading] = useState(true)
-    const [connectingTo, setConnectingTo] = useState<string | null>(null)
-
     const searchParams = useSearchParams()
     const router = useRouter()
+    const queryClient = useQueryClient()
 
-    const fetchTokens = async () => {
-        try {
+    const { data: connectedApps = {}, isLoading } = useQuery({
+        queryKey: ["integrationTokens"],
+        queryFn: async () => {
             const res = await api.get("/tokens")
-            setConnectedApps(res.data.app_tokens || {})
-        } catch (error) {
-            console.error("Failed to fetch integration tokens", error)
-        } finally {
-            setIsLoading(false)
+            return res.data.app_tokens || {}
         }
-    }
+    })
+
+    console.log(connectedApps)
 
     useEffect(() => {
-        fetchTokens()
         if (searchParams.get('success') === 'true') {
             router.replace('/settings?tab=integrations')
         }
-    }, [searchParams])
+    }, [searchParams, router])
 
-    // In your Integrations.tsx
-    const handleConnect = async (appId: string) => {
-        setConnectingTo(appId)
-
-        try {
+    const connectMutation = useMutation({
+        mutationFn: async (appId: string) => {
             const res = await api.get(`/${appId}/login`)
-
             if (res.data && res.data.auth_url) {
                 window.location.href = res.data.auth_url
             } else {
                 throw new Error("Did not receive an auth_url from the backend")
             }
-
-        } catch (error) {
+        },
+        onError: (error, appId) => {
             console.error(`Failed to initiate connection for ${appId}`, error)
-            setConnectingTo(null)
         }
-    }
+    })
 
-    const handleDisconnect = async (appId: string) => {
-        try {
+    const disconnectMutation = useMutation({
+        mutationFn: async (appId: string) => {
             await api.post("/tokens", {
                 app_name: appId,
                 token: ""
             })
-            setConnectedApps(prev => {
-                const updated = { ...prev }
+            return appId
+        },
+        onSuccess: (appId) => {
+            queryClient.setQueryData(["integrationTokens"], (old: Record<string, string> | undefined) => {
+                if (!old) return old
+                const updated = { ...old }
                 delete updated[appId]
                 return updated
             })
-        } catch (error) {
+        },
+        onError: (error, appId) => {
             console.error(`Failed to disconnect ${appId}`, error)
         }
-    }
+    })
 
     const connectedList = INTEGRATIONS.filter(app => !!connectedApps[app.id])
     const availableList = INTEGRATIONS.filter(app => !connectedApps[app.id])
 
     return (
-        <div className="relative  w-full font-mono">
+        <div className="relative w-full font-mono">
             <AnimatePresence mode="wait">
                 {isLoading ? (
                     <motion.div
@@ -126,7 +120,6 @@ export default function Integrations() {
                         transition={{ duration: 0.2 }}
                         className="space-y-8 sm:space-y-10 w-full"
                     >
-                        {/* SECTION 1: CONNECTED APPS */}
                         <div>
                             <div className="mb-4">
                                 <h3 className="text-lg sm:text-xl font-bold transition-colors text-slate-900 dark:text-slate-200">
@@ -173,14 +166,21 @@ export default function Integrations() {
                                                 </div>
 
                                                 <button
-                                                    onClick={() => handleDisconnect(app.id)}
+                                                    onClick={() => disconnectMutation.mutate(app.id)}
+                                                    disabled={disconnectMutation.isPending && disconnectMutation.variables === app.id}
                                                     title="Disconnect"
-                                                    className="flex items-center justify-center gap-2 p-2 sm:px-4 sm:py-2 text-sm font-semibold rounded-lg transition-colors shrink-0
+                                                    className="flex items-center justify-center gap-2 p-2 sm:px-4 sm:py-2 text-sm font-semibold rounded-lg transition-colors shrink-0 disabled:opacity-50
                                                         bg-slate-100 text-slate-600 hover:bg-red-50 hover:text-red-600
                                                         dark:bg-white/5 dark:text-slate-300 dark:hover:bg-red-500/10 dark:hover:text-red-400"
                                                 >
-                                                    <Unplug size={16} className="shrink-0" />
-                                                    <span className="hidden sm:inline">Disconnect</span>
+                                                    {disconnectMutation.isPending && disconnectMutation.variables === app.id ? (
+                                                        <Loader2 size={16} className="animate-spin shrink-0" />
+                                                    ) : (
+                                                        <Unplug size={16} className="shrink-0" />
+                                                    )}
+                                                    <span className="hidden sm:inline">
+                                                        {disconnectMutation.isPending && disconnectMutation.variables === app.id ? "Disconnecting..." : "Disconnect"}
+                                                    </span>
                                                 </button>
                                             </div>
                                         )
@@ -189,7 +189,6 @@ export default function Integrations() {
                             )}
                         </div>
 
-                        {/* SECTION 2: AVAILABLE APPS */}
                         <div>
                             <div className="mb-4 border-t pt-6 sm:pt-8 transition-colors border-slate-200 dark:border-secondary">
                                 <h3 className="text-lg sm:text-xl font-bold transition-colors text-slate-900 dark:text-slate-200">
@@ -210,7 +209,7 @@ export default function Integrations() {
                             ) : (
                                 <div className="grid grid-cols-1 gap-3 sm:gap-4">
                                     {availableList.map((app) => {
-                                        const isConnecting = connectingTo === app.id
+                                        const isConnecting = connectMutation.isPending && connectMutation.variables === app.id
                                         const Icon = app.icon
 
                                         return (
@@ -221,7 +220,7 @@ export default function Integrations() {
                                                     dark:bg-white/5 dark:border-secondary dark:shadow-none"
                                             >
                                                 <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-                                                    <div className="p-2 sm:p-3 rounded-xl bg-slate-100 dark:bg-[#0b0b0b] shrink-0">
+                                                    <div className="p-2 sm:p-3 rounded-xl transition-colors bg-slate-50 dark:bg-white/10 shrink-0">
                                                         <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
                                                     </div>
                                                     <div className="flex-1 min-w-0">
@@ -235,10 +234,10 @@ export default function Integrations() {
                                                 </div>
 
                                                 <button
-                                                    onClick={() => handleConnect(app.id)}
+                                                    onClick={() => connectMutation.mutate(app.id)}
                                                     disabled={isConnecting}
                                                     title="Connect"
-                                                    className="flex items-center justify-center gap-2 p-2 sm:px-4 sm:py-2 text-sm font-bold rounded-lg shrink-0
+                                                    className="flex items-center justify-center gap-2 p-2 sm:px-4 sm:py-2 text-sm font-bold rounded-lg shrink-0 disabled:opacity-50
                                                         bg-slate-900 text-white hover:bg-slate-800
                                                         dark:bg-primary dark:text-tertiary dark:hover:bg-primary/90"
                                                 >

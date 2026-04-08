@@ -284,7 +284,7 @@ const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
-                className={`fixed top-0 left-0 h-full w-[60vw] md:w-72 border-r font-mono shadow-2xl md:shadow-lg transform transition-transform duration-300 z-50 
+                className={`fixed top-0 left-0 h-full w-[55vw] md:w-72 border-r font-mono shadow-2xl md:shadow-lg transform transition-transform duration-300 z-50 
                     bg-white border-slate-200 text-slate-800
                     dark:bg-tertiary dark:border-secondary dark:text-white
                     ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
@@ -312,7 +312,7 @@ const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
 
                     <button
                         onClick={() => { router.push("/"); handleMobileNav(); }}
-                        className="p-2 md:p-3 flex items-center w-full justify-center gap-2 font-bold text-sm md:text-base rounded-xl transition-colors
+                        className="p-3 flex items-center w-full justify-center gap-2 font-bold text-sm md:text-base rounded-xl transition-colors
                             bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100
                             dark:bg-white/5 dark:border-secondary dark:text-primary dark:hover:bg-white/10"
                     >

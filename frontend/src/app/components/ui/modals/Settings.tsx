@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import { useState } from "react"
 import {
     Dialog,
     DialogBackdrop,
@@ -52,15 +52,12 @@ export default function SettingsDialog({
                     bg-black/30 dark:bg-black/60"
             />
 
-            {/* 🌟 Slightly increased padding here so the floating button doesn't touch the edge of mobile screens */}
             <div className="fixed inset-0 flex items-center justify-center p-4 sm:p-6">
 
-                {/* 🌟 1. The DialogPanel no longer has overflow-hidden or backgrounds. It just handles the animation and sizing. */}
                 <DialogPanel
                     transition
                     className="w-full max-w-3xl h-[85vh] sm:h-[70vh] relative transition duration-300 ease-out data-[closed]:scale-95 data-[closed]:opacity-0 data-[closed]:translate-y-4"
                 >
-                    {/* 🌟 2. The Floating Close Pill (Now it can safely break out of the box!) */}
                     <button
                         onClick={() => setIsOpen(false)}
                         className="absolute -top-3 -right-3 sm:-top-4 sm:-right-4 p-1.5 sm:p-2 rounded-full z-50 outline-none transition-colors shadow-sm border
@@ -71,14 +68,12 @@ export default function SettingsDialog({
                         <X size={16} strokeWidth={2.5} className="sm:w-5 sm:h-5" />
                     </button>
 
-                    {/* 🌟 3. The Inner Container handles the overflow, rounded corners, and backgrounds */}
                     <div className="w-full h-full flex flex-col rounded-2xl border shadow-2xl overflow-hidden
                         bg-white border-slate-200 shadow-slate-200/50
                         dark:bg-[#0b0b0b] dark:border-secondary dark:shadow-black/50"
                     >
                         <TabGroup selectedIndex={activeTab} onChange={setActiveTab} className="flex flex-row h-full w-full">
 
-                            {/* SIDEBAR */}
                             <div className="w-[60px] sm:w-48 md:w-56 flex flex-col items-center sm:items-stretch border-r p-2 sm:p-4 transition-all duration-300 flex-shrink-0
                                 bg-slate-50 border-slate-200
                                 dark:bg-tertiary dark:border-secondary"
@@ -104,7 +99,8 @@ export default function SettingsDialog({
                                 </TabList>
                                 <div className="mt-auto space-y-4 w-full">
                                     <Link
-                                        href="subscription/plans"
+                                        href="/subscription/plans"
+                                        onClick={() => setIsOpen(false)}
                                         className="w-full flex items-center justify-center gap-0 sm:gap-2 p-3 sm:px-6 sm:py-3 bg-primary text-tertiary rounded-xl font-bold hover:bg-white/90 transition-colors disabled:opacity-50"
                                     >
                                         <Stars className="w-5 h-5 sm:w-4 sm:h-4 flex-shrink-0" />
@@ -126,9 +122,7 @@ export default function SettingsDialog({
                                 </div>
                             </div>
 
-                            {/* RIGHT CONTENT AREA */}
                             <div className="flex-1 flex flex-col min-w-0 bg-transparent relative">
-                                {/* 🌟 Removed the pt-12 hack since the button is no longer overlapping the inner content */}
                                 <TabPanels className="flex-1 overflow-y-auto scrollbar-none p-4 sm:p-6">
                                     <TabPanel className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out">
                                         <Profile />

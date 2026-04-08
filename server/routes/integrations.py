@@ -16,7 +16,7 @@ from controllers.integrations_handler import (
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
-FRONTEND_URL = "http://localhost:3000"
+FRONTEND_URL = os.getenv("FRONTEND_URL")
 
 router = APIRouter()
 
@@ -49,7 +49,7 @@ async def oauth_login(app_id: str, current_user: dict = Depends(get_current_user
     params = {**config["auth_params"], "state": state_token}
     query_string = urllib.parse.urlencode(params)
     
-    return RedirectResponse(f"{config['auth_url']}?{query_string}")
+    return {"auth_url": f"{config['auth_url']}?{query_string}"}
 
 @router.get("/{app_id}/callback")
 async def generic_oauth_callback(app_id: str, code: str, state: str = None):
@@ -78,7 +78,6 @@ async def generic_oauth_callback(app_id: str, code: str, state: str = None):
     access_token = data.get("access_token")
 
     if access_token:
-        db_app_name = "google_drive" if app_id == "google" else app_id
-        await save_app_token(AppTokenPayload(app_name=db_app_name, token=access_token), username)
+        await save_app_token(AppTokenPayload(app_name=app_id, token=access_token), username)
     
     return RedirectResponse(url=FRONTEND_URL)

@@ -3,6 +3,7 @@ from typing import TypedDict, Optional, List
 from agent.agent_factory import route_tools, get_agent, extract_sources , extract_memory , generate_chat_title , run_guard
 from controllers.memory_handler import get_user_memories, save_user_memories
 from controllers.integrations_handler import get_all_app_tokens
+from controllers.file_handler import process_files
 from typing import TypedDict, Optional, List
 
 class AgentState(TypedDict):
@@ -11,6 +12,8 @@ class AgentState(TypedDict):
     available_apps: List[str]
     selected_apps: List[str]
 
+    files: Optional[List[any]]     
+    uploaded_files: Optional[list]
     # guard
     blocked: Optional[bool]
 
@@ -44,7 +47,6 @@ async def router_node(state: AgentState):
     print("🚦 [ROUTER NODE] STARTED")
     
     try:
-        # BUG FIX: Safely extract the user prompt whether it's a tuple or a LangChain object
         last_message = state["messages"][-1]
         user_prompt = last_message.content if hasattr(last_message, 'content') else last_message[-1]
         
@@ -59,7 +61,6 @@ async def router_node(state: AgentState):
         print(f"🚦 [ROUTER NODE] RAW LLM OUTPUT: {selected}")
         print(f"🚦 [ROUTER NODE] OUTPUT TYPE: {type(selected)}")
         
-        # Guardrail: Ensure it's a list. If LLM returned a string, wrap it or parse it
         if isinstance(selected, str):
             print("⚠️ [ROUTER NODE] WARNING: Router returned a string instead of a list! Fixing...")
             selected = [app.strip() for app in selected.replace('[','').replace(']','').replace('"','').replace("'",'').split(',') if app.strip()]
@@ -73,6 +74,36 @@ async def router_node(state: AgentState):
         traceback.print_exc()
         return {"selected_apps": []}
 
+async def file_processor_node(state: AgentState):
+    if state.get("blocked"):
+        return {}
+
+    files = state.get("files")
+    if not files:
+        return {"uploaded_files": []}
+
+    print("\n📂 [FILE NODE] Extracting text/media via Gemini & MarkItDown...")
+    
+    file_context, uploaded_metadata = await process_files(files, state["user_id"])
+    
+    print(f"📂 [FILE NODE] Extraction Complete. {len(files)} files processed.")
+
+    original_input = state["user_input"]
+    enriched_input = f"CONTEXT FROM ATTACHED FILES:\n{file_context}\n\nUSER PROMPT:\n{original_input}"
+
+    messages = state["messages"].copy()
+    last_message = messages[-1]
+    
+    if hasattr(last_message, 'content'):
+        last_message.content = enriched_input
+    elif isinstance(last_message, tuple):
+        messages[-1] = (last_message[0], enriched_input)
+
+    return {
+        "user_input": enriched_input, # Router & Memory will now see the extracted file text!
+        "messages": messages,         # Agent will now see the extracted file text!
+        "uploaded_files": uploaded_metadata # Save for DB later
+    }
 
 async def agent_node(state: AgentState):
     if state.get("blocked"):
@@ -87,7 +118,6 @@ async def agent_node(state: AgentState):
     
     print(f"🤖 [AGENT NODE] Database Tokens Found For: {list(app_tokens.keys())}")
 
-    # Explicitly calculate flags so we can log them
     selected_apps = state.get("selected_apps", [])
     
     enable_notion = "notion" in selected_apps
@@ -171,6 +201,7 @@ def postprocess_node(state: AgentState):
 workflow = StateGraph(AgentState)
 
 workflow.add_node("guard", guard_node)
+workflow.add_node("file_processor", file_processor_node) 
 workflow.add_node("router", router_node)
 workflow.add_node("agent", agent_node)
 workflow.add_node("memory", memory_node)
@@ -178,7 +209,8 @@ workflow.add_node("title", title_node)
 workflow.add_node("postprocess", postprocess_node)
 
 workflow.add_edge(START, "guard")
-workflow.add_edge("guard", "router")
+workflow.add_edge("guard", "file_processor")     
+workflow.add_edge("file_processor", "router")  
 workflow.add_edge("router", "agent")
 workflow.add_edge("agent", "memory")
 workflow.add_edge("memory", "title")

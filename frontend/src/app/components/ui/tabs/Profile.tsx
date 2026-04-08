@@ -165,7 +165,7 @@ function Field({ label, value, onChange }: FieldProps) {
                 value={value || ""}
                 onChange={e => onChange(e.target.value)}
                 className="w-full rounded-xl px-4 py-2.5 sm:py-3 text-sm sm:text-base outline-none transition-colors border
-                    bg-slate-50 border-slate-200 text-slate-900 focus:border-slate-400 focus:bg-white
+                    bg-slate-50 border-slate-200 text-slate-900 focus:border-slate-400
                     dark:bg-[#0b0b0b] dark:border-white/10 dark:text-slate-200 dark:focus:border-white/30"
             />
         </div>
@@ -184,7 +184,7 @@ function Textarea({ label, value, onChange }: FieldProps) {
                 value={value || ""}
                 onChange={e => onChange(e.target.value)}
                 className="w-full h-28 sm:h-32 rounded-xl px-4 py-3 text-sm sm:text-base outline-none resize-none transition-colors border
-                    bg-slate-50 border-slate-200 text-slate-900 focus:border-slate-400 focus:bg-white
+                    bg-slate-50 border-slate-200 text-slate-900 focus:border-slate-400
                     dark:bg-[#0b0b0b] dark:border-white/10 dark:text-slate-200 dark:focus:border-white/30"
             />
         </div>

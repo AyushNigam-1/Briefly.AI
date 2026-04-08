@@ -52,7 +52,8 @@ const Chats = ({
     };
 
     return (
-        <>
+        // 🌟 FIX 1: Wrap everything in a flex column container instead of a fragment
+        <div className="flex flex-col w-full h-full relative">
             <div className="flex flex-col items-center w-full h-[calc(100dvh-190px)] relative">
                 <div className="w-full max-w-6xl h-full relative">
 
@@ -73,7 +74,7 @@ const Chats = ({
                         data={queries}
                         onScroll={handleScroll}
                         shift={true}
-                        className="scrollbar-none overflow-x-hidden h-full w-full py-4"
+                        className="scrollbar-none overflow-x-hidden h-full w-full "
                     >
                         {(q, index) => {
                             const uniqueKey = q.id
@@ -98,7 +99,7 @@ const Chats = ({
                 </div>
             </div>
 
-            <div className="fixed bottom-0 left-0 w-full p-2 z-50">
+            <div className="relative w-full py-3 sm:px-0 px-3 z-50 mt-auto">
                 <div className="max-w-4xl w-full mx-auto">
                     <InputBox
                         query={searchInput} setQuery={setQuery} send={handleSend}
@@ -113,7 +114,7 @@ const Chats = ({
                 onClose={() => setSourcesOpen(false)}
                 sources={sources}
             />
-        </>
+        </div>
     );
 };
 

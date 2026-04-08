@@ -12,7 +12,8 @@ export default function PricingPage() {
             const response = await api.post(
                 "/payment/create-checkout-session",
                 {
-                    price_id: priceId
+                    price_id: priceId,
+                    origin: window.location.origin
                 }
             )
             const data = response.data
@@ -82,8 +83,8 @@ export default function PricingPage() {
     ];
 
     return (
-        <div className="min-h-screen overflow-y-auto bg-[#0b0b0b] text-slate-200 p-6 md:p-12 pb-24 font-mono flex flex-col items-center w-full">
-            <div className="text-center max-w-2xl mb-12 space-y-4 mt-8">
+        <div className="min-h-screen overflow-y-auto space-y-4 bg-[#0b0b0b] text-slate-200 p-6 md:p-12  font-mono flex flex-col items-center w-full">
+            <div className="text-center max-w-2xl space-y-4">
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white">
                     Simple, transparent pricing
                 </h1>

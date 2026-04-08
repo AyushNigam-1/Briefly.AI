@@ -8,24 +8,22 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Initialize Stripe with your env variable
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 router = APIRouter(prefix="/payment", tags=["payment"])
 
-# 🌟 2. Define the exact structure you expect from the React frontend
 class CheckoutRequest(BaseModel):
     price_id: str
 
 @router.post("/create-checkout-session")
 async def create_checkout_session(
-    request: CheckoutRequest, # 🌟 3. Inject it here
+    request: CheckoutRequest, 
     user=Depends(get_current_user)
 ):
+    frontend_url = request.get("origin")
     try:
         session = stripe.checkout.Session.create(
             payment_method_types=['card'],
             line_items=[{
-                # 🌟 4. Access it using dot notation
                 'price': request.price_id, 
                 'quantity': 1,
             }],
@@ -33,10 +31,10 @@ async def create_checkout_session(
             client_reference_id=str(user["user_id"]), 
             metadata={
                 "user_id": str(user["user_id"]),
-                "plan_type": "pro" if "price_1T3Z7bLIlOqwk7LfWJjRV28L" in request.price_id else "max" # Or pass this from frontend
+                "plan_type": "pro" if "price_1T3Z7bLIlOqwk7LfWJjRV28L" in request.price_id else "max"
             },
-            success_url="http://localhost:3000/success?session_id={CHECKOUT_SESSION_ID}",
-            cancel_url="http://localhost:3000/pricing",
+           success_url=f"{frontend_url}/success?session_id={{CHECKOUT_SESSION_ID}}",
+           cancel_url=f"{frontend_url}/subscription/plans",
         )
         
         return JSONResponse(content={"url": session.url})
