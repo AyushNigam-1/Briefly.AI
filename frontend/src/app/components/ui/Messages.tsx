@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Copy, FileText, ImageIcon, Link, RefreshCw, Pencil, Check, X, Volume2, Pause, Loader2 } from "lucide-react";
+import { ChevronDown, Copy, FileText, ImageIcon, Link, RefreshCw, Pencil, Check, X, Volume2, Pause, Loader2, Image, Video } from "lucide-react";
 import remarkGfm from "remark-gfm";
 import { Disclosure, DisclosureButton } from "@headlessui/react";
 import { MessageProps } from "@/app/types";
@@ -121,7 +121,6 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
 
     const shouldAnimate = !isStreaming;
 
-    // 🌟 THE FIX: Pure opacity fade. Zero Y-axis movement for EVERYTHING.
     const getInitialAnimation = () => {
         if (!shouldAnimate) return false;
         return { opacity: 0 };
@@ -136,21 +135,26 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
         >
             <div className={`relative flex flex-col gap-1 p-3 md:py-3 md:p-0 group ${q.sender === "user" ? "items-end w-full max-w-[90%] sm:max-w-[85%]" : "items-start w-full max-w-full"}`}>
 
-                {/* Files badges */}
                 {q?.files && q.files.length > 0 && (
-                    <motion.div layout="position" className="flex gap-2 flex-wrap mb-1">
+                    <div className="flex gap-2 flex-wrap mb-1">
                         {q.files.map((file, idx) => (
                             <div key={idx} className="flex items-center gap-2 p-2 rounded-xl border bg-white dark:bg-tertiary dark:border-secondary shadow-sm">
-                                <div className="p-1.5 sm:p-2 bg-slate-100 dark:bg-primary rounded-lg text-slate-600 dark:text-tertiary">
-                                    {file.type.startsWith("image/") ? <ImageIcon size={16} className="sm:w-[18px] sm:h-[18px]" /> : <FileText size={16} className="sm:w-[18px] sm:h-[18px]" />}
+                                <div className="p-2 sm:p-3 rounded-full my-auto transition-colors flex items-center justify-center bg-slate-200 text-slate-700 dark:text-gray-200 dark:bg-secondary">
+                                    {file.type.startsWith('image/') ? (
+                                        <Image size={16} className="sm:w-5 sm:h-5" />
+                                    ) : file.type.startsWith('video/') ? (
+                                        <Video size={16} className="sm:w-5 sm:h-5" />
+                                    ) : (
+                                        <FileText size={16} className="sm:w-5 sm:h-5" />
+                                    )}
                                 </div>
-                                <div className="text-[10px] sm:text-xs">
+                                <div className="text-sm">
                                     <p className="font-semibold truncate max-w-[100px] sm:max-w-[120px] text-slate-800 dark:text-white">{file.name}</p>
                                     <p className="opacity-60 dark:text-gray-400">{(file.size / 1024).toFixed(0)} KB</p>
                                 </div>
                             </div>
                         ))}
-                    </motion.div>
+                    </div>
                 )}
 
                 <div className={`flex flex-col gap-1.5 transition-all duration-200 ${q.sender === "user" ? "items-end w-fit max-w-full" : "items-start w-full"}`}>
@@ -173,7 +177,11 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
                                             <div className="rounded-xl transition-colors space-y-2 mb-2">
                                                 <DisclosureButton className="flex w-min items-center justify-between text-sm sm:text-md font-semibold gap-1 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors select-none">
                                                     <span className={isThinkingActive ? "animate-pulse text-slate-800 dark:text-slate-200" : ""}>
-                                                        {isThinkingActive ? "Thinking..." : "Thought"}
+                                                        {isThinkingActive && q.thinking?.includes("Analyzing")
+                                                            ? "Analyzing..."
+                                                            : isThinkingActive
+                                                                ? "Thinking..."
+                                                                : "Thought"}
                                                     </span>
                                                     <ChevronDown
                                                         size={16}

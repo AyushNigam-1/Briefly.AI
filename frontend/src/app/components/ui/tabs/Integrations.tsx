@@ -195,7 +195,7 @@ export default function Integrations() {
                                     Available to Connect
                                 </h3>
                                 <p className="text-xs sm:text-sm mt-1 transition-colors text-slate-500 dark:text-slate-400">
-                                    Link your accounts to allow the AI to read your private data securely via MCP.
+                                    Link your accounts to allow the AI to interact with them.
                                 </p>
                             </div>
 

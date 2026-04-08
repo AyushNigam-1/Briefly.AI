@@ -148,8 +148,7 @@ const InputBox = ({ query, setQuery, send, isPending, stop }: InputProps) => {
                         type="file"
                         className="hidden"
                         multiple
-                        // 🌟 STRICT FILE RESTRICTION: Only allows Google-supported formats
-                        accept="image/*,video/*,text/*,application/pdf,application/json,text/markdown,text/csv,application/rtf,application/x-javascript,application/x-python-code"
+                        accept="image/*,video/*,text/*,application/pdf,application/json,text/markdown,text/csv"
                         onChange={handleFileChange}
                         onClick={(e) => {
                             (e.currentTarget as HTMLInputElement).value = '';
@@ -257,7 +256,7 @@ const InputBox = ({ query, setQuery, send, isPending, stop }: InputProps) => {
                             >
                                 <button
                                     type="button"
-                                    onClick={() => isPending ? stop() : send(query, files, selected.value)}
+                                    onClick={() => isPending ? stop() : (send(query, files, selected.value), setFiles([]))}
                                     className={clsx(
                                         "p-2.5 rounded-full flex-shrink-0 transition-all duration-200 flex items-center justify-center",
                                         "bg-slate-900 text-white hover:bg-slate-800 dark:bg-primary dark:text-tertiary dark:hover:bg-primary/90 shadow-md scale-100"

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import api from "@/app/lib/api";
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import { ChevronLeft, ChevronRight, EllipsisVertical, Ghost, Pin, Plus, Share2, Trash, Loader2 } from "lucide-react";
@@ -12,27 +12,22 @@ import TaskManagerModal from "../modals/Tasks";
 import ShareModal from "../modals/ShareModal";
 import DeleteChatDialog from "../modals/DeleteChatModal";
 import SearchModal from "../modals/SearchChatModal";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
-const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
+const Sidebar = ({ user }: { user: any, isLoading: boolean }) => {
 
     const router = useRouter();
     const searchParams = useSearchParams();
+    const queryClient = useQueryClient();
     const [mounted, setMounted] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
-    const [chats, setChats] = useState<SummaryHistoryResponse[]>([]);
-    const [skip, setSkip] = useState(0);
-    const [hasMore, setHasMore] = useState(true);
-    const [loadingMore, setLoadingMore] = useState(false);
     const [search, setSearch] = useState("");
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [summaryId, setSummaryId] = useState<string>();
     const [shareModalOpen, setShareModalOpen] = useState(false);
     const [shareChatInfo, setShareChatInfo] = useState({ id: "", title: "" });
     const activeId = searchParams.get('id');
-
-    const fetchInitiated = useRef(false);
 
     useEffect(() => {
         setMounted(true);
@@ -60,134 +55,149 @@ const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
         }
     };
 
+    // --- React Query: Fetch Chats (Infinite Pagination) ---
+    const {
+        data,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
+        isLoading,
+        isError
+    } = useInfiniteQuery({
+        queryKey: ['chats', user?.id],
+        queryFn: async ({ pageParam = 0 }) => {
+            const res = await api.get(`/chats/?skip=${pageParam}&limit=20`);
+            return {
+                chats: res.data.chats as SummaryHistoryResponse[],
+                nextSkip: res.data.chats?.length === 20 ? pageParam + 20 : undefined
+            };
+        },
+        initialPageParam: 0,
+        getNextPageParam: (lastPage) => lastPage.nextSkip,
+        enabled: mounted && !!user?.id,
+    });
+
+    // Flatten pages into a single array
+    const chats = data?.pages.flatMap(page => page.chats) || [];
+
+    // --- React Query: Handle New Chat Creation Event ---
     useEffect(() => {
         const handleChatTitled = (event: any) => {
             const { id, title } = event.detail;
-            setChats(prev => {
-                const exists = prev.find(c => c.id === id);
+
+            queryClient.setQueryData(['chats', user?.id], (oldData: any) => {
+                if (!oldData) return oldData;
+
+                let exists = false;
+                const newPages = oldData.pages.map((page: any) => {
+                    const updatedChats = page.chats.map((c: any) => {
+                        if (c.id === id) {
+                            exists = true;
+                            return { ...c, title };
+                        }
+                        return c;
+                    });
+                    return { ...page, chats: updatedChats };
+                });
+
                 if (exists) {
-                    return prev.map(c => c.id === id ? { ...c, title } : c);
+                    return { ...oldData, pages: newPages };
                 } else {
                     router.push(`/?id=${id}`);
-                    return [
-                        {
-                            id,
-                            title,
-                            is_pinned: false,
-                            timestamp: new Date().toISOString(),
-                            url: "",
-                            queries: 0,
-                            type: "chat",
-                            thumbnail: ""
-                        },
-                        ...prev
-                    ];
+                    const newChat = {
+                        id,
+                        title,
+                        is_pinned: false,
+                        timestamp: new Date().toISOString(),
+                        url: "",
+                        queries: 0,
+                        type: "chat",
+                        thumbnail: ""
+                    };
+                    const firstPage = { ...oldData.pages[0], chats: [newChat, ...oldData.pages[0].chats] };
+                    return { ...oldData, pages: [firstPage, ...oldData.pages.slice(1)] };
                 }
             });
         };
+
         window.addEventListener("chat-title", handleChatTitled);
         return () => window.removeEventListener("chat-title", handleChatTitled);
-    }, [router]);
+    }, [queryClient, router, user?.id]);
 
-    const fetchUserSummaries = async (currentSkip = 0, isAppending = false) => {
-        if (!user) {
-            setLoading(false);
-            return;
-        }
-
-        if (isAppending) setLoadingMore(true);
-        else setLoading(true);
-
-        try {
-            const res = await api.get(`/chats/?skip=${currentSkip}&limit=20`);
-
-            const fetchedChats = res.data.chats || [];
-
-            if (fetchedChats.length < 10) {
-                setHasMore(false);
+    // --- React Query: Delete Mutation ---
+    const deleteMutation = useMutation({
+        mutationFn: (id: string) => api.delete(`/summary/?id=${id}`),
+        onSuccess: (_, deletedId) => {
+            queryClient.setQueryData(['chats', user?.id], (oldData: any) => {
+                if (!oldData) return oldData;
+                return {
+                    ...oldData,
+                    pages: oldData.pages.map((page: any) => ({
+                        ...page,
+                        chats: page.chats.filter((c: any) => c.id !== deletedId)
+                    }))
+                };
+            });
+            toast.success("Chat deleted successfully");
+            setDialogOpen(false);
+            if (activeId === deletedId) {
+                router.push('/');
             }
+        },
+        onError: () => {
+            toast.error("Failed to delete chat");
+        }
+    });
 
-            if (isAppending) {
-                setChats(prev => {
-                    const existingIds = new Set(prev.map(c => c.id));
-                    const newUniqueChats = fetchedChats.filter((c: SummaryHistoryResponse) => !existingIds.has(c.id));
-                    return [...prev, ...newUniqueChats];
-                });
-            } else {
-                setChats(fetchedChats);
-            }
-        } catch {
-            setError("Failed to load summaries");
-        } finally {
-            setLoading(false);
-            setLoadingMore(false);
-        }
-    };
+    // --- React Query: Pin Mutation (Optimistic Update) ---
+    const pinMutation = useMutation({
+        mutationFn: ({ id, is_pinned }: { id: string, is_pinned: boolean }) =>
+            api.patch(`/summary/${id}/pin`, { is_pinned }),
+        onMutate: async ({ id, is_pinned }) => {
+            await queryClient.cancelQueries({ queryKey: ['chats', user?.id] });
+            const previousChats = queryClient.getQueryData(['chats', user?.id]);
 
-    useEffect(() => {
-        if (!user) {
-            fetchInitiated.current = false;
+            queryClient.setQueryData(['chats', user?.id], (oldData: any) => {
+                if (!oldData) return oldData;
+                return {
+                    ...oldData,
+                    pages: oldData.pages.map((page: any) => ({
+                        ...page,
+                        chats: page.chats.map((c: any) => c.id === id ? { ...c, is_pinned } : c)
+                    }))
+                };
+            });
+            return { previousChats };
+        },
+        onSuccess: (_, variables) => {
+            toast.success(variables.is_pinned ? "Chat pinned" : "Chat unpinned");
+        },
+        onError: (err, variables, context) => {
+            queryClient.setQueryData(['chats', user?.id], context?.previousChats);
+            toast.error("Failed to update pin status");
         }
-        if (mounted && user?.id && !fetchInitiated.current) {
-            fetchInitiated.current = true;
-            fetchUserSummaries(0, false);
-        } else if (mounted && !user?.id) {
-            setLoading(false);
-        }
-    }, [mounted, user?.id]);
+    });
+
+    if (!user) return null;
 
     const filtered = chats.filter((s) => s.title.toLowerCase().includes(search.toLowerCase()));
-
-    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-        const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
-        if (scrollHeight - scrollTop <= clientHeight + 50 && hasMore && !loadingMore && !loading) {
-            const newSkip = skip + 20;
-            setSkip(newSkip);
-            fetchUserSummaries(newSkip, true);
-        }
-    };
-
-    const handleDelete = async () => {
-        try {
-            await api.delete(`/summary/?id=${summaryId}`);
-            const updated = chats.filter((s) => s.id !== summaryId);
-            setChats(updated);
-        } catch {
-            setError("Delete failed");
-        }
-    };
-
-    const handlePin = async (chatId: string, currentPinStatus: boolean) => {
-        try {
-            const newPinStatus = !currentPinStatus;
-            await api.patch(`/summary/${chatId}/pin`, {
-                is_pinned: newPinStatus,
-            });
-            setChats(prevChats =>
-                prevChats.map(chat =>
-                    chat.id === chatId ? { ...chat, is_pinned: newPinStatus } : chat
-                )
-            );
-        } catch (err) {
-            console.error("Failed to pin chat", err);
-            setError("Failed to pin chat");
-        }
-    };
-
-    if (!user) {
-        return null;
-    }
-
     const pinnedChats = filtered.filter(c => c.is_pinned);
     const recentChats = filtered.filter(c => !c.is_pinned);
 
-    const options = (chat: any) => [
+    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
+        if (scrollHeight - scrollTop <= clientHeight + 50 && hasNextPage && !isFetchingNextPage && !isLoading) {
+            fetchNextPage();
+        }
+    };
+
+    const options = (chat: SummaryHistoryResponse) => [
         {
             label: chat.is_pinned ? "Unpin" : "Pin",
             icon: (<Pin size={16} className={chat.is_pinned ? "fill-slate-800 dark:fill-white" : ""} />),
             action: (e: React.MouseEvent) => {
                 e.preventDefault();
-                handlePin(chat.id, chat.is_pinned || false);
+                pinMutation.mutate({ id: chat.id, is_pinned: !chat.is_pinned });
             }
         },
         {
@@ -252,7 +262,9 @@ const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
                         <MenuItem key={option.label}>
                             <button
                                 onClick={option.action}
+                                disabled={pinMutation.isPending || deleteMutation.isPending}
                                 className="group z-50 flex w-full p-1.5 md:p-2 items-center gap-2 md:gap-3 rounded-lg text-sm md:text-base font-bold transition-colors
+                                    disabled:opacity-50
                                     data-[focus]:bg-slate-100 
                                     dark:data-[focus]:bg-white/5"
                             >
@@ -284,7 +296,7 @@ const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
-                className={`fixed top-0 left-0 h-full w-[55vw] md:w-72 border-r font-mono shadow-2xl md:shadow-lg transform transition-transform duration-300 z-50 
+                className={`fixed top-0 left-0 h-full w-[60vw] md:w-72 border-r font-mono shadow-2xl md:shadow-lg transform transition-transform duration-300 z-50 
                     bg-white border-slate-200 text-slate-800
                     dark:bg-tertiary dark:border-secondary dark:text-white
                     ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
@@ -325,12 +337,12 @@ const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
                         onScroll={handleScroll}
                         className="overflow-y-auto min-h-0 flex-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/5"
                     >
-                        {loading && (
+                        {isLoading && (
                             <div className="flex justify-center items-center py-2">
                                 <Loader2 size={24} className="animate-spin text-slate-400" />
                             </div>
                         )}
-                        {error && <p className="text-red-500 dark:text-red-400 mb-2 text-sm">{error}</p>}
+                        {isError && <p className="text-red-500 dark:text-red-400 mb-2 text-sm text-center">Failed to load summaries.</p>}
 
                         <div className="space-y-4 overflow-y-auto pb-4">
 
@@ -347,7 +359,7 @@ const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
 
                             {recentChats.length > 0 && (
                                 <div className="space-y-2">
-                                    <h3 className="font-bold text-xs md:text-sm tracking-wide text-slate-500 dark:text-gray-200">Recent</h3>
+                                    <h3 className="font-bold text-sm tracking-wide text-slate-500 dark:text-gray-200">Recents</h3>
                                     <div className="space-y-1">
                                         <AnimatePresence>
                                             {recentChats.map((s) => renderChatItem(s))}
@@ -356,8 +368,8 @@ const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
                                 </div>
                             )}
 
-                            {loadingMore && (
-                                <div className="flex justify-center">
+                            {isFetchingNextPage && (
+                                <div className="flex justify-center mt-2">
                                     <Loader2 size={16} className="animate-spin text-slate-500 dark:text-gray-400" />
                                 </div>
                             )}
@@ -374,7 +386,9 @@ const Sidebar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
             <DeleteChatDialog
                 isOpen={dialogOpen}
                 onClose={() => setDialogOpen(false)}
-                onConfirm={handleDelete}
+                onConfirm={() => {
+                    if (summaryId) deleteMutation.mutate(summaryId);
+                }}
             />
         </>
     );

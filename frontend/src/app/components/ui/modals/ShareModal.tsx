@@ -83,7 +83,7 @@ export default function ShareModal({ isOpen, onClose, chatId, chatTitle }: Share
                 >
                     {/* Header */}
                     <div className="flex items-center justify-between">
-                        <DialogTitle className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                        <DialogTitle className="text-xl font-bold text-slate-900 dark:text-slate-100">
                             Share Chat
                         </DialogTitle>
                         <button

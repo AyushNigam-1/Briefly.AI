@@ -52,15 +52,19 @@ type StreamCallbacks = {
     isPrivate?: boolean
 }
 
+// Add onAnalyzing to your StreamCallbacks interface wherever it is defined:
+// onAnalyzing?: (data: string) => void;
+
 export async function streamChat({
     endpoint,
     body,
     abortController,
     onToken,
     onThinking,
+    onAnalyzing, // 🌟 NEW: Added to destructuring
     onDone,
     onBlocked,
-}: StreamCallbacks) {
+}: StreamCallbacks & { onAnalyzing?: (text: string) => void }) {
 
     const tokenQueue: string[] = []
     let dripInterval: ReturnType<typeof setInterval> | null = null
@@ -120,6 +124,14 @@ export async function streamChat({
 
             if (parsed.type === "thinking") {
                 onThinking(parsed.data)
+            }
+
+            if (parsed.type === "analyzing") {
+                if (onAnalyzing) {
+                    onAnalyzing(parsed.data)
+                } else {
+                    onThinking(parsed.data)
+                }
             }
 
             if (parsed.type === "done") {

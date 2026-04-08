@@ -402,6 +402,9 @@ const Home = () => {
     let accumulatedContent = "";
     let accumulatedThinking = "";
 
+    // 🌟 NEW: Track when the actual LLM reasoning begins
+    let isRealThinkingStarted = false;
+
     try {
       await streamChat({
         endpoint: "/query",
@@ -416,7 +419,25 @@ const Home = () => {
             return up;
           })
         },
+
+        // 🌟 NEW: Catch the analyzing event and display it in the thinking block
+        onAnalyzing(token) {
+          accumulatedThinking += token;
+          setQueries(prev => {
+            const up = [...prev];
+            const lastIdx = up.length - 1;
+            up[lastIdx] = { ...up[lastIdx], thinking: accumulatedThinking };
+            return up;
+          })
+        },
+
         onThinking(token) {
+          // 🌟 NEW: The very first time a real thought comes in, wipe the analyzing text!
+          if (!isRealThinkingStarted) {
+            accumulatedThinking = "";
+            isRealThinkingStarted = true;
+          }
+
           accumulatedThinking += token;
           setQueries(prev => {
             const up = [...prev];
