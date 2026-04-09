@@ -5,6 +5,8 @@ import clsx from "clsx"
 import api from "@/app/lib/api"
 import { motion, AnimatePresence } from "framer-motion"
 import { Loader2 } from "lucide-react"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { toast } from "sonner"
 
 type Verbosity = "Ultra Short" | "Concise" | "Balanced" | "Detailed" | "Very Detailed"
 type Style =
@@ -33,52 +35,77 @@ const styleOptions: Style[] = [
 ]
 
 export default function Preference() {
+    const queryClient = useQueryClient()
     const [instruction, setInstruction] = useState("")
     const [verbosity, setVerbosity] = useState<Verbosity>("Balanced")
     const [style, setStyle] = useState<Style>("Technical")
-    const [isLoading, setIsLoading] = useState(true)
+    const [isInitialized, setIsInitialized] = useState(false)
 
     const debounce = useRef<NodeJS.Timeout | null>(null)
 
-    useEffect(() => {
-        setIsLoading(true)
-        api.get("/preference/get").then(res => {
-            setInstruction(res.data.custom_instruction || "")
-            setVerbosity(res.data.verbosity || "Balanced")
-            setStyle(res.data.tone || "Technical")
-        }).finally(() => {
-            setIsLoading(false)
-        })
-    }, [])
+    const { data, isLoading: isQueryLoading } = useQuery({
+        queryKey: ['preferences'],
+        queryFn: async () => {
+            const res = await api.get("/preference/get")
+            return res.data
+        }
+    })
 
-    const updateField = async (field: string, value: string) => {
-        await api.post("/preference/update", {
-            field,
-            value,
-        })
-    }
+    useEffect(() => {
+        if (data && !isInitialized) {
+            setInstruction(data.custom_instruction || "")
+            setVerbosity(data.verbosity || "Balanced")
+            setStyle(data.tone || "Technical")
+            setIsInitialized(true)
+        }
+    }, [data, isInitialized])
+
+    const isLoading = isQueryLoading || !isInitialized;
+
+    const updateMutation = useMutation({
+        mutationFn: async ({ field, value }: { field: string, value: string }) => {
+            await api.post("/preference/update", { field, value })
+        },
+        onMutate: async ({ field, value }) => {
+            await queryClient.cancelQueries({ queryKey: ['preferences'] })
+            const previous = queryClient.getQueryData(['preferences'])
+            queryClient.setQueryData(['preferences'], (old: any) => ({
+                ...old,
+                [field]: value
+            }))
+
+            return { previous }
+        },
+        onSuccess: () => {
+            toast.success("Preferences saved", { id: "pref-save", duration: 2000 })
+        },
+        onError: (err, variables, context) => {
+            queryClient.setQueryData(['preferences'], context?.previous)
+            toast.error("Failed to save preference", { id: "pref-save" })
+        }
+    })
 
     useEffect(() => {
         if (isLoading) return
-
         if (debounce.current) clearTimeout(debounce.current)
-
         debounce.current = setTimeout(() => {
-            updateField("custom_instruction", instruction)
+            if (data && instruction !== (data.custom_instruction || "")) {
+                updateMutation.mutate({ field: "custom_instruction", value: instruction })
+            }
         }, 700)
-    }, [instruction, isLoading])
+    }, [instruction, isLoading, data, updateMutation])
 
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
             if ((e.metaKey || e.ctrlKey) && e.key === "s") {
                 e.preventDefault()
-                updateField("custom_instruction", instruction)
+                if (debounce.current) clearTimeout(debounce.current)
+                updateMutation.mutate({ field: "custom_instruction", value: instruction })
             }
         }
-
         window.addEventListener("keydown", handler)
         return () => window.removeEventListener("keydown", handler)
-    }, [instruction])
+    }, [instruction, updateMutation])
 
     return (
         <div className="relative w-full font-mono">
@@ -90,7 +117,7 @@ export default function Preference() {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.2 }}
-                        className="absolute inset-0 flex items-center justify-center h-[80vh] sm:h-[65vh]  z-10"
+                        className="absolute inset-0 flex items-center justify-center h-[80vh] sm:h-[65vh] z-10"
                     >
                         <Loader2 className="w-8 h-8 animate-spin text-slate-400 dark:text-slate-500" />
                     </motion.div>
@@ -117,13 +144,12 @@ export default function Preference() {
                                 value={instruction}
                                 onChange={e => setInstruction(e.target.value)}
                                 className="w-full h-40 rounded-xl p-4 custom-scrollbar text-sm outline-none resize-none transition-colors border
-        bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-slate-400
-        dark:bg-[#0b0b0b] dark:border-white/10 dark:text-slate-200 dark:placeholder:text-slate-500 dark:focus:border-white/30"
+                                bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-slate-400
+                                dark:bg-[#0b0b0b] dark:border-white/10 dark:text-slate-200 dark:placeholder:text-slate-500 dark:focus:border-white/30"
                                 placeholder="I am a developer. Prefer concise answers. Show code examples."
                             />
                         </div>
 
-                        {/* Verbosity Section */}
                         <div>
                             <div className="mb-3">
                                 <h4 className="text-lg font-bold transition-colors text-slate-900 dark:text-slate-200">
@@ -140,7 +166,7 @@ export default function Preference() {
                                         key={v}
                                         onClick={() => {
                                             setVerbosity(v)
-                                            updateField("verbosity", v)
+                                            updateMutation.mutate({ field: "verbosity", value: v })
                                         }}
                                         className={clsx(
                                             "px-4 py-2 text-sm rounded-lg border transition-all duration-200 font-medium",
@@ -172,7 +198,7 @@ export default function Preference() {
                                         key={s}
                                         onClick={() => {
                                             setStyle(s)
-                                            updateField("tone", s)
+                                            updateMutation.mutate({ field: "tone", value: s })
                                         }}
                                         className={clsx(
                                             "px-4 py-2 text-sm rounded-lg border transition-all duration-200 font-medium",

@@ -184,6 +184,7 @@ async def chat_stream(user_input, user_id, chat_id=None, files=None, modal_name=
         "is_new_chat": is_new,
         "user_input": user_input,
         "user_id": user_id,
+        "files": files
     }
 
     try:
@@ -194,18 +195,29 @@ async def chat_stream(user_input, user_id, chat_id=None, files=None, modal_name=
         async for event in agent_graph.astream_events(initial_state, version="v2"):
 
             kind = event["event"]
+            name = event.get("name","")
 
-            if kind == "on_chat_model_stream":
+            if kind == "on_chain_start" and name == "file_processor":
+                if files:
+                    msg = "📄 Analyzing attached files...\n"
+                    thinking_text += msg
+                    yield f"data: {json.dumps({'type': 'analyzing', 'data': msg})}\n\n"
+
+            elif kind == "on_chain_end" and name == "file_processor":
+                if files:
+                    msg = "✅ File extraction complete.\n\n"
+                    thinking_text += msg
+                    yield f"data: {json.dumps({'type': 'analyzing', 'data': msg})}\n\n"
+
+            elif kind == "on_chat_model_stream":
                 chunk = event["data"]["chunk"]
 
-                # Thinking stream
                 if hasattr(chunk, "additional_kwargs"):
                     reasoning = chunk.additional_kwargs.get("reasoning_content")
                     if reasoning:
                         thinking_text += reasoning
                         yield f"data: {json.dumps({'type': 'thinking', 'data': reasoning})}\n\n"
 
-                # Normal tokens
                 if hasattr(chunk, "content") and chunk.content:
                     assistant_text += chunk.content
                     yield f"data: {json.dumps({'type': 'token', 'data': chunk.content})}\n\n"
@@ -242,7 +254,7 @@ async def chat_stream(user_input, user_id, chat_id=None, files=None, modal_name=
 
         if not final_state:
             final_state = {}
-            
+
         uploaded_files = final_state.get("uploaded_files", [])
         sources = final_state.get("sources", [])
         title = final_state.get("title")
@@ -530,16 +542,11 @@ async def private_chat_stream(user_input, files=None, modal_name=None, chat_hist
     No database tracking, no personal tool access (Notion, Drive, etc.).
     """
     
-    # Process files (Pass "guest" so your file handler knows not to link it to a real user account)
-    file_context, uploaded_files = await process_files(files, user_id="guest")
-
     mock_chat_doc = {"queries": chat_history if chat_history else []}
     
-    # 🌟 THE FIX: Pass an empty string for memory_context, and "guest" for user_id
     messages = build_messages(
         chat=mock_chat_doc, 
         user_input=user_input, 
-        file_context=file_context, 
         memory_context="", 
         user_id="guest"
     )
@@ -547,13 +554,14 @@ async def private_chat_stream(user_input, files=None, modal_name=None, chat_hist
     initial_state = {
         "messages": messages,
         "modal_name": modal_name,
-        # Only allow strictly public/stateless tools here, if any.
         "available_apps": ["n8n"], 
         "selected_apps": [],
         "blocked": False,
         "is_new_chat": False, 
         "user_input": user_input,
-        "user_id": "guest", # LangGraph requires a string here
+        "user_id": "guest",
+        "files": files
+
     }
 
     try:

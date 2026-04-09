@@ -1,8 +1,8 @@
 "use client"
 import { useState } from 'react'
 import { User, UserPlus } from 'lucide-react';
-import SettingsDialog from './modals/Settings';
 import Link from 'next/link';
+import SettingsDialog from '../modals/Settings';
 
 const Navbar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
     const [isOpen, setOpen] = useState<boolean>(false);
@@ -16,7 +16,6 @@ const Navbar = ({ user, isLoading }: { user: any, isLoading: boolean }) => {
                 </div>
 
                 <div className="flex justify-end gap-2 sm:gap-3 items-center">
-                    {/* 🌟 Check isLoading FIRST to prevent the Login button flash */}
                     {isLoading ? (
                         <div className="w-9 h-9 sm:w-[42px] sm:h-[42px] rounded-full bg-slate-200 dark:bg-white/10 animate-pulse" />
                     ) : user ? (

@@ -222,14 +222,12 @@ async def process_files(files, user_id):
                 if gemini_file.state.name == "FAILED":
                     raise Exception("Gemini video processing failed.")
 
-                # Generate Content
                 response = client.models.generate_content(
-                    model="gemini-2.5-flash", # Use standard flash for fast multimodal tasks
+                    model="gemini-3-flash-preview", 
                     contents=[gemini_file, EXTRACTION_PROMPT]
                 )
                 extracted_text = response.text
                 
-                # Cleanup Google Cloud File
                 client.files.delete(name=gemini_file.name)
 
             except Exception as e:

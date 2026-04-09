@@ -3,9 +3,11 @@
 import api from "@/app/lib/api"
 import { Switch } from "@headlessui/react"
 import clsx from "clsx"
-import React, { useEffect, useState } from "react"
+import React from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { X, Loader2 } from "lucide-react"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { toast } from "sonner"
 
 interface MemoryItem {
     id: string
@@ -14,36 +16,62 @@ interface MemoryItem {
 }
 
 const Memory: React.FC = () => {
-    const [memories, setMemories] = useState<MemoryItem[]>([])
-    const [memoryEnabled, setMemoryEnabled] = useState(false)
-    const [isLoading, setIsLoading] = useState(true)
+    const queryClient = useQueryClient();
 
-    useEffect(() => {
-        setIsLoading(true)
-        api.get("/memory").then(res => {
-            setMemories(res.data.memories || [])
-            setMemoryEnabled(Boolean(res.data.enabled))
-        }).finally(() => {
-            setIsLoading(false)
-        })
-    }, [])
-
-    const toggleMemory = async (val: boolean) => {
-        setMemoryEnabled(val)
-        await api.post("/memory/toggle", { enabled: val })
-    }
-
-    const handleDeleteMemory = async (id: string) => {
-        const previousMemories = [...memories]
-        setMemories(prev => prev.filter(m => m.id !== id))
-
-        try {
-            await api.delete(`/memory/${id}`)
-        } catch (error) {
-            console.error("Failed to delete memory", error)
-            setMemories(previousMemories)
+    const { data, isLoading } = useQuery({
+        queryKey: ['memories'],
+        queryFn: async () => {
+            const res = await api.get("/memory");
+            return res.data;
         }
-    }
+    });
+
+    const memories: MemoryItem[] = data?.memories || [];
+    const memoryEnabled: boolean = Boolean(data?.enabled);
+
+    const toggleMutation = useMutation({
+        mutationFn: async (val: boolean) => {
+            await api.post("/memory/toggle", { enabled: val });
+        },
+        onMutate: async (newVal) => {
+            await queryClient.cancelQueries({ queryKey: ['memories'] });
+            const previousData = queryClient.getQueryData(['memories']);
+
+            queryClient.setQueryData(['memories'], (old: any) => ({
+                ...old,
+                enabled: newVal
+            }));
+
+            return { previousData };
+        },
+        onError: (err, newVal, context) => {
+            queryClient.setQueryData(['memories'], context?.previousData);
+            toast.error("Failed to toggle memory settings");
+        }
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: async (id: string) => {
+            await api.delete(`/memory/${id}`);
+        },
+        onMutate: async (id) => {
+            await queryClient.cancelQueries({ queryKey: ['memories'] });
+            const previousData = queryClient.getQueryData(['memories']);
+            queryClient.setQueryData(['memories'], (old: any) => ({
+                ...old,
+                memories: old.memories.filter((m: MemoryItem) => m.id !== id)
+            }));
+
+            return { previousData };
+        },
+        onSuccess: () => {
+            toast.success("Memory deleted successfully");
+        },
+        onError: (err, id, context) => {
+            queryClient.setQueryData(['memories'], context?.previousData);
+            toast.error("Failed to delete memory");
+        }
+    });
 
     return (
         <div className="flex w-full">
@@ -68,7 +96,7 @@ const Memory: React.FC = () => {
                         transition={{ duration: 0.2 }}
                         className="space-y-6 w-full flex-1"
                     >
-                        {/* HEADER */}
+                        {/* HEADER (Untouched) */}
                         <div>
                             <h3 className="text-lg sm:text-xl font-bold transition-colors text-slate-900 dark:text-slate-200">
                                 Saved Memories
@@ -83,21 +111,22 @@ const Memory: React.FC = () => {
                             className="space-y-4 scrollbar-none custom-scrollbar"
                             style={{ scrollbarGutter: "stable" }}
                         >
-                            <div className="flex items-center justify-between bg-white/5 border border-secondary rounded-xl px-4 py-3">
-                                <div>
-                                    <p className="text-slate-200 font-semibold">
+                            {/* 🌟 FIX: Responsive Flexbox with gap, flex-1, and min-w-0 to prevent text overflow */}
+                            <div className="flex items-center justify-between gap-3 sm:gap-4 bg-white/5 border border-secondary rounded-xl px-3 sm:px-4 py-3">
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm sm:text-base text-slate-200 font-semibold truncate mb-0.5">
                                         Use memories in conversations
                                     </p>
-                                    <p className="text-xs text-slate-400">
+                                    <p className="text-[11px] sm:text-xs text-slate-400 leading-snug">
                                         Turn off to temporarily disable personalization.
                                     </p>
                                 </div>
 
                                 <Switch
                                     checked={memoryEnabled}
-                                    onChange={toggleMemory}
+                                    onChange={(val) => toggleMutation.mutate(val)}
                                     className={clsx(
-                                        "relative inline-flex h-6 w-11 items-center rounded-full transition",
+                                        "relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition",
                                         memoryEnabled ? "bg-white/20" : "bg-white/5"
                                     )}
                                 >
@@ -109,6 +138,7 @@ const Memory: React.FC = () => {
                                     />
                                 </Switch>
                             </div>
+
                             <AnimatePresence initial={false}>
                                 {memories.map(m => (
                                     <motion.div
@@ -124,8 +154,9 @@ const Memory: React.FC = () => {
                                         </p>
 
                                         <button
-                                            onClick={() => handleDeleteMemory(m.id)}
-                                            className="absolute -top-2.5 -right-2.5 p-1 rounded-full bg-slate-100 dark:bg-[#1e1e1e] border border-slate-300 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/20 dark:hover:text-red-400 transition-colors shadow-sm z-10 outline-none"
+                                            onClick={() => deleteMutation.mutate(m.id)}
+                                            disabled={deleteMutation.isPending}
+                                            className="absolute -top-2.5 -right-2.5 p-1 rounded-full bg-slate-100 dark:bg-[#1e1e1e] border border-slate-300 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/20 dark:hover:text-red-400 disabled:opacity-50 transition-colors shadow-sm z-10 outline-none"
                                             title="Delete Memory"
                                         >
                                             <X size={14} strokeWidth={2.5} />

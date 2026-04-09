@@ -1,11 +1,10 @@
 "use client";
 import React, { Suspense } from "react";
-import Sidebar from "../components/ui/panels/Sidebar";
-import Navbar from "../components/ui/Navbar";
+import Sidebar from "../components/layout/Sidebar";
+import Navbar from "../components/layout/Navbar";
 import OneSignalSetup from "../providers/OneSignalProvider";
 import { authClient } from "../lib/auth-client";
 import { Loader2 } from "lucide-react";
-// 🌟 NEW: Import Toaster from sonner
 import { Toaster } from "sonner";
 
 export default function DashboardLayout({

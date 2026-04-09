@@ -1,77 +1,93 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import api from "@/app/lib/api"
 import {
     Dialog,
     DialogBackdrop,
     DialogPanel,
 } from "@headlessui/react"
-import { Trash2, Power, X, Workflow, Search, Loader2, Calendar } from "lucide-react"
+import { Trash2, Power, X, Workflow, Search, Loader2, Calendar, Pause, Settings } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import clsx from "clsx"
 import { SearchModalProps, Task } from "@/app/types"
 import { toast } from "sonner"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import TaskEditor from "./TaskEditor"
 
 export default function TaskManagerModal({ onCloseSidebar }: SearchModalProps) {
+    const queryClient = useQueryClient()
+    const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null)
     const [open, setOpen] = useState(false)
-    const [workflows, setWorkflows] = useState<Task[]>([])
-    const [loading, setLoading] = useState(false)
     const [query, setQuery] = useState("")
 
     const [deletingId, setDeletingId] = useState<string | null>(null)
     const [runningId, setRunningId] = useState<string | null>(null)
 
-    const load = async () => {
-        setLoading(true)
-        try {
+    const { data: workflows = [], isLoading } = useQuery({
+        queryKey: ['workflows'],
+        queryFn: async () => {
             const res = await api.get("/workflows")
-            setWorkflows(res.data.data || [])
-        } catch (error) {
-            console.error("Failed to load workflows", error)
-        } finally {
-            setLoading(false)
-        }
-    }
+            return res.data.data || []
+        },
+        enabled: open,
+    })
 
-    useEffect(() => {
-        if (open) load()
-    }, [open])
-
-    // 🌟 THE NEW TOGGLE FUNCTION
-    const toggleWorkflow = async (id: string, currentState: boolean) => {
-        setRunningId(id)
-        try {
+    const toggleMutation = useMutation({
+        mutationFn: async (id: string) => {
             await api.put(`/workflows/${id}/toggle`)
+        },
+        onMutate: async (id) => {
+            setRunningId(id)
+            await queryClient.cancelQueries({ queryKey: ['workflows'] })
+            const previousWorkflows = queryClient.getQueryData<Task[]>(['workflows'])
+            queryClient.setQueryData(['workflows'], (old: Task[] | undefined) => {
+                if (!old) return old
+                return old.map(w => w.id === id ? { ...w, is_active: !w.is_active } : w)
+            })
 
-            // Instantly update the UI so it feels snappy
-            setWorkflows(prev => prev.map(w =>
-                w.id === id ? { ...w, is_active: !currentState } : w
-            ))
-
-            toast.success(currentState ? "Task paused." : "Task activated! It is now running on schedule.")
-        } catch (error: any) {
-            console.error("Failed to toggle workflow", error)
-            const errorMsg = error.response?.data?.detail || "Failed to change task status."
+            return { previousWorkflows }
+        },
+        onSuccess: (_, id) => {
+            const currentWorkflows = queryClient.getQueryData<Task[]>(['workflows'])
+            const task = currentWorkflows?.find(w => w.id === id)
+            toast.success(task?.is_active ? "Task activated!" : "Task paused.")
+        },
+        onError: (err: any, id, context) => {
+            queryClient.setQueryData(['workflows'], context?.previousWorkflows)
+            const errorMsg = err.response?.data?.detail || "Failed to change task status."
             toast.error(errorMsg)
-        } finally {
+        },
+        onSettled: () => {
             setRunningId(null)
         }
-    }
+    })
 
-    const deleteWorkflow = async (id: string) => {
-        setDeletingId(id)
-        try {
+    const deleteMutation = useMutation({
+        mutationFn: async (id: string) => {
             await api.delete(`/workflows/${id}`)
-            setWorkflows(prev => prev.filter(w => w.id !== id))
+        },
+        onMutate: async (id) => {
+            setDeletingId(id)
+            await queryClient.cancelQueries({ queryKey: ['workflows'] })
+            const previousWorkflows = queryClient.getQueryData<Task[]>(['workflows'])
+            queryClient.setQueryData(['workflows'], (old: Task[] | undefined) => {
+                if (!old) return old
+                return old.filter(w => w.id !== id)
+            })
+            return { previousWorkflows }
+        },
+        onSuccess: () => {
             toast.success("Task deleted successfully.")
-        } catch (error) {
-            console.error("Failed to delete workflow", error)
+        },
+        onError: (err, id, context) => {
+            queryClient.setQueryData(['workflows'], context?.previousWorkflows)
             toast.error("Failed to delete the task.")
-        } finally {
+        },
+        onSettled: () => {
             setDeletingId(null)
         }
-    }
+    })
 
     const formatDate = (dateString?: string) => {
         if (!dateString) return ""
@@ -83,7 +99,7 @@ export default function TaskManagerModal({ onCloseSidebar }: SearchModalProps) {
         })
     }
 
-    const filtered = workflows.filter(w => {
+    const filtered: Task[] = workflows.filter((w: Task) => {
         const name = w.name || ""
         return name.toLowerCase().includes(query.toLowerCase())
     })
@@ -104,7 +120,7 @@ export default function TaskManagerModal({ onCloseSidebar }: SearchModalProps) {
                 <DialogBackdrop transition className="fixed inset-0 backdrop-blur-sm transition-opacity duration-300 ease-out data-[closed]:opacity-0 bg-black/40 dark:bg-black/60" />
 
                 <div className="fixed inset-0 flex items-center justify-center p-4">
-                    <DialogPanel transition className="w-full max-w-2xl h-[60vh] min-h-[450px] flex flex-col rounded-2xl border overflow-hidden shadow-2xl transition duration-300 ease-out data-[closed]:scale-95 data-[closed]:opacity-0 data-[closed]:-translate-y-4 bg-white border-slate-200 font-sans dark:bg-[#0f0f0f] dark:border-white/10">
+                    <DialogPanel transition className="w-full max-w-2xl h-[60vh] min-h-[450px] flex flex-col rounded-2xl border overflow-hidden shadow-2xl transition duration-300 ease-out data-[closed]:scale-95 data-[closed]:opacity-0 data-[closed]:-translate-y-4 bg-white border-slate-200 font-sans dark:bg-tertiary dark:border-white/10">
                         {/* Header */}
                         <div className="relative flex shrink-0 items-center p-4 border-b border-slate-200 dark:border-white/10 z-20">
                             <Search className="absolute left-5 text-slate-400 dark:text-gray-500" size={20} strokeWidth={2} />
@@ -114,10 +130,9 @@ export default function TaskManagerModal({ onCloseSidebar }: SearchModalProps) {
                             </button>
                         </div>
 
-                        {/* Body */}
                         <div className="flex-1 relative overflow-hidden">
                             <AnimatePresence mode="wait">
-                                {loading ? (
+                                {isLoading ? (
                                     <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 flex items-center justify-center text-slate-400 dark:text-gray-500">
                                         <Loader2 size={28} className="animate-spin opacity-60" />
                                     </motion.div>
@@ -131,20 +146,20 @@ export default function TaskManagerModal({ onCloseSidebar }: SearchModalProps) {
                                         {filtered.map(w => {
                                             const taskId = w.id || "unknown";
                                             const taskName = w.name || "Unnamed Task";
-                                            const isActive = w.is_active !== undefined ? w.is_active : false; // Default to false if not set
+                                            const isActive = w.is_active !== undefined ? w.is_active : false;
                                             const isDeleting = deletingId === taskId;
                                             const isRunning = runningId === taskId;
 
                                             return (
-                                                <div key={taskId} className={clsx("mb-3 bg-white dark:bg-[#161616] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm group transition-opacity", (isDeleting || isRunning) && "opacity-60 pointer-events-none")}>
+                                                <div key={taskId} className={clsx("mb-3 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm group transition-opacity", (isDeleting || isRunning) && "opacity-60 pointer-events-none")}>
                                                     <div className="flex items-center justify-between p-3">
-                                                        <div className="space-y-1.5 flex-1 min-w-0">
+                                                        <div className="space-y-1 flex-1 min-w-0">
                                                             <div className="flex items-center gap-2">
-                                                                <p className="text-base font-bold text-slate-800 dark:text-slate-200 truncate">
+                                                                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">
                                                                     {taskName}
                                                                 </p>
                                                             </div>
-                                                            <div className="flex items-center gap-3 text-[11px] font-medium text-slate-400 dark:text-gray-500 uppercase tracking-tight">
+                                                            <div className="flex items-center gap-2 text-[11px] font-medium text-slate-400 dark:text-gray-500 uppercase tracking-tight">
                                                                 {w.created_at && (
                                                                     <>
                                                                         <span className="flex items-center gap-1">
@@ -162,27 +177,32 @@ export default function TaskManagerModal({ onCloseSidebar }: SearchModalProps) {
                                                         </div>
 
                                                         <div className="flex items-center gap-2 ml-4">
-                                                            {/* 🌟 THE NEW DYNAMIC TOGGLE BUTTON */}
+
                                                             <button
-                                                                onClick={() => toggleWorkflow(taskId, isActive)}
+                                                                onClick={() => toggleMutation.mutate(taskId)}
                                                                 disabled={isDeleting || isRunning}
                                                                 className={clsx(
                                                                     "p-2 rounded-lg transition-colors border border-transparent disabled:opacity-50 disabled:cursor-not-allowed",
-                                                                    isActive
-                                                                        ? "bg-green-50 text-green-600 hover:bg-green-100 dark:bg-green-500/10 dark:text-green-400 dark:hover:bg-green-500/20"
-                                                                        : "bg-slate-50 text-slate-500 hover:bg-slate-100 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10"
+                                                                    "bg-slate-50 text-slate-500 hover:bg-slate-100 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10"
                                                                 )}
                                                                 title={isActive ? "Pause Task" : "Activate Task"}
                                                             >
                                                                 {isRunning ? (
                                                                     <Loader2 size={16} className="animate-spin" />
                                                                 ) : (
-                                                                    <Power size={16} fill={isActive ? "currentColor" : "none"} strokeWidth={isActive ? 2 : 2.5} />
+                                                                    isActive ? <Pause size={16} /> :
+                                                                        <Power size={16} strokeWidth={isActive ? 2 : 2.5} />
                                                                 )}
                                                             </button>
-
-                                                            {/* Delete Button */}
-                                                            <button onClick={() => deleteWorkflow(taskId)} disabled={isDeleting || isRunning} className="p-2 rounded-lg transition-colors border border-transparent bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 hover:border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 dark:hover:text-red-300 dark:hover:border-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed" title="Delete Task">
+                                                            <button
+                                                                onClick={() => setEditingWorkflowId(taskId)}
+                                                                disabled={isDeleting || isRunning}
+                                                                className="p-2 rounded-lg transition-colors border border-transparent bg-slate-50 text-slate-500 hover:bg-slate-100 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                title="Edit Task Configuration"
+                                                            >
+                                                                <Settings size={16} />
+                                                            </button>
+                                                            <button onClick={() => deleteMutation.mutate(taskId)} disabled={isDeleting || isRunning} className="p-2 rounded-lg transition-colors border border-transparent bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 hover:border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 dark:hover:text-red-300 dark:hover:border-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed" title="Delete Task">
                                                                 {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
                                                             </button>
                                                         </div>
@@ -197,6 +217,11 @@ export default function TaskManagerModal({ onCloseSidebar }: SearchModalProps) {
                     </DialogPanel>
                 </div>
             </Dialog>
+            <TaskEditor
+                isOpen={!!editingWorkflowId}
+                workflowId={editingWorkflowId}
+                onClose={() => setEditingWorkflowId(null)}
+            />
         </>
     )
 }

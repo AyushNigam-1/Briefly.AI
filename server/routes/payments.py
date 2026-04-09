@@ -13,13 +13,14 @@ router = APIRouter(prefix="/payment", tags=["payment"])
 
 class CheckoutRequest(BaseModel):
     price_id: str
+    origin: str
 
 @router.post("/create-checkout-session")
 async def create_checkout_session(
     request: CheckoutRequest, 
     user=Depends(get_current_user)
 ):
-    frontend_url = request.get("origin")
+    frontend_url = request.origin
     try:
         session = stripe.checkout.Session.create(
             payment_method_types=['card'],

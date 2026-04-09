@@ -7,49 +7,36 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { SearchModalProps, SearchResult } from "@/app/types";
 import api from "@/app/lib/api";
+import { useQuery } from "@tanstack/react-query";
 
 const SearchModal: React.FC<SearchModalProps> = ({ onCloseSidebar }) => {
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState("");
-    const [results, setResults] = useState<SearchResult[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [debouncedQuery, setDebouncedQuery] = useState("");
     const [searchModalOpen, setSearchModalOpen] = useState(false);
 
-    // 🌟 Debounce the API call
     useEffect(() => {
-        if (!searchQuery.trim()) {
-            setResults([]);
-            setIsLoading(false);
-            return;
-        }
-
-        const fetchSearchResults = async () => {
-            setIsLoading(true);
-            setError(null);
-            try {
-                const res = await api.get(
-                    `chats/search?q=${encodeURIComponent(searchQuery.trim())}`,
-                );
-                setResults(res.data.results || []);
-            } catch (err) {
-                console.error("Search failed", err);
-                setError("Failed to fetch search results.");
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        const debounceTimer = setTimeout(() => {
-            fetchSearchResults();
+        const timer = setTimeout(() => {
+            setDebouncedQuery(searchQuery);
         }, 400);
 
-        return () => clearTimeout(debounceTimer);
+        return () => clearTimeout(timer);
     }, [searchQuery]);
+
+    const { data: results = [], isFetching, isError } = useQuery({
+        queryKey: ['chatSearch', debouncedQuery],
+        queryFn: async () => {
+            const res = await api.get(
+                `chats/search?q=${encodeURIComponent(debouncedQuery.trim())}`
+            );
+            return res.data.results as SearchResult[];
+        },
+        enabled: !!debouncedQuery.trim(),
+    });
 
     const handleClose = () => {
         setSearchQuery("");
-        setResults([]);
+        setDebouncedQuery("");
         setSearchModalOpen(false);
     };
 
@@ -63,6 +50,8 @@ const SearchModal: React.FC<SearchModalProps> = ({ onCloseSidebar }) => {
         const d = new Date(dateString);
         return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     };
+
+    const showLoader = (searchQuery.trim() !== debouncedQuery.trim()) || isFetching;
 
     return (
         <>
@@ -128,7 +117,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ onCloseSidebar }) => {
                                             </div>
                                             <p className="text-sm font-medium">Type to search across all your chats...</p>
                                         </motion.div>
-                                    ) : isLoading ? (
+                                    ) : showLoader ? (
                                         <motion.div
                                             key="loading"
                                             initial={{ opacity: 0, scale: 0.95 }}
@@ -139,7 +128,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ onCloseSidebar }) => {
                                         >
                                             <Loader2 size={28} className="animate-spin opacity-60" />
                                         </motion.div>
-                                    ) : results.length === 0 && !error ? (
+                                    ) : results.length === 0 && !isError ? (
                                         <motion.div
                                             key="no-results"
                                             initial={{ opacity: 0, y: 10 }}
@@ -151,7 +140,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ onCloseSidebar }) => {
                                             <MessageSquare size={32} className="opacity-30 mb-2" />
                                             <p className="text-sm">No messages found for "{searchQuery}"</p>
                                         </motion.div>
-                                    ) : error ? (
+                                    ) : isError ? (
                                         <motion.div
                                             key="error"
                                             initial={{ opacity: 0 }}
@@ -159,55 +148,52 @@ const SearchModal: React.FC<SearchModalProps> = ({ onCloseSidebar }) => {
                                             exit={{ opacity: 0 }}
                                             className="absolute inset-0 flex items-center justify-center p-6 text-center text-red-500 dark:text-red-400 text-sm font-medium"
                                         >
-                                            {error}
+                                            Failed to fetch search results.
                                         </motion.div>
-                                    )
+                                    ) : (
+                                        <motion.div
+                                            key="results"
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -10 }}
+                                            transition={{ duration: 0.25 }}
+                                            className="absolute inset-0 overflow-y-auto p-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-200 dark:scrollbar-thumb-white/10"
+                                        >
+                                            {results.map((chat) => (
+                                                <div key={chat.id} className="mb-4 bg-white dark:bg-[#161616] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm shrink-0">
 
-                                        /* 5. Results State */
-                                        : (
-                                            <motion.div
-                                                key="results"
-                                                initial={{ opacity: 0, y: 10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0, y: -10 }}
-                                                transition={{ duration: 0.25 }}
-                                                className="absolute inset-0 overflow-y-auto p-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-200 dark:scrollbar-thumb-white/10"
-                                            >
-                                                {results.map((chat) => (
-                                                    <div key={chat.id} className="mb-4 bg-white dark:bg-[#161616] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden shadow-sm shrink-0">
-
-                                                        <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10">
-                                                            <MessageSquare size={14} className="text-slate-400 dark:text-gray-500 shrink-0" />
-                                                            <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-gray-300 truncate flex-1">
-                                                                {chat.title}
-                                                            </span>
-                                                            <span className="text-[11px] font-medium text-slate-400 dark:text-gray-500 shrink-0 ml-2">
-                                                                {formatDate(chat.timestamp)}
-                                                            </span>
-                                                        </div>
-
-                                                        <div className="flex flex-col">
-                                                            {chat.messages.map((msg, idx) => (
-                                                                <div
-                                                                    key={idx}
-                                                                    onClick={() => handleResultClick(chat.id)}
-                                                                    className="group flex items-start gap-3 p-4 cursor-pointer transition-all hover:bg-slate-50 dark:hover:bg-white/[0.04] border-b last:border-0 border-slate-100 dark:border-white/5"
-                                                                >
-                                                                    <div className="mt-0.5 text-slate-400 dark:text-gray-500 shrink-0">
-                                                                        {msg.sender === "user" ? <User size={16} /> : <Bot size={16} />}
-                                                                    </div>
-                                                                    <div className="flex-1 min-w-0">
-                                                                        <p className="text-sm text-slate-700 dark:text-gray-200 line-clamp-2 leading-relaxed">
-                                                                            {msg.content}
-                                                                        </p>
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
+                                                    <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10">
+                                                        <MessageSquare size={14} className="text-slate-400 dark:text-gray-500 shrink-0" />
+                                                        <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-gray-300 truncate flex-1">
+                                                            {chat.title}
+                                                        </span>
+                                                        <span className="text-[11px] font-medium text-slate-400 dark:text-gray-500 shrink-0 ml-2">
+                                                            {formatDate(chat.timestamp)}
+                                                        </span>
                                                     </div>
-                                                ))}
-                                            </motion.div>
-                                        )}
+
+                                                    <div className="flex flex-col">
+                                                        {chat.messages.map((msg, idx) => (
+                                                            <div
+                                                                key={idx}
+                                                                onClick={() => handleResultClick(chat.id)}
+                                                                className="group flex items-start gap-3 p-4 cursor-pointer transition-all hover:bg-slate-50 dark:hover:bg-white/[0.04] border-b last:border-0 border-slate-100 dark:border-white/5"
+                                                            >
+                                                                <div className="mt-0.5 text-slate-400 dark:text-gray-500 shrink-0">
+                                                                    {msg.sender === "user" ? <User size={16} /> : <Bot size={16} />}
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-sm text-slate-700 dark:text-gray-200 line-clamp-2 leading-relaxed">
+                                                                        {msg.content}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </motion.div>
+                                    )}
                                 </AnimatePresence>
                             </div>
                         </DialogPanel>

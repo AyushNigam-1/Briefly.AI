@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { VList, VListHandle } from 'virtua';
 import InputBox from "./InputBox";
-import SourcesSidebar from "./panels/SourcesPanel";
+import SourcesSidebar from "./SourcesPanel";
 import { ChatsProps } from "@/app/types";
 import Message from "./Messages";
 

@@ -3,8 +3,8 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import InputBox from "@/app/components/ui/InputBox";
-import Chats from "@/app/components/ui/Chats";
+import ChatInput from "@/app/components/chat/ChatInput";
+import Chats from "@/app/components/chat/ChatsContainer";
 import { query as QueryType } from "@/app/types";
 import { Ghost, Loader2 } from "lucide-react";
 import api, { streamChat } from "@/app/lib/api";
@@ -18,7 +18,7 @@ const Home = () => {
   const rawId = searchParams.get("id");
 
   const { data } = authClient.useSession();
-  const user = data?.user
+  const user = data?.user;
   const isExplicitPrivate = rawId === "private";
   const isPrivateMode = isExplicitPrivate || !user;
 
@@ -35,48 +35,55 @@ const Home = () => {
   const isTransitioningRef = useRef(false);
 
   useEffect(() => {
-    const savedModelValue = localStorage.getItem('selectedModel');
+    const savedModelValue = localStorage.getItem("selectedModel");
     if (savedModelValue) {
       setSelectedModel(savedModelValue);
     }
   }, []);
 
-  const [isInitialLoad, setIsInitialLoad] = useState<boolean>(!!rawId && !isExplicitPrivate);
+  const [isInitialLoad, setIsInitialLoad] = useState<boolean>(
+    !!rawId && !isExplicitPrivate,
+  );
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingOlder, setIsLoadingOlder] = useState(false);
   const [oldestCreatedAt, setOldestCreatedAt] = useState<string | null>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const fetchHistory = useCallback(async (before?: string) => {
-    if (!rawId || isPrivateMode) return;
+  const fetchHistory = useCallback(
+    async (before?: string) => {
+      if (!rawId || isPrivateMode) return;
 
-    const params = new URLSearchParams({ limit: before ? "10" : "10" });
-    if (before) params.append("before", before);
+      const params = new URLSearchParams({ limit: before ? "10" : "10" });
+      if (before) params.append("before", before);
 
-    try {
-      const res = await api.get(`/history/${rawId}?${params}`);
-      const newHistory: QueryType[] = res.data?.history || [];
-      const serverHasMore = res.data?.has_more ?? (newHistory.length === 30);
+      try {
+        const res = await api.get(`/history/${rawId}?${params}`);
+        const newHistory: QueryType[] = res.data?.history || [];
+        const serverHasMore = res.data?.has_more ?? newHistory.length === 30;
 
-      if (before) {
-        setQueries((prev) => [...newHistory, ...prev]);
-        if (newHistory.length > 0) {
-          setOldestCreatedAt(newHistory[0].created_at || null);
+        if (before) {
+          setQueries((prev) => [...newHistory, ...prev]);
+          if (newHistory.length > 0) {
+            setOldestCreatedAt(newHistory[0].created_at || null);
+          }
+          setHasMore(serverHasMore);
+        } else {
+          setQueries(newHistory);
+          setHasMore(serverHasMore);
+          setOldestCreatedAt(
+            newHistory.length > 0 ? newHistory[0].created_at || null : null,
+          );
         }
-        setHasMore(serverHasMore);
-      } else {
-        setQueries(newHistory);
-        setHasMore(serverHasMore);
-        setOldestCreatedAt(newHistory.length > 0 ? newHistory[0].created_at || null : null);
+      } catch (e) {
+        console.error("History load failed", e);
+      } finally {
+        if (before) setIsLoadingOlder(false);
+        setIsInitialLoad(false);
       }
-    } catch (e) {
-      console.error("History load failed", e);
-    } finally {
-      if (before) setIsLoadingOlder(false);
-      setIsInitialLoad(false);
-    }
-  }, [rawId, isPrivateMode]);
+    },
+    [rawId, isPrivateMode],
+  );
 
   useEffect(() => {
     if (!rawId) {
@@ -123,7 +130,7 @@ const Home = () => {
   }, [oldestCreatedAt, hasMore, isLoadingOlder, fetchHistory, isPrivateMode]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("file change")
+    console.log("file change");
   };
 
   const executePrivateStream = async (form: FormData) => {
@@ -140,38 +147,38 @@ const Home = () => {
         isPrivate: true,
         onToken(token) {
           accumulatedContent += token;
-          setQueries(prev => {
+          setQueries((prev) => {
             const up = [...prev];
             const lastIdx = up.length - 1;
             up[lastIdx] = { ...up[lastIdx], content: accumulatedContent };
             return up;
-          })
+          });
         },
         onThinking(token) {
           accumulatedThinking += token;
-          setQueries(prev => {
+          setQueries((prev) => {
             const up = [...prev];
             const lastIdx = up.length - 1;
             up[lastIdx] = { ...up[lastIdx], thinking: accumulatedThinking };
             return up;
-          })
+          });
         },
         onDone(sources) {
           isSendingRef.current = false;
-          setPending(false)
+          setPending(false);
           if (sources) {
-            setQueries(prev => {
+            setQueries((prev) => {
               const up = [...prev];
               const lastIdx = up.length - 1;
               up[lastIdx] = { ...up[lastIdx], sources: sources };
               return up;
-            })
+            });
           }
         },
         onBlocked() {
           isSendingRef.current = false;
-          setPending(false)
-          setQueries(prev => {
+          setPending(false);
+          setQueries((prev) => {
             const up = [...prev];
             const lastIdx = up.length - 1;
             up[lastIdx] = {
@@ -181,27 +188,33 @@ const Home = () => {
               blocked: true,
             };
             return up;
-          })
-        }
-      })
+          });
+        },
+      });
     } catch (err: any) {
       isSendingRef.current = false;
-      setPending(false)
-      console.error("Private streaming failed", err)
+      setPending(false);
+      console.error("Private streaming failed", err);
     }
-  }
+  };
 
   const handleRegenerate = async (targetIndex: number) => {
-    if (isSendingRef.current || (!activeId && !isPrivateMode)) return
+    if (isSendingRef.current || (!activeId && !isPrivateMode)) return;
     isSendingRef.current = true;
-    setPending(true)
+    setPending(true);
 
     if (isPrivateMode) {
       const truncated = queries.slice(0, targetIndex);
       const lastUserMsg = truncated[truncated.length - 1];
       setQueries([
         ...truncated,
-        { sender: "llm", content: "", thinking: "", sources: [], created_at: "" }
+        {
+          sender: "llm",
+          content: "",
+          thinking: "",
+          sources: [],
+          created_at: "",
+        },
       ]);
 
       const form = new FormData();
@@ -213,13 +226,19 @@ const Home = () => {
       return;
     }
 
-    setQueries(prev => {
-      const truncated = prev.slice(0, targetIndex)
+    setQueries((prev) => {
+      const truncated = prev.slice(0, targetIndex);
       return [
         ...truncated,
-        { sender: "llm", content: "", thinking: "", sources: [], created_at: "" }
-      ]
-    })
+        {
+          sender: "llm",
+          content: "",
+          thinking: "",
+          sources: [],
+          created_at: "",
+        },
+      ];
+    });
 
     abortControllerRef.current = new AbortController();
 
@@ -231,61 +250,77 @@ const Home = () => {
         endpoint: `/chat/${activeId}/regenerate`,
         body: JSON.stringify({
           target_index: targetIndex,
-          modal_name: selectedModel
+          modal_name: selectedModel,
         }),
         abortController: abortControllerRef.current,
         onToken(token) {
           accumulatedContent += token;
-          setQueries(prev => {
+          setQueries((prev) => {
             const up = [...prev];
             const lastIdx = up.length - 1;
             up[lastIdx] = { ...up[lastIdx], content: accumulatedContent };
             return up;
-          })
+          });
         },
         onThinking(token) {
           accumulatedThinking += token;
-          setQueries(prev => {
+          setQueries((prev) => {
             const up = [...prev];
             const lastIdx = up.length - 1;
             up[lastIdx] = { ...up[lastIdx], thinking: accumulatedThinking };
             return up;
-          })
+          });
         },
         onDone(sources: any) {
           isSendingRef.current = false;
-          setPending(false)
+          setPending(false);
           if (sources) {
-            setQueries(prev => {
+            setQueries((prev) => {
               const up = [...prev];
               const lastIdx = up.length - 1;
               up[lastIdx] = { ...up[lastIdx], sources: sources };
               return up;
-            })
+            });
           }
-        }
-      })
+        },
+      });
     } catch (err) {
       isSendingRef.current = false;
-      setPending(false)
-      console.error("Regenerate failed", err)
+      setPending(false);
+      console.error("Regenerate failed", err);
     }
-  }
+  };
 
   const handleEdit = async (targetIndex: number, newContent: string) => {
-    if (isSendingRef.current || (!activeId && !isPrivateMode) || !newContent.trim()) return
+    if (
+      isSendingRef.current ||
+      (!activeId && !isPrivateMode) ||
+      !newContent.trim()
+    )
+      return;
 
-    const oldFiles = queries[targetIndex]?.files || []
+    const oldFiles = queries[targetIndex]?.files || [];
 
     isSendingRef.current = true;
-    setPending(true)
+    setPending(true);
 
     if (isPrivateMode) {
       const truncated = queries.slice(0, targetIndex);
       const updatedQueries: QueryType[] = [
         ...truncated,
-        { sender: "user", content: newContent, files: oldFiles, created_at: "" },
-        { sender: "llm", content: "", thinking: "", sources: [], created_at: "" }
+        {
+          sender: "user",
+          content: newContent,
+          files: oldFiles,
+          created_at: "",
+        },
+        {
+          sender: "llm",
+          content: "",
+          thinking: "",
+          sources: [],
+          created_at: "",
+        },
       ];
       setQueries(updatedQueries);
 
@@ -297,14 +332,25 @@ const Home = () => {
       await executePrivateStream(form);
       return;
     }
-    setQueries(prev => {
-      const truncated = prev.slice(0, targetIndex)
+    setQueries((prev) => {
+      const truncated = prev.slice(0, targetIndex);
       return [
         ...truncated,
-        { sender: "user", content: newContent, files: oldFiles, created_at: "" },
-        { sender: "llm", content: "", thinking: "", sources: [], created_at: "" }
-      ]
-    })
+        {
+          sender: "user",
+          content: newContent,
+          files: oldFiles,
+          created_at: "",
+        },
+        {
+          sender: "llm",
+          content: "",
+          thinking: "",
+          sources: [],
+          created_at: "",
+        },
+      ];
+    });
 
     abortControllerRef.current = new AbortController();
 
@@ -317,76 +363,80 @@ const Home = () => {
         body: JSON.stringify({
           target_index: targetIndex,
           new_content: newContent,
-          modal_name: selectedModel
+          modal_name: selectedModel,
         }),
         abortController: abortControllerRef.current,
         onToken(token) {
           accumulatedContent += token;
-          setQueries(prev => {
+          setQueries((prev) => {
             const up = [...prev];
             const lastIdx = up.length - 1;
             up[lastIdx] = { ...up[lastIdx], content: accumulatedContent };
             return up;
-          })
+          });
         },
         onThinking(token) {
           accumulatedThinking += token;
-          setQueries(prev => {
+          setQueries((prev) => {
             const up = [...prev];
             const lastIdx = up.length - 1;
             up[lastIdx] = { ...up[lastIdx], thinking: accumulatedThinking };
             return up;
-          })
+          });
         },
         onDone(sources) {
           isSendingRef.current = false;
-          setPending(false)
+          setPending(false);
           if (sources) {
-            setQueries(prev => {
+            setQueries((prev) => {
               const up = [...prev];
               const lastIdx = up.length - 1;
               up[lastIdx] = { ...up[lastIdx], sources: sources };
               return up;
-            })
+            });
           }
-        }
-      })
+        },
+      });
     } catch (err) {
       isSendingRef.current = false;
-      setPending(false)
-      console.error("Edit failed", err)
+      setPending(false);
+      console.error("Edit failed", err);
     }
-  }
+  };
 
-  const handleSend = async (queryText: string, filesData: File[], modal: string) => {
+  const handleSend = async (
+    queryText: string,
+    filesData: File[],
+    modal: string,
+  ) => {
     if (!queryText.trim() || isSendingRef.current) return;
 
     isSendingRef.current = true;
-    setPending(true)
-    setQuery("")
+    setPending(true);
+    setQuery("");
 
     const newQueriesState: QueryType[] = [
       ...queries,
       {
         sender: "user",
         content: queryText,
-        files: filesData.map(f => ({
+        files: filesData.map((f) => ({
           name: f.name,
           size: f.size,
           type: f.type,
-          url: ""
+          url: "",
         })),
-        created_at: ""
+        created_at: "",
       },
-      { sender: "llm", content: "", thinking: "", sources: [], created_at: "" }
-    ]
-    setQueries(newQueriesState)
+      { sender: "llm", content: "", thinking: "", sources: [], created_at: "" },
+    ];
+    setQueries(newQueriesState);
 
-    const form = new FormData()
-    form.append("query", queryText)
-    form.append("modal_name", modal)
+    const form = new FormData();
+    form.append("query", queryText);
+    form.append("modal_name", modal);
 
-    filesData.forEach(file => form.append("files", file))
+    filesData.forEach((file) => form.append("files", file));
 
     if (isPrivateMode) {
       const historyToSend = [...queries];
@@ -395,14 +445,13 @@ const Home = () => {
       return;
     }
 
-    if (activeId) form.append("id", activeId)
+    if (activeId) form.append("id", activeId);
 
     abortControllerRef.current = new AbortController();
 
     let accumulatedContent = "";
     let accumulatedThinking = "";
 
-    // 🌟 NEW: Track when the actual LLM reasoning begins
     let isRealThinkingStarted = false;
 
     try {
@@ -412,74 +461,73 @@ const Home = () => {
         abortController: abortControllerRef.current,
         onToken(token) {
           accumulatedContent += token;
-          setQueries(prev => {
+          setQueries((prev) => {
             const up = [...prev];
             const lastIdx = up.length - 1;
             up[lastIdx] = { ...up[lastIdx], content: accumulatedContent };
             return up;
-          })
+          });
         },
 
-        // 🌟 NEW: Catch the analyzing event and display it in the thinking block
         onAnalyzing(token) {
           accumulatedThinking += token;
-          setQueries(prev => {
+          setQueries((prev) => {
             const up = [...prev];
             const lastIdx = up.length - 1;
             up[lastIdx] = { ...up[lastIdx], thinking: accumulatedThinking };
             return up;
-          })
+          });
         },
 
         onThinking(token) {
-          // 🌟 NEW: The very first time a real thought comes in, wipe the analyzing text!
           if (!isRealThinkingStarted) {
             accumulatedThinking = "";
             isRealThinkingStarted = true;
           }
 
           accumulatedThinking += token;
-          setQueries(prev => {
+          setQueries((prev) => {
             const up = [...prev];
             const lastIdx = up.length - 1;
             up[lastIdx] = { ...up[lastIdx], thinking: accumulatedThinking };
             return up;
-          })
+          });
         },
         onDone(sources, newId, title) {
           isSendingRef.current = false;
-          setPending(false)
+          setPending(false);
 
           if (sources) {
-            setQueries(prev => {
+            setQueries((prev) => {
               const up = [...prev];
               const lastIdx = up.length - 1;
               up[lastIdx] = { ...up[lastIdx], sources: sources };
               return up;
-            })
+            });
           }
 
           if (!activeId && newId) {
             isTransitioningRef.current = true;
             setActiveId(newId);
-            window.dispatchEvent(new CustomEvent("chat-title", {
-              detail: { id: newId, title: title || "New Chat" }
-            }));
+            window.dispatchEvent(
+              new CustomEvent("chat-title", {
+                detail: { id: newId, title: title || "New Chat" },
+              }),
+            );
             router.replace(`/?id=${newId}`, { scroll: false });
           }
         },
         onBlocked() {
           isSendingRef.current = false;
-          setPending(false)
-        }
-      })
-
+          setPending(false);
+        },
+      });
     } catch (err) {
       isSendingRef.current = false;
-      setPending(false)
-      console.error("Streaming failed", err)
+      setPending(false);
+      console.error("Streaming failed", err);
     }
-  }
+  };
 
   const handleStop = () => {
     if (abortControllerRef.current) {
@@ -506,7 +554,6 @@ const Home = () => {
           </div>
         </motion.div>
       ) : queries.length > 0 ? (
-
         <motion.div
           key={`chat-${chatKey}`}
           initial={{ opacity: 0, y: 30 }}
@@ -542,7 +589,6 @@ const Home = () => {
         >
           <div className="flex flex-col gap-6 md:gap-10 font-mono">
             <div className="text-center relative w-full">
-
               <div className="relative h-[110px] sm:h-[120px] mb-3 md:mb-4 w-full">
                 <AnimatePresence>
                   {isExplicitPrivate ? (
@@ -558,7 +604,8 @@ const Home = () => {
                         Incognito Session
                       </h3>
                       <p className="text-sm sm:text-base transition-colors text-slate-500 dark:text-gray-400 mt-2">
-                        Your history won't be saved. Close the tab to erase this session.
+                        Your history won't be saved. Close the tab to erase this
+                        session.
                       </p>
                     </motion.div>
                   ) : (
@@ -581,7 +628,7 @@ const Home = () => {
                 </AnimatePresence>
               </div>
 
-              <InputBox
+              <ChatInput
                 query={query}
                 setQuery={setQuery}
                 send={handleSend}
@@ -599,7 +646,9 @@ const Home = () => {
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ duration: 0.2 }}
-                      onClick={() => router.push('/?id=private', { scroll: false })}
+                      onClick={() =>
+                        router.push("/?id=private", { scroll: false })
+                      }
                       className="absolute top-0 text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-colors hover:text-slate-700 text-slate-500 dark:text-gray-400 dark:hover:text-slate-300"
                     >
                       <Ghost size={14} /> Go Private
@@ -611,21 +660,20 @@ const Home = () => {
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ duration: 0.2 }}
-                      onClick={() => router.push('/', { scroll: false })}
+                      onClick={() => router.push("/", { scroll: false })}
                       className="absolute top-0 text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-colors hover:text-slate-700 text-slate-500 dark:text-gray-400 dark:hover:text-slate-300"
                     >
-                      <Ghost size={14} className="opacity-60" /> Exit Private Mode
+                      <Ghost size={14} className="opacity-60" /> Exit Private
+                      Mode
                     </motion.button>
                   ) : null}
                 </AnimatePresence>
               </div>
-
             </div>
           </div>
         </motion.div>
-      )
-      }
-    </AnimatePresence >
+      )}
+    </AnimatePresence>
   );
 };
 

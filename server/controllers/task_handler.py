@@ -17,7 +17,6 @@ def get_user_workflows(user_id: str):
     """
     cache_key = f"user_workflows:{user_id}"
 
-    # 1. Try to fetch from Redis gracefully
     try:
         cached_workflows = redis_client.get(cache_key)
         if cached_workflows:
@@ -28,14 +27,13 @@ def get_user_workflows(user_id: str):
     try:
         user = users_collection.find_one(
             {"_id": ObjectId(user_id)},
-            {"n8n_workflows": 1, "_id": 0} # Only fetch the workflows array
+            {"n8n_workflows": 1, "_id": 0} 
         )
         workflows = user.get("n8n_workflows", []) if user else []
     except Exception as e:
         logger.error(f"Failed to fetch workflows from DB: {e}")
         workflows = []
 
-    # 3. Save to Redis gracefully
     try:
         redis_client.setex(cache_key, CACHE_TTL, json.dumps(workflows))
     except Exception as e:
@@ -47,7 +45,6 @@ def delete_workflow(user_id: str, workflow_id: str):
     """
     Deletes workflow from n8n and pulls it from the user's DB profile.
     """
-    # 🌟 Verify ownership by checking if the ID exists in the user's array
     user = users_collection.find_one({
         "_id": ObjectId(user_id),
         "n8n_workflows.id": workflow_id
@@ -61,7 +58,6 @@ def delete_workflow(user_id: str, workflow_id: str):
         "Content-Type": "application/json"
     }
 
-    # Delete from n8n
     res = requests.delete(
         f"{N8N_HOST}/api/v1/workflows/{workflow_id}",
         headers=headers
@@ -73,13 +69,11 @@ def delete_workflow(user_id: str, workflow_id: str):
             "message": f"n8n delete failed: {res.text}"
         }
 
-    # 🌟 Delete from Mongo using $pull to remove it from the nested array
     users_collection.update_one(
         {"_id": ObjectId(user_id)},
         {"$pull": {"n8n_workflows": {"id": workflow_id}}}
     )
 
-    # Invalidate the cache so the next fetch reflects the deletion
     try:
         redis_client.delete(f"user_workflows:{user_id}")
     except Exception as e:
@@ -124,3 +118,126 @@ def toggle_workflow(user_id: str, workflow_id: str):
     )
 
     return {"status": "success", "message": f"Workflow {action}d successfully", "is_active": new_state}
+
+import json
+# ... existing imports ...
+
+def get_workflow_blocks(user_id: str, workflow_id: str):
+    """
+    Dynamically fetches ALL configurable parameters from the n8n nodes.
+    """
+    user = users_collection.find_one({"_id": ObjectId(user_id), "n8n_workflows.id": workflow_id})
+    if not user:
+        return {"status": "error", "message": "Workflow not found or access denied."}
+
+    headers = {"X-N8N-API-KEY": N8N_API_KEY}
+    n8n_base_url = N8N_HOST.rstrip('/')
+    
+    res = requests.get(f"{n8n_base_url}/api/v1/workflows/{workflow_id}", headers=headers)
+    if not res.ok:
+        return {"status": "error", "message": "Failed to fetch workflow from n8n."}
+
+    raw_data = res.json()
+    formatted_nodes = []
+    
+    for node in raw_data.get("nodes", []):
+        parameters = node.get("parameters", {})
+        editable_fields = []
+        
+        # 🌟 Dynamically loop through EVERY parameter in the node
+        for key, value in parameters.items():
+            # Format the label nicely (e.g., "jsonBody" -> "Json Body")
+            formatted_label = ''.join([' '+c if c.isupper() else c for c in key]).strip().title()
+
+            if isinstance(value, (dict, list)):
+                # It's a nested object (like headers or rules). Convert to JSON string.
+                editable_fields.append({
+                    "key": key,
+                    "label": f"{formatted_label} (Advanced)",
+                    "value": json.dumps(value, indent=2),
+                    "is_json": True # Flag for the frontend to render a textarea
+                })
+            else:
+                # It's a standard string, number, or boolean
+                editable_fields.append({
+                    "key": key,
+                    "label": formatted_label,
+                    "value": str(value),
+                    "is_json": False
+                })
+
+        formatted_nodes.append({
+            "id": node.get("id"),
+            "name": node.get("name"),
+            "type": node.get("type"),
+            "editable_fields": editable_fields
+        })
+
+    return {"status": "success", "data": {"nodes": formatted_nodes}}
+
+
+def update_workflow_blocks(user_id: str, workflow_id: str, updated_nodes: list):
+    """
+    Safely merges user edits back into the full n8n JSON and saves.
+    """
+    user = users_collection.find_one({"_id": ObjectId(user_id), "n8n_workflows.id": workflow_id})
+    if not user:
+        return {"status": "error", "message": "Workflow not found or access denied."}
+
+    headers = {"X-N8N-API-KEY": N8N_API_KEY, "Content-Type": "application/json"}
+    n8n_base_url = N8N_HOST.rstrip('/')
+    
+    get_res = requests.get(f"{n8n_base_url}/api/v1/workflows/{workflow_id}", headers=headers)
+    if not get_res.ok:
+        return {"status": "error", "message": "Failed to fetch original workflow."}
+        
+    workflow_data = get_res.json()
+    
+    for raw_node in workflow_data.get("nodes", []):
+        frontend_node = next((n for n in updated_nodes if n["id"] == raw_node["id"]), None)
+        
+        if frontend_node and frontend_node.get("editable_fields"):
+            if "parameters" not in raw_node:
+                raw_node["parameters"] = {}
+                
+            for field in frontend_node["editable_fields"]:
+                key = field["key"]
+                raw_val = field["value"]
+                is_json = field.get("is_json", False)
+                
+                # 🌟 Type Casting Logic
+                if is_json:
+                    try:
+                        # Ensure we handle nested JSON strings from textareas
+                        parsed_val = json.loads(raw_val) if isinstance(raw_val, str) else raw_val
+                    except Exception:
+                        parsed_val = raw_val 
+                else:
+                    # Cast string literals back to proper types
+                    val_str = str(raw_val).strip()
+                    if val_str.lower() == "true":
+                        parsed_val = True
+                    elif val_str.lower() == "false":
+                        parsed_val = False
+                    elif val_str.isdigit():
+                        parsed_val = int(val_str)
+                    else:
+                        parsed_val = raw_val
+                        
+                raw_node["parameters"][key] = parsed_val
+
+    save_payload = {
+        "name": workflow_data.get("name"),
+        "nodes": workflow_data.get("nodes"),
+        "connections": workflow_data.get("connections"),
+        "settings": workflow_data.get("settings", {}),
+        "staticData": workflow_data.get("staticData", {})
+    }
+
+    put_res = requests.put(f"{n8n_base_url}/api/v1/workflows/{workflow_id}", headers=headers, json=save_payload)
+    
+    if not put_res.ok:
+        print(f"🚨 n8n Save Error: {put_res.status_code} - {put_res.text}")
+        return {"status": "error", "message": f"n8n rejected save: {put_res.text}"}
+        
+    return {"status": "success", "message": "Workflow updated successfully."}
