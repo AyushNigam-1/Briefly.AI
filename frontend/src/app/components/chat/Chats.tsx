@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { VList, VListHandle } from 'virtua';
-import InputBox from "./InputBox";
 import SourcesSidebar from "./SourcesPanel";
 import { ChatsProps } from "@/app/types";
-import Message from "./Messages";
+import MessageList from "./MessageList";
+import ChatInput from "./ChatInput";
 
 const Chats = ({
     queries,
@@ -29,7 +29,6 @@ const Chats = ({
 
     const handleScroll = (offset: number) => {
         if (!vlistRef.current) return;
-        // Load older chats when scrolling near the top
         if (offset < 50 && hasMore && !isLoadingOlder) {
             loadOlderChats();
         }
@@ -73,17 +72,14 @@ const Chats = ({
                         ref={vlistRef}
                         data={queries}
                         onScroll={handleScroll}
-                        shift={true}
+                        shift={isLoadingOlder}
                         className="scrollbar-none overflow-x-hidden h-full w-full "
                     >
                         {(q, index) => {
-                            const uniqueKey = q.id
-                                ? q.id
-                                : `msg-${q.created_at || 'local'}-${q.sender}-${(q.content.length)}`;
 
                             return (
-                                <Message
-                                    key={uniqueKey}
+                                <MessageList
+                                    key={q.id}
                                     q={q}
                                     isLastItem={index === queries.length - 1}
                                     isPending={isPending}
@@ -101,7 +97,7 @@ const Chats = ({
 
             <div className="relative w-full py-3 sm:px-0 px-3 z-50 mt-auto">
                 <div className="max-w-4xl w-full mx-auto">
-                    <InputBox
+                    <ChatInput
                         query={searchInput} setQuery={setQuery} send={handleSend}
                         isPending={isPending}
                         handleFileChange={handleFileChange} stop={handleStop}

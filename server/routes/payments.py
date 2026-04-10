@@ -48,35 +48,26 @@ async def create_checkout_session(
 
 @router.post("/webhook")
 async def stripe_webhook(request: Request):
-    # 1. Stripe requires the raw body in bytes to verify the signature securely
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
     
-    # Get this from the Stripe CLI (whsec_...) or Stripe Dashboard
     endpoint_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
 
     try:
-        # 2. Cryptographically verify that this request came from Stripe
         event = stripe.Webhook.construct_event(
             payload, sig_header, endpoint_secret
         )
     except ValueError as e:
-        # Invalid payload
         return JSONResponse(status_code=400, content={"message": "Invalid payload"})
     except stripe.error.SignatureVerificationError as e:
-        # Invalid signature (someone is trying to hack you!)
         print("🚨 ALERT: Invalid Stripe Signature detected!")
         return JSONResponse(status_code=400, content={"message": "Invalid signature"})
 
-    # 3. Handle the successful payment event
     if event["type"] == "checkout.session.completed":
         session = event["data"]["object"]
         
-        # Grab the data we packed into the session earlier
         user_id = session.get("client_reference_id")
-        stripe_customer_id = session.get("customer")
         
-        # Get the plan type from the metadata we added
         plan_type = session.get("metadata", {}).get("plan_type", "pro")
 
         if user_id:

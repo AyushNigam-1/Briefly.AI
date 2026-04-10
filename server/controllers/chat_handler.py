@@ -4,9 +4,10 @@ from bson import ObjectId
 from datetime import datetime, timezone
 from typing import Optional
 import os
+import asyncio
 from groq import Groq
 from fastapi import HTTPException
-from controllers.file_handler import process_files
+from fastapi import Request 
 from controllers.memory_handler import get_user_memories , get_memory_enabled
 from agent.agent_graph import agent_graph
 from fastapi import HTTPException
@@ -46,10 +47,8 @@ def search_user_chats(user_id: str, search_term: str):
     """
     try:
         pipeline = [
-            # 1. Match only documents belonging to this user
             {"$match": {"user_id": user_id}},
             
-            # 2. Project (shape) the output to only include matching messages
             {"$project": {
                 "_id": 1,
                 "title": 1,
@@ -147,32 +146,28 @@ def save_chat_turn(chat_id, user_input, assistant_text, files, sources, title=No
 
     summary_collection.update_one({"_id": chat_id}, payload)
 
-async def chat_stream(user_input, user_id, chat_id=None, files=None, modal_name=None):
+async def chat_stream(request: Request, user_input, user_id, chat_id=None, files=None, modal_name=None):
     print(files)
     chat_doc, chat_oid, is_new = get_or_create_chat(chat_id, user_id)
 
     existing_memories = get_user_memories(user_id)
-
     memory_context = ""
     
     if existing_memories and get_memory_enabled(user_id):
         memory_context = "Here is what you know about the user from past conversations:\n"
         for mem in existing_memories:
             memory_context += f"- {mem}\n"
-    messages = build_messages(chat_doc, user_input,memory_context, user_id)
+            
+    messages = build_messages(chat_doc, user_input, memory_context, user_id)
 
     user = users_collection.find_one({"_id": ObjectId(user_id)})
     app_tokens = user.get("app_tokens", {}) if user else {}
 
     available_apps = []
-    if app_tokens.get("notion"):
-        available_apps.append("notion")
-    if app_tokens.get("google_drive"):
-        available_apps.append("google_drive")
-    if app_tokens.get("linear"):
-        available_apps.append("linear")
-    if app_tokens.get("slack"):
-        available_apps.append("slack")
+    if app_tokens.get("notion"): available_apps.append("notion")
+    if app_tokens.get("google_drive"): available_apps.append("google_drive")
+    if app_tokens.get("linear"): available_apps.append("linear")
+    if app_tokens.get("slack"): available_apps.append("slack")
     available_apps.append("n8n")
 
     initial_state = {
@@ -192,65 +187,75 @@ async def chat_stream(user_input, user_id, chat_id=None, files=None, modal_name=
         thinking_text = ""
         final_state = {}
 
-        async for event in agent_graph.astream_events(initial_state, version="v2"):
+        try:
+            async for event in agent_graph.astream_events(initial_state, version="v2"):
+                
+                if await request.is_disconnected():
+                    print("🚨 Client disconnected! Halting LangGraph.")
+                    break 
 
-            kind = event["event"]
-            name = event.get("name","")
+                kind = event["event"]
+                name = event.get("name","")
 
-            if kind == "on_chain_start" and name == "file_processor":
-                if files:
-                    msg = "📄 Analyzing attached files...\n"
-                    thinking_text += msg
-                    yield f"data: {json.dumps({'type': 'analyzing', 'data': msg})}\n\n"
+                if kind == "on_chain_start" and name == "file_processor":
+                    if files:
+                        msg = "📄 Analyzing attached files...\n"
+                        thinking_text += msg
+                        yield f"data: {json.dumps({'type': 'analyzing', 'data': msg})}\n\n"
 
-            elif kind == "on_chain_end" and name == "file_processor":
-                if files:
-                    msg = "✅ File extraction complete.\n\n"
-                    thinking_text += msg
-                    yield f"data: {json.dumps({'type': 'analyzing', 'data': msg})}\n\n"
+                elif kind == "on_chain_end" and name == "file_processor":
+                    if files:
+                        msg = "✅ File extraction complete.\n\n"
+                        thinking_text += msg
+                        yield f"data: {json.dumps({'type': 'analyzing', 'data': msg})}\n\n"
 
-            elif kind == "on_chat_model_stream":
-                chunk = event["data"]["chunk"]
+                elif kind == "on_chat_model_stream":
+                    chunk = event["data"]["chunk"]
 
-                if hasattr(chunk, "additional_kwargs"):
-                    reasoning = chunk.additional_kwargs.get("reasoning_content")
-                    if reasoning:
-                        thinking_text += reasoning
-                        yield f"data: {json.dumps({'type': 'thinking', 'data': reasoning})}\n\n"
+                    if hasattr(chunk, "additional_kwargs"):
+                        reasoning = chunk.additional_kwargs.get("reasoning_content")
+                        if reasoning:
+                            thinking_text += reasoning
+                            yield f"data: {json.dumps({'type': 'thinking', 'data': reasoning})}\n\n"
+                            await asyncio.sleep(0.01) 
 
-                if hasattr(chunk, "content") and chunk.content:
-                    assistant_text += chunk.content
-                    yield f"data: {json.dumps({'type': 'token', 'data': chunk.content})}\n\n"
+                    if hasattr(chunk, "content") and chunk.content:
+                        assistant_text += chunk.content
+                        yield f"data: {json.dumps({'type': 'token', 'data': chunk.content})}\n\n"
+                        await asyncio.sleep(0.03) 
 
-            elif kind == "on_tool_start":
-                yield f"data: {json.dumps({'type': 'tool_status', 'tool': event['name'], 'status': 'running'})}\n\n"
+                elif kind == "on_tool_start":
+                    yield f"data: {json.dumps({'type': 'tool_status', 'tool': event['name'], 'status': 'running'})}\n\n"
 
-            elif kind == "on_tool_end":
-                tool_name = event['name']
-                yield f"data: {json.dumps({'type': 'tool_status', 'tool': event['name'], 'status': 'completed'})}\n\n"
-                if tool_name == "n8n_create_workflow":
-                    try:
-                        msg = event['data'].get('output')
-                        if msg and hasattr(msg, 'content'):
-                            raw_text = msg.content[0].get("text", "{}") if isinstance(msg.content, list) else msg.content
-                            data = json.loads(raw_text).get("data", {})                            
-                            if wf_id := data.get("id"):
-                                users_collection.update_one(
-                                    {"_id": ObjectId(user_id)},
-                                    {"$push": {"n8n_workflows": {"id": wf_id, "name": data.get("name", "AI Automation")}}}
-                                )
-                                print(f"✅ GUARANTEED SAVE: Workflow {wf_id} saved!")
-                                try:
-                                    redis_client.delete(f"user_workflows:{user_id}")
-                                    print(f"🧹 Cache cleared for user {user_id}")
-                                except Exception as e:
-                                    print(f"⚠️ Redis cache clear failed: {e}")
-                    except Exception as e:
-                        print(f"⚠️ Auto-save failed: {e}")
-            elif kind == "on_chain_end":
-                output = event["data"]["output"]
-                if isinstance(output, dict):
-                    final_state.update(output)
+                elif kind == "on_tool_end":
+                    tool_name = event['name']
+                    yield f"data: {json.dumps({'type': 'tool_status', 'tool': event['name'], 'status': 'completed'})}\n\n"
+                    if tool_name == "n8n_create_workflow":
+                        try:
+                            msg = event['data'].get('output')
+                            if msg and hasattr(msg, 'content'):
+                                raw_text = msg.content[0].get("text", "{}") if isinstance(msg.content, list) else msg.content
+                                data = json.loads(raw_text).get("data", {})                            
+                                if wf_id := data.get("id"):
+                                    users_collection.update_one(
+                                        {"_id": ObjectId(user_id)},
+                                        {"$push": {"n8n_workflows": {"id": wf_id, "name": data.get("name", "AI Automation")}}}
+                                    )
+                                    print(f"✅ GUARANTEED SAVE: Workflow {wf_id} saved!")
+                                    try:
+                                        redis_client.delete(f"user_workflows:{user_id}")
+                                    except Exception as e:
+                                        print(f"⚠️ Redis cache clear failed: {e}")
+                        except Exception as e:
+                            print(f"⚠️ Auto-save failed: {e}")
+                
+                elif kind == "on_chain_end":
+                    output = event["data"]["output"]
+                    if isinstance(output, dict):
+                        final_state.update(output)
+                        
+        except asyncio.CancelledError:
+            print("🚨 Stream forcefully cancelled by client (CancelledError). Proceeding to save.")
 
         if not final_state:
             final_state = {}
@@ -262,6 +267,8 @@ async def chat_stream(user_input, user_id, chat_id=None, files=None, modal_name=
         if not thinking_text.strip():
             thinking_text = None
 
+        print(f"💾 Saving chat turn. AI words generated: {len(assistant_text.split())}")
+
         save_chat_turn(
             chat_id=chat_oid,
             user_input=user_input,
@@ -272,7 +279,13 @@ async def chat_stream(user_input, user_id, chat_id=None, files=None, modal_name=
             thinking_text=thinking_text
         )
 
-        yield f"data: {json.dumps({'type': 'done', 'id': str(chat_oid), 'title': title, 'sources': sources})}\n\n"
+        if not await request.is_disconnected():
+            yield f"data: {json.dumps({'type': 'done', 'id': str(chat_oid), 'title': title, 'sources': sources})}\n\n"
+
+    except Exception:
+        traceback.print_exc()
+        if not await request.is_disconnected():
+            yield f"data: {json.dumps({'type': 'error'})}\n\n"
 
     except Exception:
         traceback.print_exc()
@@ -427,14 +440,13 @@ def generate_audio_from_text(text: str, voice: str = "troy") -> bytes:
         print(e)
         raise HTTPException(status_code=500, detail=f"Groq API Error: {str(e)}")
 
-async def regenerate_chat_stream(chat_id: str, user_id: str, modal_name: Optional[str] = None):
+async def regenerate_chat_stream(request:Request,chat_id: str, user_id: str, modal_name: Optional[str] = None):
     """
     Regenerates the last AI response for a given chat.
     It removes the last AI message and the preceding user message from the database,
     then re-triggers the chat_stream with the extracted user input.
     """
     try:
-        # 1. Fetch the chat to validate and get the last messages
         if not ObjectId.is_valid(chat_id):
             yield f"data: {json.dumps({'type': 'error', 'message': 'Invalid chat ID'})}\n\n"
             return
@@ -449,7 +461,6 @@ async def regenerate_chat_stream(chat_id: str, user_id: str, modal_name: Optiona
         last_user_query = None
         slice_index = len(queries)
 
-        # 2. Identify the last user message and LLM response to pop them off
         if queries[-1]["sender"] == "llm":
             if len(queries) >= 2 and queries[-2]["sender"] == "user":
                 last_user_query = queries[-2]
@@ -458,26 +469,23 @@ async def regenerate_chat_stream(chat_id: str, user_id: str, modal_name: Optiona
                 yield f"data: {json.dumps({'type': 'error', 'message': 'Malformed chat history'})}\n\n"
                 return
         elif queries[-1]["sender"] == "user":
-            # Edge case: If the last generation failed and only the user message was saved
             last_user_query = queries[-1]
             slice_index = len(queries) - 1
         else:
             yield f"data: {json.dumps({'type': 'error', 'message': 'Cannot regenerate from current state'})}\n\n"
             return
 
-        # 3. Update the database by removing the last turn(s)
         summary_collection.update_one(
             {"_id": ObjectId(chat_id), "user_id": user_id},
             {"$set": {"queries": queries[:slice_index]}}
         )
 
-        # 4. Extract the original input to feed back into the stream
         user_input = last_user_query.get("content", "")
-        # NOTE: If your `process_files` requires raw UploadFile objects rather than 
-        # saved file metadata, you might need to handle files differently here.
+
         files = last_user_query.get("files", []) 
 
         async for event in chat_stream(
+            request=request,
             user_input=user_input,
             user_id=user_id,
             chat_id=chat_id,
@@ -490,7 +498,7 @@ async def regenerate_chat_stream(chat_id: str, user_id: str, modal_name: Optiona
         traceback.print_exc()
         yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 
-async def edit_chat_stream(chat_id: str, user_id: str, target_index: int, new_content: str, modal_name: Optional[str] = None):
+async def edit_chat_stream(request:Request,chat_id: str, user_id: str, target_index: int, new_content: str, modal_name: Optional[str] = None):
     """
     Replaces a user message at a specific index with new text,
     drops all subsequent messages, and generates a new AI response.
@@ -524,6 +532,7 @@ async def edit_chat_stream(chat_id: str, user_id: str, target_index: int, new_co
         )
 
         async for event in chat_stream(
+            request=request,
             user_input=new_content,
             user_id=user_id,
             chat_id=chat_id,
@@ -569,17 +578,28 @@ async def private_chat_stream(user_input, files=None, modal_name=None, chat_hist
 
         async for event in agent_graph.astream_events(initial_state, version="v2"):
             kind = event["event"]
+            name = event.get("name","")
 
-            if kind == "on_chat_model_stream":
+            if kind == "on_chain_start" and name == "file_processor":
+                if files:
+                    msg = "📄 Analyzing attached files...\n"
+                    thinking_text += msg
+                    yield f"data: {json.dumps({'type': 'analyzing', 'data': msg})}\n\n"
+
+            elif kind == "on_chain_end" and name == "file_processor":
+                if files:
+                    msg = "✅ File extraction complete.\n\n"
+                    thinking_text += msg
+                    yield f"data: {json.dumps({'type': 'analyzing', 'data': msg})}\n\n"
+
+            elif kind == "on_chat_model_stream":
                 chunk = event["data"]["chunk"]
 
-                # Thinking stream
                 if hasattr(chunk, "additional_kwargs"):
                     reasoning = chunk.additional_kwargs.get("reasoning_content")
                     if reasoning:
                         yield f"data: {json.dumps({'type': 'thinking', 'data': reasoning})}\n\n"
 
-                # Normal tokens
                 if hasattr(chunk, "content") and chunk.content:
                     yield f"data: {json.dumps({'type': 'token', 'data': chunk.content})}\n\n"
 

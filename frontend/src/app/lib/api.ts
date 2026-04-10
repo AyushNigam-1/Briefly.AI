@@ -38,9 +38,6 @@ api.interceptors.response.use(
     }
 )
 
-const TOKEN_DRIP_INTERVAL = 80
-const TOKENS_PER_TICK = 2
-
 type StreamCallbacks = {
     endpoint: string
     body: BodyInit
@@ -52,24 +49,16 @@ type StreamCallbacks = {
     isPrivate?: boolean
 }
 
-// Add onAnalyzing to your StreamCallbacks interface wherever it is defined:
-// onAnalyzing?: (data: string) => void;
-
 export async function streamChat({
     endpoint,
     body,
     abortController,
     onToken,
     onThinking,
-    onAnalyzing, // 🌟 NEW: Added to destructuring
+    onAnalyzing,
     onDone,
     onBlocked,
 }: StreamCallbacks & { onAnalyzing?: (text: string) => void }) {
-
-    const tokenQueue: string[] = []
-    let dripInterval: ReturnType<typeof setInterval> | null = null
-    let streamDone = false
-    let donePayload: { sources?: any; id?: string, title?: string } | null = null
 
     const { data } = await authClient.getSession()
     const token = data?.session?.token
@@ -81,23 +70,6 @@ export async function streamChat({
 
     if (typeof body === "string") {
         headers["Content-Type"] = "application/json"
-    }
-
-    const startDrip = () => {
-        if (dripInterval) return
-
-        dripInterval = setInterval(() => {
-            if (tokenQueue.length > 0) {
-                const chunk = tokenQueue.splice(0, TOKENS_PER_TICK).join("")
-                onToken(chunk)
-            } else if (streamDone) {
-                clearInterval(dripInterval!)
-                dripInterval = null
-                if (donePayload) {
-                    onDone(donePayload.sources, donePayload.id, donePayload.title)
-                }
-            }
-        }, TOKEN_DRIP_INTERVAL)
     }
 
     await fetchEventSource(`${baseURL}${endpoint}`, {
@@ -118,8 +90,7 @@ export async function streamChat({
             const parsed = JSON.parse(msg.data)
 
             if (parsed.type === "token") {
-                tokenQueue.push(parsed.data)
-                startDrip()
+                onToken(parsed.data)
             }
 
             if (parsed.type === "thinking") {
@@ -135,8 +106,7 @@ export async function streamChat({
             }
 
             if (parsed.type === "done") {
-                streamDone = true
-                donePayload = { sources: parsed.sources, id: parsed.id, title: parsed.title }
+                onDone(parsed.sources, parsed.id, parsed.title)
                 abortController.abort()
             }
 
@@ -147,15 +117,10 @@ export async function streamChat({
         },
 
         onclose() {
-            streamDone = true
             throw new StopRetryError("Closed")
         },
 
         onerror(err) {
-            if (dripInterval) {
-                clearInterval(dripInterval)
-                dripInterval = null
-            }
             throw err
         }
     })

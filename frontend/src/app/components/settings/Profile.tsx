@@ -95,7 +95,7 @@ export default function Profile() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="space-y-6 w-full pb-8 flex-1"
+            className="space-y-6 w-full flex-1"
           >
             <div
               className="flex items-center gap-4 md:p-4 p-2 rounded-xl border transition-colors

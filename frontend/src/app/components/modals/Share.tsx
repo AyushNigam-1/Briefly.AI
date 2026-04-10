@@ -5,14 +5,10 @@ import { Dialog, DialogPanel, DialogTitle, DialogBackdrop } from "@headlessui/re
 import { Copy, Check, X, Twitter, Linkedin, Facebook, MessageCircle, Mail, Info } from "lucide-react";
 import { ShareModalProps } from "@/app/types";
 
-
 export default function ShareModal({ isOpen, onClose, chatId, chatTitle }: ShareModalProps) {
     const [copied, setCopied] = useState(false);
 
-    // Generate the full URL dynamically
-    const shareUrl = typeof window !== "undefined"
-        ? `${window.location.origin}/${chatId}`
-        : `https://briefly.ai/${chatId}`;
+    const shareUrl = `${window.location.origin}/${chatId}`
 
     const defaultShareText = chatTitle
         ? `Check out this AI conversation: "${chatTitle}"`
@@ -23,12 +19,12 @@ export default function ShareModal({ isOpen, onClose, chatId, chatTitle }: Share
             await navigator.clipboard.writeText(shareUrl);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
+            // toast
         } catch (err) {
             console.error("Failed to copy text: ", err);
         }
     };
 
-    // Social media sharing links
     const socialLinks = [
         {
             name: "Twitter / X",
@@ -82,19 +78,18 @@ export default function ShareModal({ isOpen, onClose, chatId, chatTitle }: Share
                         dark:bg-tertiary dark:border-secondary overflow-hidden"
                 >
                     {/* Header */}
-                    <div className="flex items-center justify-between">
+                    <div className="flex  justify-between">
                         <DialogTitle className="text-xl font-bold text-slate-900 dark:text-slate-100">
                             Share Chat
                         </DialogTitle>
                         <button
                             onClick={onClose}
-                            className="p-1 rounded-md transition-colors text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:text-white dark:hover:bg-white/10"
+                            className="transition-colors text-slate-400 hover:text-slate-700 dark:hover:text-white"
                         >
                             <X size={20} strokeWidth={2.5} />
                         </button>
                     </div>
 
-                    {/* Link Input Section */}
                     <div className="flex items-center gap-2 p-1.5 rounded-xl transition-colors border
                             bg-slate-50 border-slate-200 focus-within:border-slate-300 focus-within:bg-white
                             dark:bg-[#161616] dark:border-white/10 dark:focus-within:border-white/20 dark:focus-within:bg-[#1a1a1a]"

@@ -14,7 +14,6 @@ const SourcesSidebar: React.FC<SourcesSidebarProps> = ({
         <AnimatePresence>
             {isOpen && (
                 <>
-                    {/* Backdrop */}
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}

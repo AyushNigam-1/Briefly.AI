@@ -74,7 +74,7 @@ const Chats = ({
             ref={vlistRef}
             data={queries}
             onScroll={handleScroll}
-            shift={true}
+            shift={isLoadingOlder}
             className="scrollbar-none overflow-x-hidden h-full w-full "
           >
             {(q, index) => {

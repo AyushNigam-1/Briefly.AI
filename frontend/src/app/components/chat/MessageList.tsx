@@ -6,7 +6,7 @@ import remarkGfm from "remark-gfm";
 import { Disclosure, DisclosureButton } from "@headlessui/react";
 import { MessageProps } from "@/app/types";
 
-const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen, onRegenerate, onEdit }: MessageProps) => {
+const MessageList = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen, onRegenerate, onEdit }: MessageProps) => {
     const isStreaming = isPending && isLastItem && q.sender === "llm";
 
     const showLoader = isStreaming && !q.thinking && !q.content;
@@ -123,13 +123,13 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
 
     const getInitialAnimation = () => {
         if (!shouldAnimate) return false;
-        return { opacity: 0 };
+        return { opacity: 0, y: 15 };
     };
 
     return (
         <motion.div
             initial={getInitialAnimation()}
-            animate={{ opacity: 1 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
             className={`flex w-full ${q.sender === "user" ? "justify-end" : "justify-start"}`}
         >
@@ -311,4 +311,4 @@ const Message = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen,
     );
 };
 
-export default Message;
+export default MessageList;

@@ -59,7 +59,11 @@ const Home = () => {
 
       try {
         const res = await api.get(`/history/${rawId}?${params}`);
-        const newHistory: QueryType[] = res.data?.history || [];
+        const rawHistory = res.data?.history || [];
+        const newHistory: QueryType[] = rawHistory.map((msg: any) => ({
+          ...msg,
+          id: crypto.randomUUID()
+        }));
         const serverHasMore = res.data?.has_more ?? newHistory.length === 30;
 
         if (before) {
@@ -78,8 +82,11 @@ const Home = () => {
       } catch (e) {
         console.error("History load failed", e);
       } finally {
-        if (before) setIsLoadingOlder(false);
         setIsInitialLoad(false);
+
+        if (before) setTimeout(() => {
+          setIsLoadingOlder(false);
+        }, 50);
       }
     },
     [rawId, isPrivateMode],
@@ -418,6 +425,7 @@ const Home = () => {
     const newQueriesState: QueryType[] = [
       ...queries,
       {
+        id: crypto.randomUUID(),
         sender: "user",
         content: queryText,
         files: filesData.map((f) => ({
@@ -428,7 +436,7 @@ const Home = () => {
         })),
         created_at: "",
       },
-      { sender: "llm", content: "", thinking: "", sources: [], created_at: "" },
+      { id: crypto.randomUUID(), sender: "llm", content: "", thinking: "", sources: [], created_at: "" },
     ];
     setQueries(newQueriesState);
 

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Form, UploadFile, File, Query, Response 
+from fastapi import APIRouter, HTTPException, Depends, Form, UploadFile, File, Query, Response ,Request
 from fastapi.responses import StreamingResponse
 from utils.auth import get_current_user
 from pydantic import BaseModel, Field
@@ -40,6 +40,7 @@ class TTSRequest(BaseModel):
 
 @router.post("/query")
 async def query_handler(
+    request: Request,
     query: str = Form(...),
     id: Optional[str] = Form(None),
     files: list[UploadFile] = File(None),
@@ -49,6 +50,7 @@ async def query_handler(
     user_id = user["user_id"]
 
     generator = chat_stream(
+        request=request,
         user_input=query,
         user_id=user_id,
         chat_id=id,
@@ -141,6 +143,7 @@ class RegenerateRequest(BaseModel):
 
 @router.post("/chat/{chat_id}/regenerate")
 async def regenerate_chat_route(
+    request: Request,
     chat_id: str,
     payload: RegenerateRequest,
     user=Depends(get_current_user)
@@ -153,6 +156,7 @@ async def regenerate_chat_route(
         raise HTTPException(status_code=400, detail="chat_id is required")
 
     generator = regenerate_chat_stream(
+        request=request,
         chat_id=chat_id,
         user_id=user["user_id"],
         modal_name=payload.modal_name
@@ -162,6 +166,7 @@ async def regenerate_chat_route(
 
 @router.post("/chat/{chat_id}/edit")
 async def edit_chat_route(
+    request:Request,
     chat_id: str,
     payload: EditMessageRequest,
     user=Depends(get_current_user)
@@ -173,6 +178,7 @@ async def edit_chat_route(
         raise HTTPException(status_code=400, detail="chat_id is required")
 
     generator = edit_chat_stream(
+        request=request,
         chat_id=chat_id,
         user_id=user["user_id"],
         target_index=payload.target_index,
@@ -184,6 +190,7 @@ async def edit_chat_route(
 
 @router.post("/query/private")
 async def private_chat_endpoint(
+    request:Request,
     query: str = Form(...),
     modal_name: Optional[str] = Form(None),
     chat_history: Optional[str] = Form(None), 
@@ -198,6 +205,7 @@ async def private_chat_endpoint(
 
     return StreamingResponse(
         private_chat_stream(
+            request=request,
             user_input=query,
             files=files,
             modal_name=modal_name,
@@ -214,12 +222,10 @@ async def search_chats_endpoint(
     """
     Endpoint to search through user chat history.
     """
-    # Prevent empty searches from hitting the database
     if not q or not q.strip():
         return {"results": []}
 
     try:
-        # Assuming your get_current_user returns a dict with 'user_id'
         user_id = user["user_id"] 
         
         results = search_user_chats(user_id=user_id, search_term=q.strip())
