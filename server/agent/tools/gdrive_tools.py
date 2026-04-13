@@ -1,10 +1,9 @@
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
-# ⚠️ UPDATED: These exact names must match the 'name' property in your TypeScript schemas!
 ALLOWED_GDRIVE_TOOLS = {
     "gdrive_search",
     "gdrive_read_file",
-    "gdrive_create_file", # 🌟 Add this!
+    "gdrive_create_file",
     "gdrive_delete_file",
     "gdrive_update_file"
 }

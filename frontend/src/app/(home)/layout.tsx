@@ -24,7 +24,7 @@ export default function DashboardLayout({
                 position="bottom-right"
                 toastOptions={{
                     classNames: {
-                        toast: '!bg-secondary !border !border-white/10 !text-slate-200 font-mono shadow-xl rounded-xl p-4 w-full',
+                        toast: '!bg-[#232323] !border !border-white/10 !text-slate-200 font-mono shadow-xl rounded-xl p-4 w-full',
                         title: 'text-sm font-medium',
                         description: 'text-xs text-slate-400',
                         success: 'group-[.toaster]:!bg-[#0b0b0b] group-[.toaster]:!text-green-400 group-[.toaster]:!border-green-900/50',
@@ -35,14 +35,14 @@ export default function DashboardLayout({
             />
 
 
-            <div className="flex h-screen w-full relative max-w-4xl mx-auto">
+            <div className="flex h-dvh w-full relative max-w-4xl mx-auto">
                 <OneSignalSetup />
                 <Sidebar user={session?.user} isLoading={isPending} />
 
                 <div className="flex flex-col flex-1 h-full w-full overflow-hidden">
                     <Navbar user={session?.user} isLoading={isPending} />
 
-                    <main className="flex-1 overflow-y-hidden relative z-10">
+                    <main className="flex-1 min-h-0 overflow-y-hidden relative z-10 flex flex-col">
                         <div className="w-full h-full">
                             {children}
                         </div>

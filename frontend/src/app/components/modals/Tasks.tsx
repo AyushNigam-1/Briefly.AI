@@ -24,7 +24,7 @@ export default function TaskManagerModal({ onCloseSidebar }: SearchModalProps) {
     const [deletingId, setDeletingId] = useState<string | null>(null)
     const [runningId, setRunningId] = useState<string | null>(null)
 
-    const { data: workflows = [], isLoading } = useQuery({
+    const { data: workflows = [], isFetching } = useQuery({
         queryKey: ['workflows'],
         queryFn: async () => {
             const res = await api.get("/workflows")
@@ -71,14 +71,14 @@ export default function TaskManagerModal({ onCloseSidebar }: SearchModalProps) {
             setDeletingId(id)
             await queryClient.cancelQueries({ queryKey: ['workflows'] })
             const previousWorkflows = queryClient.getQueryData<Task[]>(['workflows'])
+            return { previousWorkflows }
+        },
+        onSuccess: (_, id) => {
+            toast.success("Task deleted successfully.")
             queryClient.setQueryData(['workflows'], (old: Task[] | undefined) => {
                 if (!old) return old
                 return old.filter(w => w.id !== id)
             })
-            return { previousWorkflows }
-        },
-        onSuccess: () => {
-            toast.success("Task deleted successfully.")
         },
         onError: (err, id, context) => {
             queryClient.setQueryData(['workflows'], context?.previousWorkflows)
@@ -121,7 +121,6 @@ export default function TaskManagerModal({ onCloseSidebar }: SearchModalProps) {
 
                 <div className="fixed inset-0 flex items-center justify-center p-4">
                     <DialogPanel transition className="w-full max-w-2xl h-[60vh] min-h-[450px] flex flex-col rounded-2xl border overflow-hidden shadow-2xl transition duration-300 ease-out data-[closed]:scale-95 data-[closed]:opacity-0 data-[closed]:-translate-y-4 bg-white border-slate-200 font-sans dark:bg-tertiary dark:border-white/10">
-                        {/* Header */}
                         <div className="relative flex shrink-0 items-center p-4 border-b border-slate-200 dark:border-white/10 z-20">
                             <Search className="absolute left-5 text-slate-400 dark:text-gray-500" size={20} strokeWidth={2} />
                             <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search tasks..." className="w-full bg-transparent pl-10 pr-10 text-lg sm:text-xl font-medium outline-none text-slate-800 dark:text-white placeholder:text-slate-300 dark:placeholder:text-gray-600" />
@@ -132,14 +131,14 @@ export default function TaskManagerModal({ onCloseSidebar }: SearchModalProps) {
 
                         <div className="flex-1 relative overflow-hidden">
                             <AnimatePresence mode="wait">
-                                {isLoading ? (
+                                {isFetching ? (
                                     <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 flex items-center justify-center text-slate-400 dark:text-gray-500">
                                         <Loader2 size={28} className="animate-spin opacity-60" />
                                     </motion.div>
                                 ) : filtered.length === 0 ? (
                                     <motion.div key="empty" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="absolute inset-0 flex flex-col items-center justify-center p-12 text-slate-400 dark:text-gray-500 gap-3 text-center">
                                         <Workflow size={32} className="opacity-30 mb-2" />
-                                        <p className="text-sm">No tasks or workflows found.</p>
+                                        <p className="text-sm">No tasks found.</p>
                                     </motion.div>
                                 ) : (
                                     <motion.div key="results" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="absolute inset-0 overflow-y-auto p-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-200 dark:scrollbar-thumb-white/10">

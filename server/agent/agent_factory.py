@@ -147,42 +147,49 @@ def _build_agent_cache_key(
 def get_tool_prompts(user_id: str):
     return {
         "n8n": (
-            "N8N AUTOMATION RULES:\n"
-            "- You can create, test, get, delete, and update n8n workflows.\n"
+            "N8N AUTOMATION RULES & CAPABILITIES:\n"
+            "- CAPABILITIES: If the user asks what automations you can build, explain that you can create scheduled background tasks that scrape websites, analyze the content using an AI brain based on custom rules, and send conditional alerts via Email or Push Notification. You can also create, read, update, test, and delete these workflows.\n"
             "- CRITICAL: Before creating a workflow, you MUST call `get_workflow_blueprint()`.\n"
             "- The blueprint is a SUPERSET of available nodes. You MUST heavily customize it based on the user's request:\n"
-            "  1. PRUNING: Delete any nodes the user didn't explicitly ask for. (e.g., If they only want an Email, completely delete the 'Push' node from the JSON).\n"
-            "  2. REWIRING: You MUST update the 'connections' dictionary. The 'true' branch of 'Should I Notify?' MUST connect ONLY to the notification nodes the user requested.\n"
+            "  1. PRUNING: Delete any nodes the user didn't explicitly ask for. (e.g., If they only want an Email, completely delete the 'Push' node. If they just want a scheduled email without web scraping, delete 'Fetch Website' and 'Ask LLM Brain').\n"
+            "  2. REWIRING: You MUST update the 'connections' dictionary. The 'true' branch of 'Should I Notify?' MUST connect ONLY to the notification nodes the user requested. If no logic is needed, connect the trigger directly to the action node.\n"
             "  3. SCHEDULING: Modify the 'Schedule' node parameters to match the requested timeframe (e.g., change field to 'seconds' and expression to 10).\n"
             f"  4. VARIABLES: Replace 'TARGET_USER_ID' with: {user_id}. Replace 'TARGET_EMAIL' with their email. For 'TARGET_URL', replace it ONLY with the raw website URL. Do NOT add Jina manually, it is already in the blueprint!\n"
             "  5. RULE EXTRACTION: Replace 'USER_RULE' with ONLY the logical condition. (e.g., If user says 'Email me about Unnao news', the USER_RULE should simply be 'News about Unnao').\n"
             "💡 PRO TIP: If the user asks to monitor 'news' about a topic, DO NOT use a specific newspaper website. Instead, construct a Google News URL. Example: If they ask for 'Unnao news', replace TARGET_URL with 'https://news.google.com/search?q=unnao%20news'.\n"
+            "- SECRETS: You ALREADY have all required API keys (n8n, Resend, OneSignal, Jina) configured in the backend environment. NEVER ask the user for API keys, credentials, or tokens. Just execute the task.\n"
             "- DATA HANDLING: NEVER output raw data, raw HTML, or raw JSON from external sources directly to the user. You MUST parse the data, pass it through your own reasoning, and explain it conversationally.\n"
             "- EXTERNAL RESOURCES: NEVER guess or assume URLs, API endpoints, or external websites. If the user asks for an automation involving a website but does not provide the exact URL, you MUST stop and ask them for the exact URL before building the workflow.\n"
             "- UPDATE PROTOCOL: If modifying an existing workflow, ALWAYS call `n8n_get_workflow` first to get the current state, modify the parameters, then call `n8n_update_workflow`.\n"
+            "- POST-CREATION MESSAGE: After successfully creating a workflow, you MUST politely inform the user: 'You can activate and configure this task by going to the **Manage Tasks** option.'\n"
         ),
-        "notion": (
-            "NOTION RULES:\n"
-            "- You can read and interact with Notion databases and pages.\n"
-            "- Format all retrieved Notion data as clean Markdown tables or bulleted lists for readability."
+       "notion": (
+            "NOTION RULES & CAPABILITIES:\n"
+            "- CAPABILITIES: If asked, explain you can search and read Notion databases, and extract content directly from Notion pages.\n"
+            "- FORMATTING: ALWAYS format retrieved Notion data as clean Markdown tables or structured bulleted lists for maximum readability.\n"
+            "- DATA HANDLING: NEVER dump raw JSON or raw Notion UUIDs to the user. Always reference pages and databases by their human-readable Title.\n"
         ),
         "gdrive": (
-            "GOOGLE DRIVE RULES:\n"
-            "- You can search, read, create, update, and delete Google Drive files.\n"
-            "- When creating a file, ensure the title is descriptive.\n"
-            "- When referencing files, provide clear names and avoid dumping raw file IDs to the user unless requested."
+            "GOOGLE DRIVE RULES & CAPABILITIES:\n"
+            "- CAPABILITIES: If asked, explain you can search, read, create, update, and delete files in Google Drive.\n"
+            "- CREATION & TITLING: When creating a new file, autonomously generate a highly descriptive, professional title based on the content.\n"
+            "- DATA HANDLING: NEVER dump raw JSON metadata or raw Google Drive File IDs to the user. Reference files strictly by their names.\n"
+            "- LINKING: If the user needs to view or edit the file directly, provide a clean, clickable Markdown link using the file's web link (e.g., `[Document Title](url)`).\n"
         ),
         "linear": (
-            "LINEAR RULES:\n"
-            "- You can search issues/projects, get teams/users, create/delete issues, and manage comments.\n"
-            "- Always tag specific Linear issues with their ID (e.g., ENG-123).\n"
-            "- When creating an issue, ensure the title is concise and the description includes necessary context."
+            "LINEAR RULES & CAPABILITIES:\n"
+            "- CAPABILITIES: If asked, explain you can search issues and projects, fetch teams and users, create or delete issues, and read or post issue comments.\n"
+            "- TAGGING: ALWAYS tag specific Linear issues using their official identifier format (e.g., `ENG-123`).\n"
+            "- ISSUE CREATION: When creating an issue, write a concise, action-oriented title. The description must be well-structured and include all necessary context.\n"
+            "- FORMATTING: When listing multiple issues, present them as clean Markdown tables including the Identifier, Title, Status, and Assignee.\n"
+            "- DATA HANDLING: NEVER dump raw API JSON. Extract and synthesize the human-readable text.\n"
         ),
         "slack": (
-            "SLACK RULES:\n"
-            "- You can read history, list channels, post messages, reply to threads, add reactions, and get user profiles.\n"
-            "- Keep generated Slack messages concise and professional.\n"
-            "- Use the <@username> syntax if mentioning specific users."
+            "SLACK RULES & CAPABILITIES:\n"
+            "- CAPABILITIES: If asked, explain you can read channel history, list channels, fetch user profiles, post new messages, reply to specific threads, and add emoji reactions.\n"
+            "- COMMUNICATION STYLE: Keep any generated Slack messages concise, professional, and action-oriented. Avoid unnecessary fluff.\n"
+            "- MENTIONS: ALWAYS use the proper `<@username>` or `<@user_id>` syntax when instructed to tag or mention specific users in a message.\n"
+            "- SUMMARIZATION: When retrieving channel history or thread replies, synthesize the conversation logically. Do not dump raw JSON, raw timestamps, or internal user IDs.\n"
         )
     }
 

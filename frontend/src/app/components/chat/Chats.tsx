@@ -51,9 +51,9 @@ const Chats = ({
     };
 
     return (
-        // 🌟 FIX 1: Wrap everything in a flex column container instead of a fragment
         <div className="flex flex-col w-full h-full relative">
-            <div className="flex flex-col items-center w-full h-[calc(100dvh-190px)] relative">
+
+            <div className="flex flex-col items-center w-full flex-1 min-h-0 relative">
                 <div className="w-full max-w-6xl h-full relative">
 
                     {isLoadingOlder && (
@@ -73,29 +73,26 @@ const Chats = ({
                         data={queries}
                         onScroll={handleScroll}
                         shift={isLoadingOlder}
-                        className="scrollbar-none overflow-x-hidden h-full w-full "
+                        className="scrollbar-none overflow-x-hidden h-full w-full"
                     >
-                        {(q, index) => {
-
-                            return (
-                                <MessageList
-                                    key={q.id}
-                                    q={q}
-                                    isLastItem={index === queries.length - 1}
-                                    isPending={isPending}
-                                    onCopy={copyToClipboard}
-                                    setSources={setSources}
-                                    setSourcesOpen={setSourcesOpen}
-                                    onRegenerate={() => handleRegenerate(index)}
-                                    onEdit={(newContent: string) => handleEdit(index, newContent)}
-                                />
-                            );
-                        }}
+                        {(q, index) => (
+                            <MessageList
+                                key={q.id}
+                                q={q}
+                                isLastItem={index === queries.length - 1}
+                                isPending={isPending}
+                                onCopy={copyToClipboard}
+                                setSources={setSources}
+                                setSourcesOpen={setSourcesOpen}
+                                onRegenerate={() => handleRegenerate(index)}
+                                onEdit={(newContent: string) => handleEdit(index, newContent)}
+                            />
+                        )}
                     </VList>
                 </div>
             </div>
 
-            <div className="relative w-full py-3 sm:px-0 px-3 z-50 mt-auto">
+            <div className="relative w-full py-3 sm:px-0 px-3 z-50 shrink-0">
                 <div className="max-w-4xl w-full mx-auto">
                     <ChatInput
                         query={searchInput} setQuery={setQuery} send={handleSend}

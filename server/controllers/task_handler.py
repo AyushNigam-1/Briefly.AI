@@ -120,11 +120,42 @@ def toggle_workflow(user_id: str, workflow_id: str):
     return {"status": "success", "message": f"Workflow {action}d successfully", "is_active": new_state}
 
 import json
-# ... existing imports ...
+import requests
+from bson import ObjectId
+
+# 🌟 NEW: The Security Filter
+def is_protected_parameter(key: str, value: any = None) -> bool:
+    """
+    Security filter to prevent API keys and credentials from leaking to the frontend.
+    Checks both the parameter key names and common secret value prefixes.
+    """
+    k = key.lower()
+    
+    # 1. Block by Key Name (Aggressive Blacklist)
+    blacklisted_keys = [
+        "apikey", "api_key", "token", "secret", "password", 
+        "credentials", "headerparameters", "headers", "sendheaders",
+        "jina", "resend", "opensignal", "auth"
+    ]
+    if any(word in k for word in blacklisted_keys):
+        return True
+        
+    # 2. Block by Value Signature (Catches secrets hidden inside nested JSON)
+    if value is not None:
+        if isinstance(value, str):
+            if value.startswith("sk-") or value.startswith("Bearer ") or value.startswith("re_") or value.startswith("jina_"):
+                return True
+        elif isinstance(value, (dict, list)):
+            dump = json.dumps(value)
+            if '"sk-' in dump or '"Bearer ' in dump or '"re_' in dump or '"jina_' in dump:
+                return True
+                
+    return False
+
 
 def get_workflow_blocks(user_id: str, workflow_id: str):
     """
-    Dynamically fetches ALL configurable parameters from the n8n nodes.
+    Dynamically fetches configurable parameters, aggressively filtering out API keys.
     """
     user = users_collection.find_one({"_id": ObjectId(user_id), "n8n_workflows.id": workflow_id})
     if not user:
@@ -144,21 +175,22 @@ def get_workflow_blocks(user_id: str, workflow_id: str):
         parameters = node.get("parameters", {})
         editable_fields = []
         
-        # 🌟 Dynamically loop through EVERY parameter in the node
         for key, value in parameters.items():
-            # Format the label nicely (e.g., "jsonBody" -> "Json Body")
+            
+            # 🌟 SECURITY CHECK: Skip this iteration if it contains an API key
+            if is_protected_parameter(key, value):
+                continue
+
             formatted_label = ''.join([' '+c if c.isupper() else c for c in key]).strip().title()
 
             if isinstance(value, (dict, list)):
-                # It's a nested object (like headers or rules). Convert to JSON string.
                 editable_fields.append({
                     "key": key,
                     "label": f"{formatted_label} (Advanced)",
                     "value": json.dumps(value, indent=2),
-                    "is_json": True # Flag for the frontend to render a textarea
+                    "is_json": True 
                 })
             else:
-                # It's a standard string, number, or boolean
                 editable_fields.append({
                     "key": key,
                     "label": formatted_label,
@@ -175,10 +207,9 @@ def get_workflow_blocks(user_id: str, workflow_id: str):
 
     return {"status": "success", "data": {"nodes": formatted_nodes}}
 
-
 def update_workflow_blocks(user_id: str, workflow_id: str, updated_nodes: list):
     """
-    Safely merges user edits back into the full n8n JSON and saves.
+    Safely merges user edits back into the full n8n JSON and saves, protecting original keys.
     """
     user = users_collection.find_one({"_id": ObjectId(user_id), "n8n_workflows.id": workflow_id})
     if not user:
@@ -202,18 +233,19 @@ def update_workflow_blocks(user_id: str, workflow_id: str, updated_nodes: list):
                 
             for field in frontend_node["editable_fields"]:
                 key = field["key"]
+                
+                if is_protected_parameter(key):
+                    continue
+
                 raw_val = field["value"]
                 is_json = field.get("is_json", False)
                 
-                # 🌟 Type Casting Logic
                 if is_json:
                     try:
-                        # Ensure we handle nested JSON strings from textareas
                         parsed_val = json.loads(raw_val) if isinstance(raw_val, str) else raw_val
                     except Exception:
                         parsed_val = raw_val 
                 else:
-                    # Cast string literals back to proper types
                     val_str = str(raw_val).strip()
                     if val_str.lower() == "true":
                         parsed_val = True

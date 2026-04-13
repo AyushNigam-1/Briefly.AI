@@ -8,7 +8,7 @@ import { ShareModalProps } from "@/app/types";
 export default function ShareModal({ isOpen, onClose, chatId, chatTitle }: ShareModalProps) {
     const [copied, setCopied] = useState(false);
 
-    const shareUrl = `${window.location.origin}/${chatId}`
+    const shareUrl = `${window.location.origin}/chat?id=${chatId}`
 
     const defaultShareText = chatTitle
         ? `Check out this AI conversation: "${chatTitle}"`
@@ -19,7 +19,6 @@ export default function ShareModal({ isOpen, onClose, chatId, chatTitle }: Share
             await navigator.clipboard.writeText(shareUrl);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
-            // toast
         } catch (err) {
             console.error("Failed to copy text: ", err);
         }
@@ -79,7 +78,7 @@ export default function ShareModal({ isOpen, onClose, chatId, chatTitle }: Share
                 >
                     {/* Header */}
                     <div className="flex  justify-between">
-                        <DialogTitle className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                        <DialogTitle className="text-xl font-bold font-mono text-slate-900 dark:text-slate-100">
                             Share Chat
                         </DialogTitle>
                         <button

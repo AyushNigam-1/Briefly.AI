@@ -269,6 +269,15 @@ const Home = () => {
             return up;
           });
         },
+        onAnalyzing(token) {
+          accumulatedThinking += token;
+          setQueries((prev) => {
+            const up = [...prev];
+            const lastIdx = up.length - 1;
+            up[lastIdx] = { ...up[lastIdx], thinking: accumulatedThinking };
+            return up;
+          });
+        },
         onThinking(token) {
           accumulatedThinking += token;
           setQueries((prev) => {
@@ -379,6 +388,15 @@ const Home = () => {
             const up = [...prev];
             const lastIdx = up.length - 1;
             up[lastIdx] = { ...up[lastIdx], content: accumulatedContent };
+            return up;
+          });
+        },
+        onAnalyzing(token) {
+          accumulatedThinking += token;
+          setQueries((prev) => {
+            const up = [...prev];
+            const lastIdx = up.length - 1;
+            up[lastIdx] = { ...up[lastIdx], thinking: accumulatedThinking };
             return up;
           });
         },
@@ -547,154 +565,157 @@ const Home = () => {
   };
 
   return (
-    <AnimatePresence mode="wait">
-      {isInitialLoad ? (
-        <motion.div
-          key="loading"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
-          className="flex items-center justify-center w-full h-[85vh]"
-        >
-          <div className="flex justify-center items-center py-2">
-            <Loader2 size={28} className="animate-spin text-slate-400" />
-          </div>
-        </motion.div>
-      ) : queries.length > 0 ? (
-        <motion.div
-          key={`chat-${chatKey}`}
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
-          className="w-full h-full overflow-none"
-        >
-          <Chats
-            query={query}
-            queries={queries}
-            isPending={isPending}
-            isLoadingOlder={isLoadingOlder}
-            hasMore={hasMore}
-            setQueries={setQueries}
-            handleSend={handleSend}
-            setQuery={setQuery}
-            handleStop={handleStop}
-            handleFileChange={handleFileChange}
-            loadOlderChats={loadOlderChats}
-            handleRegenerate={handleRegenerate}
-            handleEdit={handleEdit}
-          />
-        </motion.div>
-      ) : (
-        <motion.div
-          key="intro"
-          initial={{ opacity: 0, scale: 0.95, x: "-50%", y: "-45%" }}
-          animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
-          exit={{ opacity: 0, scale: 0.95, x: "-50%", y: "-55%" }}
-          transition={{ duration: 0.4, ease: "easeInOut" }}
-          className="fixed top-1/2 left-1/2 w-full max-w-3xl px-4 sm:px-6 transition-colors duration-300 text-slate-800 dark:text-white"
-        >
-          <div className="flex flex-col gap-6 md:gap-10 font-mono">
-            <div className="text-center relative w-full">
-              <div className="relative h-[110px] sm:h-[120px] mb-3 md:mb-4 w-full">
-                <AnimatePresence>
-                  {isExplicitPrivate ? (
-                    <motion.div
-                      key="private"
-                      initial={{ opacity: 0, y: 15 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -15 }}
-                      transition={{ duration: 0.4, ease: "easeInOut" }}
-                      className="absolute bottom-0 inset-x-0 w-full flex flex-col items-center justify-end"
-                    >
-                      <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
-                        Incognito Session
-                      </h3>
-                      <p className="text-sm sm:text-base transition-colors text-slate-500 dark:text-gray-400 mt-2">
-                        Your history won't be saved. Close the tab to erase this
-                        session.
-                      </p>
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="normal"
-                      initial={{ opacity: 0, y: 15 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -15 }}
-                      transition={{ duration: 0.4, ease: "easeInOut" }}
-                      className="absolute bottom-0 inset-x-0 w-full flex flex-col items-center justify-end"
-                    >
-                      <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
-                        How can I help you today?
-                      </h3>
-                      <p className="text-sm sm:text-base transition-colors text-slate-500 dark:text-gray-400 mt-2">
-                        Ask anything, upload docs, brainstorm, or chat.
-                      </p>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+    <main className="relative flex flex-col w-full h-full flex-1 min-h-0 overflow-hidden">
+      <AnimatePresence mode="wait">
+        {isInitialLoad ? (
+          <motion.div
+            key="loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="flex items-center justify-center w-full h-[85vh]"
+          >
+            <div className="flex justify-center items-center py-2">
+              <Loader2 size={28} className="animate-spin text-slate-400" />
+            </div>
+          </motion.div>
+        ) : queries.length > 0 ? (
+          <motion.div
+            key={`chat-${chatKey}`}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="relative flex-1 w-full h-full min-h-0 overflow-hidden">
+            <Chats
+              query={query}
+              queries={queries}
+              isPending={isPending}
+              isLoadingOlder={isLoadingOlder}
+              hasMore={hasMore}
+              setQueries={setQueries}
+              handleSend={handleSend}
+              setQuery={setQuery}
+              handleStop={handleStop}
+              handleFileChange={handleFileChange}
+              loadOlderChats={loadOlderChats}
+              handleRegenerate={handleRegenerate}
+              handleEdit={handleEdit}
+            />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="intro"
+            initial={{ opacity: 0, scale: 0.95, x: "-50%", y: "-45%" }}
+            animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
+            exit={{ opacity: 0, scale: 0.95, x: "-50%", y: "-55%" }}
+            transition={{ duration: 0.4, ease: "easeInOut" }}
+            className="fixed top-1/2 left-1/2 w-full max-w-3xl px-4 sm:px-6 transition-colors duration-300 text-slate-800 dark:text-white"
+          >
+            <div className="flex flex-col gap-6 md:gap-10 font-mono">
+              <div className="text-center relative w-full">
+                <div className="relative h-[110px] sm:h-[120px] mb-3 md:mb-4 w-full">
+                  <AnimatePresence>
+                    {isExplicitPrivate ? (
+                      <motion.div
+                        key="private"
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -15 }}
+                        transition={{ duration: 0.4, ease: "easeInOut" }}
+                        className="absolute bottom-0 inset-x-0 w-full flex flex-col items-center justify-end"
+                      >
+                        <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
+                          Incognito Session
+                        </h3>
+                        <p className="text-sm sm:text-base transition-colors text-slate-500 dark:text-gray-400 mt-2">
+                          Your history won't be saved. Close the tab to erase this
+                          session.
+                        </p>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="normal"
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -15 }}
+                        transition={{ duration: 0.4, ease: "easeInOut" }}
+                        className="absolute bottom-0 inset-x-0 w-full flex flex-col items-center justify-end"
+                      >
+                        <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
+                          How can I help you today?
+                        </h3>
+                        <p className="text-sm sm:text-base transition-colors text-slate-500 dark:text-gray-400 mt-2">
+                          Ask anything, upload docs, brainstorm, or chat.
+                        </p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
 
-              <ChatInput
-                query={query}
-                setQuery={setQuery}
-                send={handleSend}
-                isPending={isPending}
-                handleFileChange={handleFileChange}
-                stop={handleStop}
-              />
+                <ChatInput
+                  query={query}
+                  setQuery={setQuery}
+                  send={handleSend}
+                  isPending={isPending}
+                  handleFileChange={handleFileChange}
+                  stop={handleStop}
+                />
 
-              <div className="relative mt-4 h-[44px] w-full flex justify-center">
-                <AnimatePresence initial={false}>
-                  {user && !isPrivateMode ? (
-                    <motion.button
-                      key="btn-private"
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ duration: 0.2 }}
-                      onClick={() =>
-                        router.push("/?id=private", { scroll: false })
-                      }
-                      className="absolute top-0 text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-colors hover:text-slate-700 text-slate-500 dark:text-gray-400 dark:hover:text-slate-300"
-                    >
-                      <Ghost size={14} /> Go Private
-                    </motion.button>
-                  ) : user && isPrivateMode ? (
-                    <motion.button
-                      key="btn-normal"
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ duration: 0.2 }}
-                      onClick={() => router.push("/", { scroll: false })}
-                      className="absolute top-0 text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-colors hover:text-slate-700 text-slate-500 dark:text-gray-400 dark:hover:text-slate-300"
-                    >
-                      <Ghost size={14} className="opacity-60" /> Exit Private
-                      Mode
-                    </motion.button>
-                  ) : null}
-                </AnimatePresence>
+                <div className="relative mt-4 h-[44px] w-full flex justify-center">
+                  <AnimatePresence initial={false}>
+                    {user && !isPrivateMode ? (
+                      <motion.button
+                        key="btn-private"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.2 }}
+                        onClick={() =>
+                          router.push("/?id=private", { scroll: false })
+                        }
+                        className="absolute top-0 text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-colors hover:text-slate-700 text-slate-500 dark:text-gray-400 dark:hover:text-slate-300"
+                      >
+                        <Ghost size={14} /> Go Private
+                      </motion.button>
+                    ) : user && isPrivateMode ? (
+                      <motion.button
+                        key="btn-normal"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.2 }}
+                        onClick={() => router.push("/", { scroll: false })}
+                        className="absolute top-0 text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-colors hover:text-slate-700 text-slate-500 dark:text-gray-400 dark:hover:text-slate-300"
+                      >
+                        <Ghost size={14} className="opacity-60" /> Exit Private
+                        Mode
+                      </motion.button>
+                    ) : null}
+                  </AnimatePresence>
+                </div>
               </div>
             </div>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </main>
   );
 };
 
 export default function Page() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex items-center justify-center w-full h-[80vh]">
-          <Loader2 size={28} className="animate-spin text-slate-400" />
-        </div>
-      }
-    >
-      <Home />
-    </Suspense>
+    <div className="relative w-full h-full flex flex-col overflow-hidden">
+      <Suspense
+        fallback={
+          <div className="flex items-center justify-center w-full h-[80vh]">
+            <Loader2 size={28} className="animate-spin text-slate-400" />
+          </div>
+        }
+      >
+        <Home />
+      </Suspense>
+    </div>
   );
 }

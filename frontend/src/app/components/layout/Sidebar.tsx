@@ -264,15 +264,14 @@ const Sidebar = ({ user }: { user: any; isLoading: boolean }) => {
         duration: 0.35,
         layout: { type: "tween", duration: 0.2, ease: "easeOut" },
       }}
-      className={`group relative overflow-hidden flex items-center justify-between transition-colors rounded-xl pr-1 md:pr-2 mb-1 text-sm md:text-base
-            ${
-              activeId == s.id
-                ? "font-medium bg-slate-100 border border-slate-200 text-slate-900 dark:bg-white/5 dark:border-secondary dark:text-white"
-                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-gray-400 border border-transparent dark:hover:text-white dark:hover:bg-white/5"
-            }`}
+      className={`group relative overflow-hidden flex items-center justify-between transition-colors rounded-xl pr-1 md:pr-2 mb-1 text-base
+            ${activeId == s.id
+          ? "font-medium bg-slate-100 border border-slate-200 text-slate-900 dark:bg-white/5 dark:border-secondary dark:text-white"
+          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-gray-400 border border-transparent dark:hover:text-white dark:hover:bg-white/5"
+        }`}
     >
       <Link
-        href={`chat/?id=${s.id}`}
+        href={`/chat/?id=${s.id}`}
         onClick={handleMobileNav}
         className="flex-1 outline-none focus:outline-none p-1.5 md:p-2 truncate"
       >
