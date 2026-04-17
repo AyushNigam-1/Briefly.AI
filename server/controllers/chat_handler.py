@@ -440,12 +440,7 @@ def generate_audio_from_text(text: str, voice: str = "troy") -> bytes:
         print(e)
         raise HTTPException(status_code=500, detail=f"Groq API Error: {str(e)}")
 
-async def regenerate_chat_stream(request:Request,chat_id: str, user_id: str, modal_name: Optional[str] = None):
-    """
-    Regenerates the last AI response for a given chat.
-    It removes the last AI message and the preceding user message from the database,
-    then re-triggers the chat_stream with the extracted user input.
-    """
+async def regenerate_chat_stream(request:Request, chat_id: str, user_id: str, target_index: int, modal_name: Optional[str] = None):
     try:
         if not ObjectId.is_valid(chat_id):
             yield f"data: {json.dumps({'type': 'error', 'message': 'Invalid chat ID'})}\n\n"
@@ -458,30 +453,27 @@ async def regenerate_chat_stream(request:Request,chat_id: str, user_id: str, mod
             return
 
         queries = chat["queries"]
-        last_user_query = None
-        slice_index = len(queries)
 
-        if queries[-1]["sender"] == "llm":
-            if len(queries) >= 2 and queries[-2]["sender"] == "user":
-                last_user_query = queries[-2]
-                slice_index = len(queries) - 2
-            else:
-                yield f"data: {json.dumps({'type': 'error', 'message': 'Malformed chat history'})}\n\n"
-                return
-        elif queries[-1]["sender"] == "user":
-            last_user_query = queries[-1]
-            slice_index = len(queries) - 1
-        else:
-            yield f"data: {json.dumps({'type': 'error', 'message': 'Cannot regenerate from current state'})}\n\n"
+        user_msg_index = target_index - 1
+
+        if target_index >= len(queries) or user_msg_index < 0:
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Invalid index'})}\n\n"
             return
+
+        last_user_query = queries[user_msg_index]
+
+        if last_user_query.get("sender") != "user":
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Target is not a user message'})}\n\n"
+            return
+
+        truncated_queries = queries[:user_msg_index]
 
         summary_collection.update_one(
             {"_id": ObjectId(chat_id), "user_id": user_id},
-            {"$set": {"queries": queries[:slice_index]}}
+            {"$set": {"queries": truncated_queries}}
         )
 
         user_input = last_user_query.get("content", "")
-
         files = last_user_query.get("files", []) 
 
         async for event in chat_stream(
@@ -495,16 +487,12 @@ async def regenerate_chat_stream(request:Request,chat_id: str, user_id: str, mod
             yield event
 
     except Exception as e:
+        import traceback
         traceback.print_exc()
         yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 
-async def edit_chat_stream(request:Request,chat_id: str, user_id: str, target_index: int, new_content: str, modal_name: Optional[str] = None):
-    """
-    Replaces a user message at a specific index with new text,
-    drops all subsequent messages, and generates a new AI response.
-    """
+async def edit_chat_stream(request:Request, chat_id: str, user_id: str, target_index: int, new_content: str, modal_name: Optional[str] = None):
     try:
-        # 1. Fetch the parent chat session
         chat = summary_collection.find_one({"_id": ObjectId(chat_id), "user_id": user_id})
         
         if not chat or "queries" not in chat:
@@ -513,7 +501,6 @@ async def edit_chat_stream(request:Request,chat_id: str, user_id: str, target_in
 
         queries = chat["queries"]
 
-        # 2. Validate the index
         if target_index >= len(queries) or target_index < 0:
             yield f"data: {json.dumps({'type': 'error', 'message': 'Invalid index'})}\n\n"
             return
@@ -523,7 +510,6 @@ async def edit_chat_stream(request:Request,chat_id: str, user_id: str, target_in
             return
 
         old_files = queries[target_index].get("files", [])
-
         truncated_queries = queries[:target_index]
 
         summary_collection.update_one(
@@ -533,19 +519,21 @@ async def edit_chat_stream(request:Request,chat_id: str, user_id: str, target_in
 
         async for event in chat_stream(
             request=request,
-            user_input=new_content,
+            user_input=new_content, 
             user_id=user_id,
             chat_id=chat_id,
-            files=old_files, # Re-attach the old files to the new prompt
+            files=old_files, 
             modal_name=modal_name
         ):
             yield event
 
     except Exception as e:
+        import traceback
         traceback.print_exc()
         yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 
-async def private_chat_stream(user_input, files=None, modal_name=None, chat_history=None):
+# 🌟 FIX: Added `request` to the parameters here
+async def private_chat_stream(request, user_input, files=None, modal_name=None, chat_history=None):
     """
     Streams a truly stateless chat response.
     No database tracking, no personal tool access (Notion, Drive, etc.).
@@ -570,13 +558,19 @@ async def private_chat_stream(user_input, files=None, modal_name=None, chat_hist
         "user_input": user_input,
         "user_id": "guest",
         "files": files
-
     }
+
+    thinking_text = "" 
 
     try:
         final_state = {}
 
         async for event in agent_graph.astream_events(initial_state, version="v2"):
+            # 🌟 NEW: Listen for client disconnects to cancel the stream early if they close the tab
+            if await request.is_disconnected():
+                print("Client disconnected. Aborting stream.")
+                break
+
             kind = event["event"]
             name = event.get("name","")
 
@@ -619,5 +613,6 @@ async def private_chat_stream(user_input, files=None, modal_name=None, chat_hist
         yield f"data: {json.dumps({'type': 'done', 'id': 'private', 'sources': sources})}\n\n"
 
     except Exception as e:
+        import traceback
         traceback.print_exc()
         yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"

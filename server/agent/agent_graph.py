@@ -5,6 +5,8 @@ from controllers.memory_handler import get_user_memories, save_user_memories
 from controllers.integrations_handler import get_all_app_tokens
 from controllers.file_handler import process_files
 from typing import TypedDict, Optional, List
+import traceback 
+
 
 class AgentState(TypedDict):
     messages: list
@@ -14,19 +16,14 @@ class AgentState(TypedDict):
 
     files: Optional[List[any]]     
     uploaded_files: Optional[list]
-    # guard
     blocked: Optional[bool]
 
-    # model output
     response: Optional[str]
     full_messages: Optional[list]
     sources: Optional[list]
-
-    # title
     is_new_chat: bool
     title: Optional[str]
 
-    # memory
     user_input: str
     user_id: str
     assistant_text: Optional[str]
@@ -39,8 +36,6 @@ async def guard_node(state: AgentState):
         return {"blocked": True}
 
     return {"blocked": False}   
-
-import traceback # Add this at the top of your file
 
 async def router_node(state: AgentState):
     print("\n" + "🚦"*20)
@@ -82,28 +77,19 @@ async def file_processor_node(state: AgentState):
     if not files:
         return {"uploaded_files": []}
 
+    if isinstance(files[0], dict):
+        print("\n📂 [FILE NODE] Edit/Regenerate detected. Bypassing extraction.")
+        return {"uploaded_files": files}
+
     print("\n📂 [FILE NODE] Extracting text/media via Gemini & MarkItDown...")
+    file_context, uploaded_metadata = await process_files(files)
     
-    file_context, uploaded_metadata = await process_files(files, state["user_id"])
+    for meta in uploaded_metadata:
+        meta["extracted_text"] = file_context
     
     print(f"📂 [FILE NODE] Extraction Complete. {len(files)} files processed.")
 
-    original_input = state["user_input"]
-    enriched_input = f"CONTEXT FROM ATTACHED FILES:\n{file_context}\n\nUSER PROMPT:\n{original_input}"
-
-    messages = state["messages"].copy()
-    last_message = messages[-1]
-    
-    if hasattr(last_message, 'content'):
-        last_message.content = enriched_input
-    elif isinstance(last_message, tuple):
-        messages[-1] = (last_message[0], enriched_input)
-
-    return {
-        "user_input": enriched_input, # Router & Memory will now see the extracted file text!
-        "messages": messages,         # Agent will now see the extracted file text!
-        "uploaded_files": uploaded_metadata # Save for DB later
-    }
+    return {"uploaded_files": uploaded_metadata}
 
 async def agent_node(state: AgentState):
     if state.get("blocked"):
@@ -111,22 +97,35 @@ async def agent_node(state: AgentState):
 
     print("\n" + "🤖"*20)
     print("🤖 [AGENT NODE] STARTED")
-    print(f"🤖 [AGENT NODE] Apps Selected By Router: {state.get('selected_apps', [])}")
-
+    
     token_data = await get_all_app_tokens(user_id=state["user_id"])
     app_tokens = token_data.get("app_tokens", {})
     
-    print(f"🤖 [AGENT NODE] Database Tokens Found For: {list(app_tokens.keys())}")
-
     selected_apps = state.get("selected_apps", [])
-    
     enable_notion = "notion" in selected_apps
     enable_gdrive = "google_drive" in selected_apps
     enable_linear = "linear" in selected_apps
     enable_slack = "slack" in selected_apps
     enable_n8n = "n8n" in selected_apps
 
-    print(f"🤖 [AGENT NODE] Enabling Tools -> Notion:{enable_notion} | GDrive:{enable_gdrive} | Linear:{enable_linear} | Slack:{enable_slack} | n8n:{enable_n8n}")
+    messages = state["messages"].copy()
+    uploaded_files = state.get("uploaded_files", [])
+    
+    extracted_texts = [f.get("extracted_text", "") for f in uploaded_files if "extracted_text" in f]
+    
+    if extracted_texts:
+        print("🤖 [AGENT NODE] Injecting file context into temporary prompt...")
+        combined_context = "\n".join(extracted_texts)
+        last_msg = messages[-1]
+        
+        if hasattr(last_msg, 'content'):
+            original_text = last_msg.content
+            msg_class = type(last_msg) 
+            new_msg = msg_class(content=f"CONTEXT FROM ATTACHED FILES:\n{combined_context}\n\nUSER PROMPT:\n{original_text}")
+            messages[-1] = new_msg
+        elif isinstance(last_msg, tuple):
+            original_text = last_msg[1]
+            messages[-1] = (last_msg[0], f"CONTEXT FROM ATTACHED FILES:\n{combined_context}\n\nUSER PROMPT:\n{original_text}")
 
     try:
         agent = await get_agent(
@@ -144,7 +143,7 @@ async def agent_node(state: AgentState):
         )
 
         print("🤖 [AGENT NODE] Invoking LangChain Agent...")
-        response = await agent.ainvoke({"messages": state["messages"]})
+        response = await agent.ainvoke({"messages": messages})
         
         assistant_text = response["messages"][-1].content
         print("🤖 [AGENT NODE] Agent Execution Complete!")
@@ -157,6 +156,7 @@ async def agent_node(state: AgentState):
         }
     except Exception as e:
         print(f"❌ [AGENT NODE FATAL ERROR] {e}")
+        import traceback
         traceback.print_exc()
         raise e
 
@@ -180,7 +180,6 @@ async def memory_node(state: AgentState):
 
     if new_memories:
          save_user_memories(state["user_id"], new_memories)
-    print(new_memories)
     return {"extracted_memory": new_memories}
 
 async def title_node(state: AgentState):

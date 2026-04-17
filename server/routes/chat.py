@@ -30,13 +30,22 @@ class EditMessageRequest(BaseModel):
     new_content: str
     modal_name: Optional[str] = None
 
+class TTSRequest(BaseModel):
+    text: str = Field(..., max_length=200, description="Text to convert to speech (max 200 chars)")
+    voice: str = Field(default="troy", description="Voice persona (e.g., troy, hannah, autumn)")
+
+class RegenerateRequest(BaseModel):
+    target_index: int
+    modal_name: Optional[str] = None
+
+class PinRequest(BaseModel):
+    is_pinned: bool
+
+
 query_limiter = Limiter(Rate(20, Duration.MINUTE))
 read_limiter = Limiter(Rate(60, Duration.MINUTE))
 mutation_limiter = Limiter(Rate(30, Duration.MINUTE))
 
-class TTSRequest(BaseModel):
-    text: str = Field(..., max_length=200, description="Text to convert to speech (max 200 chars)")
-    voice: str = Field(default="troy", description="Voice persona (e.g., troy, hannah, autumn)")
 
 @router.post("/query")
 async def query_handler(
@@ -90,11 +99,6 @@ async def get_user_chats(
     chats = get_chats_by_user(user_id=user["user_id"], skip=skip, limit=limit)
     return {"chats": chats}
 
-
-class PinRequest(BaseModel):
-    is_pinned: bool
-
-
 @router.delete(
     "/summary/",
     dependencies=[Depends(RateLimiter(limiter=mutation_limiter))]
@@ -124,8 +128,6 @@ async def toggle_pin_chat_route(
         is_pinned=request.is_pinned
     )
 
-
-
 @router.post("/generate-voice", summary="Convert Text to Speech")
 async def generate_voice_route(request: TTSRequest):
     audio_bytes = generate_audio_from_text(text=request.text, voice=request.voice)
@@ -137,9 +139,6 @@ async def generate_voice_route(request: TTSRequest):
             "Content-Disposition": 'attachment; filename="output.wav"'
         }
     )
-
-class RegenerateRequest(BaseModel):
-    modal_name: Optional[str] = None
 
 @router.post("/chat/{chat_id}/regenerate")
 async def regenerate_chat_route(
@@ -159,6 +158,7 @@ async def regenerate_chat_route(
         request=request,
         chat_id=chat_id,
         user_id=user["user_id"],
+        target_index=payload.target_index,
         modal_name=payload.modal_name
     )
 
