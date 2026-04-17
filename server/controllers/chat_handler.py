@@ -17,7 +17,6 @@ import json
 from redis_client import redis_client
 from groq import Groq
 import hashlib
-import time
 
 client = Groq(api_key=os.getenv("groq_api_key"))
 
@@ -59,22 +58,19 @@ def search_user_chats(user_id: str, search_term: str):
                         "as": "msg",
                         "cond": {
                             "$regexMatch": {
-                                # Use ifNull to prevent crashes if a message has no content
                                 "input": {"$ifNull": ["$$msg.content", ""]}, 
                                 "regex": search_term,
-                                "options": "i" # 'i' makes it case-insensitive
+                                "options": "i" 
                             }
                         }
                     }
                 }
             }},
             
-            # 3. Filter out any chats where no messages matched
             {"$match": {
                 "matching_messages": {"$ne": []}
             }},
             
-            # 4. Sort by newest chats first
             {"$sort": {"timestamp": -1}}
         ]
 
@@ -160,15 +156,7 @@ async def chat_stream(request: Request, user_input, user_id, chat_id=None, files
             
     messages = build_messages(chat_doc, user_input, memory_context, user_id)
 
-    user = users_collection.find_one({"_id": ObjectId(user_id)})
-    app_tokens = user.get("app_tokens", {}) if user else {}
-
-    available_apps = []
-    if app_tokens.get("notion"): available_apps.append("notion")
-    if app_tokens.get("google_drive"): available_apps.append("google_drive")
-    if app_tokens.get("linear"): available_apps.append("linear")
-    if app_tokens.get("slack"): available_apps.append("slack")
-    available_apps.append("n8n")
+    available_apps = ["notion","google_drive","linear","slack","n8n"]
 
     initial_state = {
         "messages": messages,
@@ -303,13 +291,11 @@ def get_chat_history(
             query = {"id": id}
 
         if before is None:
-            # First load → most recent chats
             result = summary_collection.find_one(
                 query,
                 {"queries": {"$slice": -limit}, "_id": 0}
             )
         else:
-            # Scroll up → older chats before the given timestamp
             pipeline = [
                 {"$match": query},
                 {"$project": {
@@ -376,7 +362,6 @@ async def delete_summary_by_id(chat_id: str, user_id: str):
         
     except Exception as e:
         print(f"Delete Error: {e}")
-        # Re-raise HTTPExceptions so they don't get swallowed as 500s
         if isinstance(e, HTTPException):
             raise e
         raise HTTPException(status_code=500, detail="Internal Server Error")
@@ -418,7 +403,6 @@ def generate_audio_from_text(text: str, voice: str = "troy") -> bytes:
     cache_key = get_cache_key(text, voice)
 
     try:
-        # 1️⃣ Check Redis cache
         cached_audio = redis_client.get(cache_key)
 
         if cached_audio:
@@ -532,7 +516,6 @@ async def edit_chat_stream(request:Request, chat_id: str, user_id: str, target_i
         traceback.print_exc()
         yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 
-# 🌟 FIX: Added `request` to the parameters here
 async def private_chat_stream(request, user_input, files=None, modal_name=None, chat_history=None):
     """
     Streams a truly stateless chat response.
@@ -566,7 +549,6 @@ async def private_chat_stream(request, user_input, files=None, modal_name=None, 
         final_state = {}
 
         async for event in agent_graph.astream_events(initial_state, version="v2"):
-            # 🌟 NEW: Listen for client disconnects to cancel the stream early if they close the tab
             if await request.is_disconnected():
                 print("Client disconnected. Aborting stream.")
                 break

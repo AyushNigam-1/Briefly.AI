@@ -168,6 +168,7 @@ def get_tool_prompts(user_id: str):
             "- CAPABILITIES: If asked, explain you can search and read Notion databases, and extract content directly from Notion pages.\n"
             "- FORMATTING: ALWAYS format retrieved Notion data as clean Markdown tables or structured bulleted lists for maximum readability.\n"
             "- DATA HANDLING: NEVER dump raw JSON or raw Notion UUIDs to the user. Always reference pages and databases by their human-readable Title.\n"
+            "- AUTHENTICATION & ERRORS: NEVER state that you cannot access Notion or refuse the ability to use it. If you lack access or receive an invalid token error, politely instruct the user to 'connect the app, or if already connected, disconnect and reconnect it by clicking on your user icon and navigating to Integrations'.\n"
         ),
         "gdrive": (
             "GOOGLE DRIVE RULES & CAPABILITIES:\n"
@@ -175,6 +176,7 @@ def get_tool_prompts(user_id: str):
             "- CREATION & TITLING: When creating a new file, autonomously generate a highly descriptive, professional title based on the content.\n"
             "- DATA HANDLING: NEVER dump raw JSON metadata or raw Google Drive File IDs to the user. Reference files strictly by their names.\n"
             "- LINKING: If the user needs to view or edit the file directly, provide a clean, clickable Markdown link using the file's web link (e.g., `[Document Title](url)`).\n"
+            "- AUTHENTICATION & ERRORS: NEVER state that you cannot access Google Drive or refuse the ability to use it. If you lack access or receive an invalid token error, politely instruct the user to 'connect the app, or if already connected, disconnect and reconnect it by clicking on your user icon and navigating to Integrations'.\n"
         ),
         "linear": (
             "LINEAR RULES & CAPABILITIES:\n"
@@ -183,6 +185,7 @@ def get_tool_prompts(user_id: str):
             "- ISSUE CREATION: When creating an issue, write a concise, action-oriented title. The description must be well-structured and include all necessary context.\n"
             "- FORMATTING: When listing multiple issues, present them as clean Markdown tables including the Identifier, Title, Status, and Assignee.\n"
             "- DATA HANDLING: NEVER dump raw API JSON. Extract and synthesize the human-readable text.\n"
+            "- AUTHENTICATION & ERRORS: NEVER state that you cannot access Linear or refuse the ability to use it. If you lack access or receive an invalid token error, politely instruct the user to 'connect the app, or if already connected, disconnect and reconnect it by clicking on your user icon and navigating to Integrations'.\n"
         ),
         "slack": (
             "SLACK RULES & CAPABILITIES:\n"
@@ -190,6 +193,7 @@ def get_tool_prompts(user_id: str):
             "- COMMUNICATION STYLE: Keep any generated Slack messages concise, professional, and action-oriented. Avoid unnecessary fluff.\n"
             "- MENTIONS: ALWAYS use the proper `<@username>` or `<@user_id>` syntax when instructed to tag or mention specific users in a message.\n"
             "- SUMMARIZATION: When retrieving channel history or thread replies, synthesize the conversation logically. Do not dump raw JSON, raw timestamps, or internal user IDs.\n"
+            "- AUTHENTICATION & ERRORS: NEVER state that you cannot access Slack or refuse the ability to use it. If you lack access or receive an invalid token error, politely instruct the user to 'connect the app, or if already connected, disconnect and reconnect it by clicking on your user icon and navigating to Integrations'.\n"
         )
     }
 
@@ -212,7 +216,6 @@ async def get_agent(
 
     if cache_key in AGENT_CACHE:
         logger.info("Reusing cached agent")
-        # Ensure we don't accidentally reuse a broken cache
         print(f"📦 [GET AGENT] Returning cached agent for key: {cache_key}")
         return AGENT_CACHE[cache_key]
 
@@ -258,6 +261,13 @@ async def get_agent(
         if requires_token and not token:
             print(f"   ❌ [EVAL] {name.upper()}: FAILED. Tool enabled but token is missing!")
             logger.warning(f"Tool {name} enabled but missing token. Skipping.")
+            
+            # 🌟 FIX 1: The AI must know the user tried to use a tool without a token!
+            active_tool_prompts.append(
+                f"{name.upper()} MISSING CONNECTION: The user requested an action involving {name.capitalize()}, but their account is NOT connected. "
+                f"NEVER refuse the ability to use this tool or say you cannot access external apps. Instead, politely instruct the user exactly like this: "
+                f"'To access your {name.capitalize()} account, please connect the app by clicking on your user icon and navigating to Integrations.'"
+            )
             continue
 
         cache_key_token = token if token else "default"
@@ -278,6 +288,13 @@ async def get_agent(
                 import traceback
                 traceback.print_exc()
                 cached_tool = []
+                
+                # 🌟 FIX 2: The AI must know the tool failed to load due to an invalid token/gateway error!
+                active_tool_prompts.append(
+                    f"{name.upper()} CONNECTION ERROR: The connection to {name.capitalize()} failed or the token is invalid. "
+                    f"NEVER refuse the ability to use this tool or say you cannot access external apps. Instead, politely instruct the user exactly like this: "
+                    f"'There seems to be an issue connecting to {name.capitalize()}. Please disconnect and reconnect the app by clicking on your user icon and navigating to Integrations.'"
+                )
         else:
             print(f"   ✅ [EVAL] {name.upper()}: Loaded {len(cached_tool)} tools from Local Cache.")
 

@@ -19,9 +19,7 @@ async def get_slack_tools(token: str):
     client = MultiServerMCPClient({
         "slack": {
             "transport": "sse",
-            
-            "url": "http://localhost:7860/slack/sse",
-            
+            "url": "https://ayush456-mcp-gateway.hf.space/slack/sse",
             "headers": {
                 "Authorization": f"Bearer {token}",
             }
