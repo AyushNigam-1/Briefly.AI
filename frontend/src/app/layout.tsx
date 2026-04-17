@@ -5,6 +5,9 @@ import QueryProvider from "./providers/QueryProvider";
 export const metadata: Metadata = {
     title: "Briefly.ai",
     description: "Your intelligent AI assistant",
+    icons: {
+        icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"/>',
+    }
 };
 
 export default function RootLayout({

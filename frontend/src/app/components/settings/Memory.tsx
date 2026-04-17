@@ -21,7 +21,7 @@ const Memory: React.FC = () => {
     const { data, isLoading } = useQuery({
         queryKey: ['memories'],
         queryFn: async () => {
-            const res = await api.get("/memory");
+            const res = await api.get("/memory/");
             return res.data;
         }
     });
@@ -96,7 +96,6 @@ const Memory: React.FC = () => {
                         transition={{ duration: 0.2 }}
                         className="space-y-6 w-full flex-1"
                     >
-                        {/* HEADER (Untouched) */}
                         <div>
                             <h3 className="text-lg sm:text-xl font-bold transition-colors text-slate-900 dark:text-slate-200">
                                 Saved Memories
@@ -111,7 +110,6 @@ const Memory: React.FC = () => {
                             className="space-y-4 scrollbar-none custom-scrollbar"
                             style={{ scrollbarGutter: "stable" }}
                         >
-                            {/* 🌟 FIX: Responsive Flexbox with gap, flex-1, and min-w-0 to prevent text overflow */}
                             <div className="flex items-center justify-between gap-3 sm:gap-4 bg-white/5 border border-secondary rounded-xl px-3 sm:px-4 py-3">
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm sm:text-base text-slate-200 font-semibold truncate mb-0.5">

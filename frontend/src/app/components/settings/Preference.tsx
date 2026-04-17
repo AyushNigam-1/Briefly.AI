@@ -73,11 +73,9 @@ export default function Preference() {
                 ...old,
                 [field]: value
             }))
+            toast.success("Preferences saved", { id: "pref-save", duration: 2000 })
 
             return { previous }
-        },
-        onSuccess: () => {
-            toast.success("Preferences saved", { id: "pref-save", duration: 2000 })
         },
         onError: (err, variables, context) => {
             queryClient.setQueryData(['preferences'], context?.previous)
@@ -130,7 +128,6 @@ export default function Preference() {
                         transition={{ duration: 0.2 }}
                         className="space-y-8 w-full"
                     >
-                        {/* Custom Instructions Section */}
                         <div>
                             <div className="mb-3 sm:mb-4">
                                 <h3 className="text-lg sm:text-xl font-bold transition-colors text-slate-900 dark:text-slate-200">
@@ -181,7 +178,6 @@ export default function Preference() {
                             </div>
                         </div>
 
-                        {/* Writing Style Section */}
                         <div>
                             <div className="mb-3">
                                 <h4 className="text-lg font-bold transition-colors text-slate-900 dark:text-slate-200">

@@ -14,11 +14,6 @@ from controllers.memory_handler import (
 
 router = APIRouter(prefix="/memory", tags=["memory"])
 
-
-# -------------------------
-# Request Schemas
-# -------------------------
-
 class AddMemoryRequest(BaseModel):
     memories: List[str]
 
@@ -31,10 +26,6 @@ class UpdateMemoryRequest(BaseModel):
 class ToggleMemoryRequest(BaseModel):
     enabled: bool
 
-
-# -------------------------
-# Routes
-# -------------------------
 
 @router.get("/")
 async def fetch_memories(user: dict = Depends(get_current_user)):

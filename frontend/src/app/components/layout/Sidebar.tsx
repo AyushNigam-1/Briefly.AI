@@ -141,7 +141,13 @@ const Sidebar = ({ user }: { user: any; isLoading: boolean }) => {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/summary/?id=${id}`),
-    onSuccess: (_, deletedId) => {
+    onMutate: async (deletedId) => {
+      setDialogOpen(false);
+
+      await queryClient.cancelQueries({ queryKey: ["chats", user?.id] });
+
+      const previousChats = queryClient.getQueryData(["chats", user?.id]);
+
       queryClient.setQueryData(["chats", user?.id], (oldData: any) => {
         if (!oldData) return oldData;
         return {
@@ -152,14 +158,17 @@ const Sidebar = ({ user }: { user: any; isLoading: boolean }) => {
           })),
         };
       });
-      toast.success("Chat deleted successfully");
-      setDialogOpen(false);
       if (activeId === deletedId) {
         router.push("/");
       }
+      toast.success("Chat deleted");
+
+      return { previousChats };
     },
-    onError: () => {
-      toast.error("Failed to delete chat");
+
+    onError: (err, deletedId, context) => {
+      queryClient.setQueryData(["chats", user?.id], context?.previousChats);
+      toast.error("Failed to delete chat. It has been restored.");
     },
   });
 
@@ -182,10 +191,8 @@ const Sidebar = ({ user }: { user: any; isLoading: boolean }) => {
           })),
         };
       });
+      toast.success(is_pinned ? "Chat pinned" : "Chat unpinned");
       return { previousChats };
-    },
-    onSuccess: (_, variables) => {
-      toast.success(variables.is_pinned ? "Chat pinned" : "Chat unpinned");
     },
     onError: (err, variables, context) => {
       queryClient.setQueryData(["chats", user?.id], context?.previousChats);
@@ -297,7 +304,6 @@ const Sidebar = ({ user }: { user: any; isLoading: boolean }) => {
             <MenuItem key={option.label}>
               <button
                 onClick={option.action}
-                disabled={pinMutation.isPending || deleteMutation.isPending}
                 className="group z-50 flex w-full p-1.5 md:p-2 items-center gap-2 md:gap-3 rounded-lg text-sm md:text-base font-bold transition-colors
                                     disabled:opacity-50
                                     data-[focus]:bg-slate-100

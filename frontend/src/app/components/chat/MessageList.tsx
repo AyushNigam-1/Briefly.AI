@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Copy, FileText, ImageIcon, Link, RefreshCw, Pencil, Check, X, Volume2, Pause, Loader2, Image, Video } from "lucide-react";
+import { ChevronDown, Copy, FileText, Link, RefreshCw, Pencil, Check, X, Volume2, Pause, Loader2, Image, Video } from "lucide-react";
 import remarkGfm from "remark-gfm";
 import { Disclosure, DisclosureButton } from "@headlessui/react";
 import { MessageProps } from "@/app/types";
+import api from '@/app/lib/api';
 
 const MessageList = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesOpen, onRegenerate, onEdit }: MessageProps) => {
     const isStreaming = isPending && isLastItem && q.sender === "llm";
@@ -16,7 +17,6 @@ const MessageList = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesO
     const [copied, setCopied] = useState(false);
     const editRef = useRef<HTMLParagraphElement>(null);
 
-    // Voice state and refs
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [isAudioLoading, setIsAudioLoading] = useState(false);
@@ -35,7 +35,6 @@ const MessageList = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesO
         }
     }, [isEditing, q.content]);
 
-    // Cleanup audio when component unmounts
     useEffect(() => {
         return () => {
             if (audioRef.current) {
@@ -72,7 +71,6 @@ const MessageList = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesO
         setTimeout(() => setCopied(false), 2000);
     };
 
-    // Voice functionality
     const handleToggleAudio = async () => {
         if (isPlaying && audioRef.current) {
             audioRef.current.pause();
@@ -90,17 +88,13 @@ const MessageList = ({ q, isLastItem, isPending, onCopy, setSources, setSourcesO
         setIsAudioLoading(true);
 
         try {
-            const response = await fetch("http://localhost:8000/generate-voice", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ text: q.content, voice: "troy" })
-            });
+            const response = await api.post(
+                "/generate-voice",
+                { text: q.content, voice: "troy" },
+                { responseType: "blob" }
+            );
 
-            if (!response.ok) throw new Error("Failed to fetch audio");
-
-            const blob = await response.blob();
+            const blob = response.data;
             const audioUrl = URL.createObjectURL(blob);
 
             const audio = new Audio(audioUrl);

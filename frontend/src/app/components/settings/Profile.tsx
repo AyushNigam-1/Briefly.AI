@@ -53,10 +53,9 @@ export default function Profile() {
         ...payload,
       }));
 
-      return { previous };
-    },
-    onSuccess: () => {
       toast.success("Profile saved", { id: "profile-save", duration: 2000 });
+
+      return { previous };
     },
     onError: (err, variables, context) => {
       queryClient.setQueryData(["profile"], context?.previous);
