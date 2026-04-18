@@ -6,6 +6,15 @@ Below is a comprehensive guide to the features, capabilities, and architecture t
 
 ---
 
+## ⚠️ Important Notes for Testers
+
+Before exploring the application, please keep the following in mind:
+* **Open Access (No Paywall):** I have deliberately removed all feature restrictions based on user subscription tiers. You can explore and test all premium features, models, and integrations without needing to process a Stripe payment.
+* **Latency Expectations:** You may occasionally experience slow response times or delayed streaming. This is entirely due to the hardware limitations of the **free Hugging Face Spaces** hosting environment, not a bug in the application code.
+* **Voice-to-Voice Interruptions:** While using the real-time Voice Chat feature, the AI may sometimes refuse to respond or drop the conversation. This is caused by strict token and rate limitations on the free API tiers, not a flaw in the application logic.
+
+---
+
 ## 💬 Core Chat Experience
 
 ### 🌊 Live Chat Stream
@@ -42,7 +51,7 @@ Easily locate past conversations, ideas, or extracted data using the globally ac
 A truly stateless, zero-retention chat mode. No database tracking, no memory extraction, and no saved history. Close the tab, and the conversation is gone forever.
 
 ### 🎤 Voice Chat
-Interact hands-free. Speak your prompts directly into the application, and the AI will process your voice and respond accordingly.
+Interact hands-free. Speak your prompts directly into the application, and the AI will process your voice and respond accordingly. Real-time audio streaming is powered by **LiveKit** for ultra-low latency communication.
 
 ---
 
@@ -64,14 +73,14 @@ Users are not locked into one model. Select your preferred AI model from a dropd
 Connect your favorite tools! The application supports Model Context Protocol (MCP), allowing secure, multi-tenant integration with external apps (Notion, Google Drive, Slack, Linear) tailored to your specific user account.
 
 ### ⚙️ n8n Automation Workflows
-Build and trigger powerful background automations. The AI can interact with n8n to execute complex, multi-step workflows based on your chat commands.
+Build and trigger powerful background automations. The AI can interact with n8n to execute multi-step workflows based on your chat commands.
 
 ---
 
 ## 💰 Monetization
 
 ### 💳 Stripe Subscription Tiers
-Built-in monetization with Stripe. Users can upgrade to premium tiers to unlock higher usage limits, advanced models, and exclusive integrations.
+Built-in monetization with Stripe. Users can theoretically upgrade to premium tiers to unlock higher usage limits, advanced models, and exclusive integrations *(Note: Disabled for current testing purposes)*.
 
 ---
 
@@ -82,11 +91,13 @@ Built-in monetization with Stripe. Users can upgrade to premium tiers to unlock 
 * **LangSmith:** Integrated deeply for tracing, debugging, and monitoring the AI's internal reasoning and token usage.
 
 ### 🛡️ Backend Infrastructure
+* **Database Management:** Secure, scalable, and highly structured data storage powered by **MongoDB** and **Mongoose** ORM.
 * **Middleware & Security:** Robust custom middleware protecting endpoints.
 * **Rate Limiting:** Protects the API from abuse and enforces subscription tier limits.
 * **Redis Caching:** Lightning-fast state management and data retrieval to reduce database load.
 
-### ⚡ Frontend Performance
+### ⚡ Frontend Performance & UI
+* **Modern Interface:** Beautifully styled with **Tailwind CSS**, fully accessible via **Headless UI**, and butter-smooth layout animations powered by **Framer Motion**.
 * **React Query (TanStack):** Handles all asynchronous data fetching, caching, and state synchronization.
 * **Optimistic Mutations:** Ensures the UI feels instantaneous (e.g., instantly deleting a chat while the server processes it in the background).
 * **OneSignal Integration:** Delivers reliable push notifications to users for background task completions or important updates.
